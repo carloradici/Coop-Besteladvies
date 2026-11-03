@@ -1,7 +1,8 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
 // Wordt door de korte stuur-push in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
-// Soorten: test (één toestel), boek (na upload bestelboek, alleen beheerder), cron (elk kwartier: besteldag, dag-export, in/out).
+// Soorten: test (één toestel), boek (na upload bestelboek, beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };
+const ONDERDELEN = [['agf', 'AGF'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries'], ['kw', 'KW']];
 const STD_OPEN = [['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['', '']];
 const DAGEN = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
 const pad = n => String(n).padStart(2, '0');
@@ -36,63 +37,72 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date() }) {
   }
 
   if (soort === 'boek') {
-    if (!token) return { status: 401, fout: 'Niet ingelogd' };
+    if (!token || !body.winkel) return { status: 401, fout: 'Niet ingelogd' };
     const { data: u } = await sb.auth.getUser(token);
-    const email = u && u.user && u.user.email;
-    const { data: b } = await sb.from('beheerders').select('email');
-    if (!email || !(b || []).some(x => x.email.toLowerCase() === email.toLowerCase())) return { status: 403, fout: 'Alleen de beheerder' };
+    const user = u && u.user; if (!user) return { status: 401, fout: 'Niet ingelogd' };
+    const email = (user.email || '').toLowerCase();
+    const { data: b } = await sb.from('winkel_beheer').select('email').eq('winkel_id', body.winkel);
+    let ok = !!email && (b || []).some(x => x.email === email);
+    if (!ok) {
+      const { data: se } = await sb.from('sessies').select('medewerker_id,tot').eq('uid', user.id).eq('winkel_id', body.winkel);
+      const sessie = (se || []).find(x => new Date(x.tot) > nu);
+      if (sessie) { const { data: m } = await sb.from('medewerkers').select('rol,rechten').eq('id', sessie.medewerker_id); const mw = m && m[0]; ok = !!mw && (mw.rol === 'beheerder' || !!(mw.rechten && mw.rechten.upload)); }
+    }
+    if (!ok) return { status: 403, fout: 'Geen recht' };
     const naam = body.bron === 'kw' ? 'KW' : 'Vers';
     const tekst = `${body.nieuw || 0} nieuw, ${body.uit || 0} uit assortiment${body.uit ? ' – schap aanpassen' : ''}.`;
-    await stuur((abos || []).filter(a => wil(a, 'boek')), { titel: `Nieuw bestelboek ${naam}`, tekst, tag: 'boek-' + body.bron });
+    await stuur((abos || []).filter(a => a.winkel_id === body.winkel && wil(a, 'boek')), { titel: `Nieuw bestelboek ${naam}`, tekst, tag: 'boek-' + body.bron });
     return { status: 200, ...verstuurd };
   }
 
   if (soort === 'cron') {
     const { dag, tijd } = lokaleTijd(nu);
-    const { data: ir } = await sb.from('instellingen').select('data').eq('id', 1);
-    const inst = (ir && ir[0] && ir[0].data) || {};
-    const schema = inst.schema || STD_SCHEMA; const open = inst.open || STD_OPEN; const t = Object.assign({ bestel: '08:30', export: '10:00', inout: '11:00' }, inst.push || {});
-    const { data: agenda } = await sb.from('agenda').select('*');
-    const gesloten = d => { const a = (agenda || []).find(x => x.dag === d); if (a && a.soort === 'gesloten') return true; const o = open[wd(d)] || ['', '']; return !o[0] && !o[1]; };
+    const { data: winkels } = await sb.from('winkels').select('id,naam');
     const gedaan = [];
-    // besteldag
-    if (tijd >= t.bestel) for (const bron of ['vers', 'kw']) {
-      const r = (schema[bron] || []).find(x => x.b === wd(dag)); if (!r) continue;
-      if (!(await eenmalig(`bestel:${bron}:${dag}`))) continue;
-      let L = add(dag, 1); while (wd(L) !== r.l) L = add(L, 1);
-      await stuur((abos || []).filter(a => wil(a, 'bestel_' + bron)), { titel: `Vandaag bestellen ${bron === 'kw' ? 'KW' : 'Vers'}`, tekst: `Levering ${fmtDag(L)}. Open Besteladvies voor het advies.`, tag: 'bestel-' + bron });
-      gedaan.push('bestel_' + bron);
-    }
-    // dag-export van gisteren
-    if (tijd >= t.export) {
-      const gister = add(dag, -1);
-      if (!gesloten(gister) && await eenmalig(`export:${dag}`)) {
-        const { data: dv } = await sb.from('dagverkoop').select('dag').eq('dag', gister);
-        if (!dv || !dv.length) { await stuur((abos || []).filter(a => a.rol === 'beheer' && wil(a, 'export')), { titel: 'Dag-export ontbreekt', tekst: `De verkoop van ${fmtDag(gister)} is nog niet geüpload.`, tag: 'export' }); gedaan.push('export'); }
+    for (const w of winkels || []) {
+      const W = w.id; const wa = (abos || []).filter(a => a.winkel_id === W);
+      if (!wa.length) continue;
+      const { data: ir } = await sb.from('instellingen').select('data').eq('winkel_id', W);
+      const inst = (ir && ir[0] && ir[0].data) || {};
+      const schema = Object.assign({}, STD_SCHEMA, inst.schema || {}); const open = inst.open || STD_OPEN; const t = Object.assign({ bestel: '08:30', export: '10:00', inout: '11:00' }, inst.push || {});
+      const { data: agenda } = await sb.from('agenda').select('*').eq('winkel_id', W);
+      const gesloten = d => { const a = (agenda || []).find(x => x.dag === d); if (a && a.soort === 'gesloten') return true; const o = open[wd(d)] || ['', '']; return !o[0] && !o[1]; };
+      if (tijd >= t.bestel) for (const [o, naam] of ONDERDELEN) {
+        const sch = schema[o] || schema.vers; const r = (sch || []).find(x => x.b === wd(dag)); if (!r) continue;
+        if (!(await eenmalig(`bestel:${W}:${o}:${dag}`))) continue;
+        let L = add(dag, 1); while (wd(L) !== r.l) L = add(L, 1);
+        await stuur(wa.filter(a => wil(a, 'bestel_' + o)), { titel: `Vandaag bestellen ${naam}`, tekst: `Levering ${fmtDag(L)}. Open Besteladvies voor het advies.`, tag: 'bestel-' + o });
+        gedaan.push(W.slice(0, 4) + ':bestel_' + o);
       }
-    }
-    // in/out
-    if (tijd >= t.inout && await eenmalig(`inout:${dag}`)) {
-      const { data: io } = await sb.from('inout').select('*');
-      const actief = (io || []).filter(x => x.ingekocht > 0 && (!x.eind || x.eind >= dag));
-      if (actief.length) {
-        const van = actief.reduce((m, x) => (x.start && x.start < m ? x.start : m), add(dag, -60));
-        const { data: dv } = await sb.from('dagverkoop').select('dag,data').gte('dag', van);
-        const dagen = (dv || []).sort((a, b) => a.dag < b.dag ? -1 : 1);
-        const namen = [];
-        for (const x of actief) {
-          const start = x.start || (dagen.find(d => d.data[x.ean]) || {}).dag || dag;
-          let tot = 0; for (const d of dagen) if (d.dag >= start && d.data[x.ean]) tot += +d.data[x.ean][0] || 0;
-          const laatste = dagen.slice(-7); const perDag = laatste.length ? laatste.reduce((s, d) => s + (d.data[x.ean] ? +d.data[x.ean][0] || 0 : 0), 0) / laatste.length : 0;
-          const rest = x.ingekocht - tot; const dagenOp = perDag > 0 ? rest / perDag : null;
-          const totEind = x.eind ? Math.round((new Date(x.eind) - new Date(dag)) / 864e5) : null;
-          if (rest <= 0 || (dagenOp !== null && (totEind !== null ? dagenOp < totEind : dagenOp < 3))) namen.push(x.ean);
+      if (tijd >= t.export) {
+        const gister = add(dag, -1);
+        if (!gesloten(gister) && await eenmalig(`export:${W}:${dag}`)) {
+          const { data: dv } = await sb.from('dagverkoop').select('dag').eq('winkel_id', W).eq('dag', gister);
+          if (!dv || !dv.length) { await stuur(wa.filter(a => a.rol === 'beheer' && wil(a, 'export')), { titel: 'Dag-export ontbreekt', tekst: `De verkoop van ${fmtDag(gister)} is nog niet geüpload.`, tag: 'export' }); gedaan.push(W.slice(0, 4) + ':export'); }
         }
-        if (namen.length) {
-          const { data: k } = await sb.from('kassa').select('ean,n').in('ean', namen);
-          const nm = namen.map(e => ((k || []).find(r => r.ean === e) || {}).n || e);
-          await stuur((abos || []).filter(a => a.rol === 'beheer' && wil(a, 'inout')), { titel: 'In/out bijna op', tekst: nm.slice(0, 4).join(', ') + (nm.length > 4 ? ` en ${nm.length - 4} meer` : '') + ' – telefonisch bijbestellen?', tag: 'inout' });
-          gedaan.push('inout');
+      }
+      if (tijd >= t.inout && await eenmalig(`inout:${W}:${dag}`)) {
+        const { data: io } = await sb.from('inout').select('*').eq('winkel_id', W);
+        const actief = (io || []).filter(x => x.ingekocht > 0 && (!x.eind || x.eind >= dag));
+        if (actief.length) {
+          const van = actief.reduce((m, x) => (x.start && x.start < m ? x.start : m), add(dag, -60));
+          const { data: dv } = await sb.from('dagverkoop').select('dag,data').eq('winkel_id', W).gte('dag', van);
+          const dagen = (dv || []).sort((a, b) => a.dag < b.dag ? -1 : 1);
+          const namen = [];
+          for (const x of actief) {
+            const start = x.start || (dagen.find(d => d.data[x.ean]) || {}).dag || dag;
+            let tot = 0; for (const d of dagen) if (d.dag >= start && d.data[x.ean]) tot += +d.data[x.ean][0] || 0;
+            const laatste = dagen.slice(-7); const perDag = laatste.length ? laatste.reduce((s2, d) => s2 + (d.data[x.ean] ? +d.data[x.ean][0] || 0 : 0), 0) / laatste.length : 0;
+            const rest = x.ingekocht - tot; const dagenOp = perDag > 0 ? rest / perDag : null;
+            const totEind = x.eind ? Math.round((new Date(x.eind) - new Date(dag)) / 864e5) : null;
+            if (rest <= 0 || (dagenOp !== null && (totEind !== null ? dagenOp < totEind : dagenOp < 3))) namen.push(x.ean);
+          }
+          if (namen.length) {
+            const { data: k } = await sb.from('kassa').select('ean,n').eq('winkel_id', W).in('ean', namen);
+            const nm = namen.map(e => ((k || []).find(r => r.ean === e) || {}).n || e);
+            await stuur(wa.filter(a => a.rol === 'beheer' && wil(a, 'inout')), { titel: 'In/out bijna op', tekst: nm.slice(0, 4).join(', ') + (nm.length > 4 ? ` en ${nm.length - 4} meer` : '') + ' – telefonisch bijbestellen?', tag: 'inout' });
+            gedaan.push(W.slice(0, 4) + ':inout');
+          }
         }
       }
     }
