@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f17d04">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -251,6 +251,12 @@ input.schak:checked::after{left:23px}
 .login.compact .inlog label{margin-top:10px}
 .login.compact .cijferblok button{height:54px}
 .naamkeuze.fout{animation:schud .35s}
+
+/* 1.7 niet zoomen of selecteren */
+html{touch-action:manipulation;overflow-x:hidden}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overflow-x:hidden;touch-action:pan-x pan-y}
+input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+.stp input,textarea{font-size:max(16px,1em)}
 </style>
 </head>
 <body>
@@ -755,7 +761,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.6';
+const VERSIE = '1.7';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -1145,6 +1151,9 @@ async function faceInstellen() {
 }
 document.addEventListener('click', e => { if (e.target && e.target.matches && e.target.matches('input[type=file]')) kiestBestand = true; }, true);
 document.addEventListener('change', e => { if (e.target && e.target.matches && e.target.matches('input[type=file]')) kiestBestand = false; }, true);
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('touchmove', e => { if (e.scale !== undefined && e.scale !== 1) e.preventDefault(); }, { passive: false });
+document.addEventListener('dblclick', e => e.preventDefault());
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { verborgen = Date.now(); return; }
   const lang = verborgen && Date.now() - verborgen > 15000; verborgen = 0;
@@ -1659,8 +1668,9 @@ function renderMeldingen() {
   if (mag('instellingen')) { const p = (S.inst && S.inst.push) || {}; h += `<div class="blk"><h2>Tijden</h2><div class="form"><div class="f"><label>Herinnering besteldag</label><input type="time" id="tB" value="${p.bestel || '08:30'}"></div><div class="f"><label>Controle dag-export</label><input type="time" id="tE" value="${p.export || '10:00'}"></div><div class="f"><label>Controle in/out</label><input type="time" id="tI" value="${p.inout || '11:00'}"></div><button class="btn" id="tSave">Tijden opslaan</button></div></div>`; }
   v.innerHTML = h;
   const aan = $('#pAan'); if (aan) aan.onclick = async () => { try { const p = await Notification.requestPermission(); if (p !== 'granted') { toast('Meldingen zijn niet toegestaan'); return render(); } await pushOpslaan([]); toast('Meldingen staan aan'); render(); } catch (e) { toast('Aanzetten mislukt: ' + e.message, 5000); } };
-  v.querySelectorAll('[data-ps]').forEach(c => c.onchange = async () => { const u = new Set(uit); c.checked ? u.delete(c.dataset.ps) : u.add(c.dataset.ps); try { await pushOpslaan([...u]); toast('Opgeslagen'); } catch (e) { toast('Opslaan mislukt: ' + e.message, 5000); } });
-  const t = $('#pTest'); if (t) t.onclick = async () => { try { const r = await fetch(`${SB_URL}/functions/v1/stuur-push`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY }, body: JSON.stringify({ soort: 'test', endpoint: cur.endpoint }) }); const j = await r.json().catch(() => ({})); toast(r.ok ? 'Testmelding verstuurd' : 'Mislukt: ' + (j.fout || r.status), 5000); } catch (e) { toast('Mislukt: ' + e.message, 5000); } };
+  const huidigUit = () => { const u = new Set((ls.get('cba-push') || {}).uit || []); v.querySelectorAll('[data-ps]').forEach(x => x.checked ? u.delete(x.dataset.ps) : u.add(x.dataset.ps)); return [...u]; };
+  v.querySelectorAll('[data-ps]').forEach(c => c.onchange = async () => { try { await pushOpslaan(huidigUit()); toast('Opgeslagen'); } catch (e) { toast('Opslaan mislukt: ' + e.message, 5000); } });
+  const t = $('#pTest'); if (t) t.onclick = async () => { try { t.disabled = true; const row = await pushOpslaan(huidigUit()); const r = await fetch(`${SB_URL}/functions/v1/stuur-push`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY }, body: JSON.stringify({ soort: 'test', endpoint: row.endpoint }) }); const j = await r.json().catch(() => ({})); toast(r.ok ? 'Testmelding verstuurd' : 'Mislukt: ' + (j.fout || j.message || j.msg || r.status), 6000); } catch (e) { toast('Mislukt: ' + e.message, 6000); } finally { t.disabled = false; } };
   const ts = $('#tSave'); if (ts) ts.onclick = () => saveInst(Object.assign({}, S.inst || {}, { push: { bestel: $('#tB').value || '08:30', export: $('#tE').value || '10:00', inout: $('#tI').value || '11:00' } }));
 }
 async function pushBoek(bron, nieuw, uit) {
