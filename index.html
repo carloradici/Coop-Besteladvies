@@ -225,6 +225,31 @@ input.schak:checked::after{left:23px}
   #printArea tr{page-break-inside:avoid}
   #printArea .grpr td{background:#eee;font-weight:800;text-align:left}
 }
+/* 1.5 inloggen zoals Brood Opzet */
+.login .inlog{margin-top:4px}
+.naamkeuze{position:relative;display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;height:56px;padding:0 16px}
+.naamkeuze select{flex:1;min-width:0;height:100%;border:0;background:transparent;font-size:18px;font-weight:700;color:#222;-webkit-appearance:none;appearance:none;font-family:inherit;padding:0}
+.naamkeuze .rol{color:#f17d04;font-size:13px;font-weight:700}
+.pijlneer{color:#999;font-size:16px;pointer-events:none}
+.pinbolletjes{display:flex;justify-content:center;gap:20px;margin:10px 0 4px}
+.pinbolletjes i{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.85)}
+.pinbolletjes i.vol{background:#fff;border-color:#fff}
+.pinbolletjes.fout{animation:schud .35s}
+@keyframes schud{25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-4px)}}
+.cijferblok{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
+.cijferblok button{height:58px;border-radius:16px;border:0;background:rgba(255,255,255,.95);color:#222;font-size:26px;font-weight:500;display:flex;align-items:center;justify-content:center}
+.cijferblok button:active{background:#ffe1bf}
+.cijferblok .wis{background:transparent;color:#fff;font-size:24px}
+.merkhint{text-align:center;color:rgba(255,255,255,.9);font-size:12px;margin:10px 0 0}
+.merklink{display:block;margin:14px auto 0;background:none;border:0;color:#fff;text-decoration:underline;font-size:14px}
+.login .inlog .msg{min-height:1.2em;text-align:center;font-weight:700}
+.login.compact{padding-top:calc(env(safe-area-inset-top) + 14px)}
+.login.compact .merklogo{width:160px}
+.login.compact .merkregel{display:flex;align-items:center;gap:10px;margin:6px 0 4px}
+.login.compact .merkicoon{width:34px;margin:0}
+.login.compact h1{font-size:26px}
+.login.compact .inlog label{margin-top:10px}
+.login.compact .cijferblok button{height:54px}
 </style>
 </head>
 <body>
@@ -729,7 +754,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.4';
+const VERSIE = '1.5';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -803,7 +828,7 @@ const remove = (table, q) => rest(`${table}?${q}`, { method: 'DELETE', headers: 
 const PK = { push_abos: 'endpoint', voorraad: 'winkel_id,bron,nr', bestellingen: 'winkel_id,bron,nr,besteldag', schap_ok: 'winkel_id,bron,nr', inout: 'winkel_id,ean', instellingen: 'winkel_id', agenda: 'winkel_id,dag', kassa: 'winkel_id,ean', dagverkoop: 'winkel_id,dag', boeken: 'winkel_id,bron', acties: 'winkel_id,id', assortiment: 'winkel_id,bron,nr', notities: 'winkel_id,sleutel', voorkeuren: 'winkel_id,wie', activiteit: null };
 let W = ls.get('cba-w'); let WINKEL = null; let winkels = []; let eigenaar = false; let OEFEN = false;
 let OPEN = false; let VERS_IN = false; let kiestBestand = false; let verborgen = 0;
-const isMail = () => DEMO ? eigenaar : !!(sess && sess.kind === 'email');
+const isMail = () => !!(sess && sess.kind === 'email');
 const wq = p => p + (p.includes('?') ? '&' : '?') + 'winkel_id=eq.' + W;
 const metW = rows => rows.map(r => Object.assign({ winkel_id: W }, r));
 const upW = (t, rows) => upsert(t, metW(rows), PK[t]);
@@ -827,7 +852,7 @@ async function loadCache() {
   const c = await iget('cache:' + W); if (!c) return false;
   Object.assign(S, c, { schapOk: new Set(c.schapOk || []) });
   S.dagen = {}; for (const d of Object.keys(S.dagMeta || {})) { const v = await iget('d:' + W + ':' + d); if (v) S.dagen[d] = v; }
-  rol = c.rol || rol; eigenaar = !!c.eigenaar; WINKEL = c.WINKEL || WINKEL; winkels = c.winkels || winkels;
+  rol = c.rol || rol; WINKEL = c.WINKEL || WINKEL; winkels = c.winkels || winkels;
   applyOutboxLocal();
   return true;
 }
@@ -838,18 +863,18 @@ async function saveCache() {
 }
 async function sync(full) {
   if (DEMO || OEFEN) return;
-  if (isMail() && !OPEN) return;
+  if (!OPEN) return;
   try {
     setSync('Bijwerken…');
-    await flush();
     winkels = await rpc('mijn_winkels');
     if (!winkels.length) { if (sess && sess.kind === 'anon') ontkoppeld(); else geenWinkel(); return; }
     if (!W || !winkels.some(x => x.id === W)) {
       if (winkels.length === 1) { W = winkels[0].id; ls.set('cba-w', W); }
       else { kiesWinkel(); return; }
     }
-    WINKEL = winkels.find(x => x.id === W); eigenaar = WINKEL.rol === 'beheer';
-    if (isMail() && eigenaar && WINKEL.open === false) { setSync(); vergrendelNu(); return; }
+    WINKEL = winkels.find(x => x.id === W); eigenaar = berekenEigenaar();
+    if (WINKEL.open === false) { setSync(); inlogScherm(); return; }
+    await flush();
     const [inst, agenda, boekMeta, acties, dagMeta, vr, be, so, io, mws, ass, nts, wr] = await Promise.all([
       rest(wq('instellingen?select=data')), rest(wq('agenda?select=*')), rest(wq('boeken?select=bron,geupload')), rest(wq('acties?select=*&order=van.asc')),
       getAll(wq(`dagverkoop?select=dag,geupload&dag=gte.${C.add(C.today(), -460)}&order=dag.asc`)),
@@ -880,7 +905,7 @@ async function sync(full) {
     applyOutboxLocal();
     await saveCache(); online = true; setSync();
     rebuild();
-    if (!eigenaar && !geldigeMw()) { if (!document.body.classList.contains('inlog')) kiesMedewerker(); return; }
+    if (!mw || !mwLijst().some(m => m.id === mw.id)) { inlogScherm(); return; }
     if (!document.body.classList.contains('inlog')) render();
   } catch (e) {
     console.warn(e); online = false; setSync();
@@ -963,9 +988,9 @@ const ini = n => String(n || '').split(/\s+/).filter(Boolean).map(w => w[0]).joi
 const hhmm = iso => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const log = (wat, tekst) => write('activiteit', [{ wie: mijnNaam(), wat, tekst, dag: C.today(), ts: new Date().toISOString() }]);
 
-function loginKader(onder, inhoud) {
+function loginKader(onder, inhoud, compact) {
   document.body.classList.add('inlog'); $('nav.tabs').classList.add('hide'); $('#kop').classList.add('hide'); ['#updBalk', '#oefenBalk'].forEach(s => $(s) && $(s).remove());
-  $('#app').innerHTML = `<div class="login"><img class="merklogo" src="${logoSrc()}" alt="Coop">${KLEMBORD}<h1>Besteladvies</h1><div class="ond">${onder}</div>${inhoud}<div class="versie">${esc((WINKEL && WINKEL.naam) || 'Coop Vogelenzang')} · versie ${VERSIE}</div></div>`;
+  $('#app').innerHTML = compact ? `<div class="login compact"><img class="merklogo" src="${logoSrc()}" alt="Coop"><div class="merkregel">${KLEMBORD}<h1>Besteladvies</h1></div>${inhoud}` : `<div class="login"><img class="merklogo" src="${logoSrc()}" alt="Coop">${KLEMBORD}<h1>Besteladvies</h1><div class="ond">${onder}</div>${inhoud}<div class="versie">${esc((WINKEL && WINKEL.naam) || 'Coop Vogelenzang')} · versie ${VERSIE}</div></div>`;
 }
 function showLogin(msg) {
   if (DEMO) {
@@ -989,93 +1014,134 @@ function ontkoppeld() { sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-
 function geenWinkel() { loginKader('Geen winkel', '<p>Dit account hoort nog bij geen enkele winkel. Vraag de eigenaar om je als beheerder toe te voegen.</p><div class="form"><button class="btn sec" id="lUit">Uitloggen</button></div>'); $('#lUit').onclick = () => { sess = null; ls.del('cba-sess'); showLogin(); }; }
 function kiesWinkel() {
   loginKader('Kies een winkel', `<div class="form namen">${winkels.map(w => `<button class="btn" data-w="${w.id}">${esc(w.naam)}<small>${esc(w.plaats || '')}</small></button>`).join('')}</div>`);
-  document.querySelectorAll('[data-w]').forEach(b => b.onclick = async () => { await saveCache(); W = b.dataset.w; ls.set('cba-w', W); mw = null; ls.del('cba-mw'); if (isMail()) OPEN = false; S.dagen = {}; S.dagMeta = {}; S.boeken = {}; S.kassa = {}; M = null; start(); });
-}
-function geldigeMw() { return !!(mw && mwLijst().some(m => m.id === mw.id)); }
-function kiesMedewerker(msg) {
-  const lijst = mwLijst();
-  loginKader('Wie ben jij?', lijst.length ? `<div class="form namen">${lijst.map(m => `<button class="btn" data-mw="${m.id}">${esc(m.naam)}${m.rol === 'beheerder' ? '<small>beheerder</small>' : ''}</button>`).join('')}</div><div class="msg">${esc(msg || '')}</div>` : `<p>Er zijn nog geen medewerkers. De beheerder voegt ze toe via Meer → Medewerkers.</p><div class="form"><button class="btn" id="opn">Opnieuw proberen</button></div>`);
-  document.querySelectorAll('[data-mw]').forEach(b => b.onclick = () => pinScherm(lijst.find(m => m.id === b.dataset.mw)));
-  const o = $('#opn'); if (o) o.onclick = () => start();
+  document.querySelectorAll('[data-w]').forEach(b => b.onclick = async () => { await saveCache(); W = b.dataset.w; ls.set('cba-w', W); mw = null; ls.del('cba-mw'); OPEN = false; S.dagen = {}; S.dagMeta = {}; S.boeken = {}; S.kassa = {}; M = null; start(); });
 }
 async function pinHash(id, pin) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id + ':' + pin)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); } catch (e) { return id + ':' + pin; } }
-function pinScherm(m, eig) {
-  const nieuw = !m.heeft_pin;
-  loginKader(esc(m.naam), `<p>${nieuw ? (eig ? 'Kies je eigen pincode van 4 cijfers. Daarmee log je voortaan in.' : 'Kies je eigen pincode van 4 cijfers.') : 'Voer je pincode in.'}${DEMO && !nieuw ? ' (Testversie: 1234)' : ''}</p><div class="form"><label for="p1">${nieuw ? 'Kies een pincode (4 cijfers)' : 'Pincode'}</label><input type="password" id="p1" inputmode="numeric" maxlength="4" pattern="[0-9]*" class="codeveld" autocomplete="off">
-  ${nieuw ? '<label for="p2">Herhaal pincode</label><input type="password" id="p2" inputmode="numeric" maxlength="4" pattern="[0-9]*" class="codeveld" autocomplete="off">' : ''}<button class="btn" id="pB">${nieuw ? 'Pincode opslaan' : 'Verder'}</button><button class="btn sec" id="pT">${eig ? 'Pincode vergeten' : 'Andere naam'}</button>${eig && winkels.length > 1 ? '<button class="btn sec" id="pW">Andere winkel</button>' : ''}<div class="msg" id="pM"></div></div>`);
-  $('#pT').onclick = () => eig ? (DEMO ? toast('In de echte app log je dan opnieuw in met je e-mail') : naarMail('Log in met je e-mail. Daarna kies je een nieuwe pincode.', true)) : kiesMedewerker();
-  const pw = $('#pW'); if (pw) pw.onclick = () => { W = null; ls.del('cba-w'); kiesWinkel(); };
-  $('#p1').focus();
-  const go = async () => {
-    const p1 = $('#p1').value.trim(); const msg = $('#pM');
-    if (!/^\d{4}$/.test(p1)) { msg.textContent = 'Een pincode bestaat uit 4 cijfers.'; return; }
-    if (nieuw && p1 !== $('#p2').value.trim()) { msg.textContent = 'De twee pincodes zijn niet gelijk.'; return; }
-    msg.textContent = 'Bezig…';
-    try {
-      let ok;
-      if (DEMO) ok = nieuw || p1 === '1234';
-      else {
-        const lok = ls.get('cba-pin') || {};
-        let r = null;
-        try { r = await rpc('pin_login', { w: W, mid: m.id, pin: p1 }); }
-        catch (e) { if (!lok[m.id]) throw new Error('Geen internet. Probeer het opnieuw zodra je verbinding hebt.'); }
-        if (r) { ok = r.ok; if (ok) { m.rol = r.rol || m.rol; m.rechten = r.rechten || m.rechten; } if (r.geblokkeerd) return naarMail('Te vaak een verkeerde pincode. Log opnieuw in met je e-mail en kies een nieuwe pincode.', true); if (!ok && eig && r.over !== undefined) { msg.textContent = `Pincode klopt niet. Nog ${r.over} ${r.over === 1 ? 'poging' : 'pogingen'}.`; return; } }
-        else {
-          ok = lok[m.id] === await pinHash(m.id, p1);
-          if (eig) { const f = ok ? 0 : (ls.get('cba-pinfout') || 0) + 1; ls.set('cba-pinfout', f); if (f >= 5) { delete lok[m.id]; ls.set('cba-pin', lok); return naarMail('Te vaak een verkeerde pincode. Log opnieuw in met je e-mail en kies een nieuwe pincode.', true); } if (!ok) { msg.textContent = `Pincode klopt niet. Nog ${5 - f} ${5 - f === 1 ? 'poging' : 'pogingen'}.`; return; } }
-        }
-      }
-      if (!ok) { msg.textContent = 'Pincode klopt niet.'; return; }
-      const lok = ls.get('cba-pin') || {}; lok[m.id] = await pinHash(m.id, p1); ls.set('cba-pin', lok); ls.del('cba-pinfout');
-      mw = { id: m.id, naam: m.naam }; ls.set('cba-mw', mw); m.heeft_pin = true;
-      if (eig) { OPEN = true; VERS_IN = false; ui.pinVergeten = false; if (!DEMO) return start(); }
-      S.pref = Object.assign({}, (ls.get('cba-pref-' + wieSleutel()) || {})); pasPrefToe();
-      shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig();
-      if (!DEMO) sync();
-    } catch (e) { msg.textContent = e.message; }
-  };
-  $('#pB').onclick = go; document.querySelectorAll('.codeveld').forEach(i => i.onkeydown = e => { if (e.key === 'Enter') go(); });
-}
-/* ---------- eigenaar: e-mail eenmalig, daarna pincode ---------- */
+/* ---------- inloggen: naam + pincode, elke keer bij openen ---------- */
+function berekenEigenaar() { if (!WINKEL || WINKEL.rol !== 'beheer' || !mw) return false; if (DEMO) return mw.id === 'd1'; const em = ls.get('cba-emw:' + W); return !!(isMail() && em && em.id === mw.id); }
+function demoNamen() { return DEMO_MW.map(m => Object.assign({}, m, { eigen: m.id === 'd1' && WINKEL && WINKEL.rol === 'beheer', mail: m.id === 'd1' })); }
+const IN = { namen: [], keuze: null, pin: '', eerste: null, msg: '', blokTot: 0 };
 function naarMail(msg, vergeten) { OPEN = false; sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); ui.loginModus = 'mail'; ui.pinVergeten = !!vergeten; showLogin(msg); }
-function vergrendelNu() {
-  if (!isMail()) return;
-  OPEN = false; mw = null; ls.del('cba-mw'); ['#undoBalk'].forEach(x => $(x) && $(x).remove()); document.querySelectorAll('.sheet,.sheetbg,.overlay').forEach(x => x.remove());
-  if (DEMO) return pinScherm(DEMO_MW[0], true);
-  ontgrendel();
-}
-async function ontgrendel(nm) {
-  loginKader('Inloggen', '<p>Even geduld…</p>');
+function opruimen() { const u = $('#undoBalk'); if (u) u.remove(); document.querySelectorAll('.sheet').forEach(x => x.remove()); }
+async function inlogScherm(msg) {
+  OPEN = false; mw = null; ls.del('cba-mw'); opruimen();
+  IN.pin = ''; IN.eerste = null; IN.msg = msg || '';
+  if (DEMO) { IN.namen = demoNamen(); return tekenInlog(); }
+  const cache = W && ls.get('cba-namen:' + W);
+  if (cache && !ui.pinVergeten && !VERS_IN) { IN.namen = cache; tekenInlog(); } else loginKader('Inloggen', '<p>Even geduld…</p>');
   try {
     winkels = await rpc('mijn_winkels');
-    if (!winkels.length) return geenWinkel();
+    if (!winkels.length) return sess && sess.kind === 'anon' ? ontkoppeld() : geenWinkel();
     if (!W || !winkels.some(x => x.id === W)) { if (winkels.length === 1) { W = winkels[0].id; ls.set('cba-w', W); } else return kiesWinkel(); }
     WINKEL = winkels.find(x => x.id === W);
-    if (WINKEL.rol !== 'beheer') { OPEN = true; return start(); }
-    eigenaar = true;
-    await rpc('vergrendel', { w: W }).catch(() => { });
-    let r = await rpc('eigenaar_mw', { w: W, nm: nm || null });
-    if (r && r.nodig) return naamScherm(r.namen || []);
-    if (r.geblokkeerd || (ui.pinVergeten && r.heeft_pin)) {
-      if (!VERS_IN) return naarMail(r.geblokkeerd ? 'Te vaak een verkeerde pincode. Log opnieuw in met je e-mail en kies een nieuwe pincode.' : 'Log in met je e-mail. Daarna kies je een nieuwe pincode.', true);
-      const ok = await rpc('eigenaar_pin_reset', { w: W });
-      if (!ok) return naarMail('Log opnieuw in met je e-mail om een nieuwe pincode te kiezen.', true);
-      const lok = ls.get('cba-pin') || {}; delete lok[r.id]; ls.set('cba-pin', lok); ls.del('cba-pinfout');
-      r = await rpc('eigenaar_mw', { w: W, nm: null });
+    if (WINKEL.rol === 'beheer' && isMail()) {
+      await rpc('eigen_toestel', { w: W });
+      const r = await rpc('eigenaar_mw', { w: W, nm: null });
+      if (r && r.nodig) return naamScherm(r.namen || []);
+      ls.set('cba-emw:' + W, { id: r.id, naam: r.naam });
+      if (ui.pinVergeten) {
+        if (!VERS_IN) return naarMail('Log in met je e-mail. Daarna kies je een nieuwe pincode.', true);
+        if (!(await rpc('eigenaar_pin_reset', { w: W }))) return naarMail('Log opnieuw in met je e-mail om een nieuwe pincode te kiezen.', true);
+        const lok = ls.get('cba-pin') || {}; delete lok[r.id]; ls.set('cba-pin', lok); ls.del('cba-face:' + W); ui.pinVergeten = false;
+      }
+      if (VERS_IN) IN.keuze = r.id;
     }
-    ls.set('cba-emw:' + W, { id: r.id, naam: r.naam });
-    pinScherm({ id: r.id, naam: r.naam, heeft_pin: r.heeft_pin }, true);
+    await rpc('vergrendel', { w: W }).catch(() => { });
+    IN.namen = await rpc('namen', { w: W }); ls.set('cba-namen:' + W, IN.namen);
+    tekenInlog();
   } catch (e) {
-    if (/niet ingelogd|refresh|Invalid Refresh|401|JWT/i.test(e.message) && navigator.onLine) return naarMail('Je sessie is verlopen. Log opnieuw in met je e-mail.');
-    const em = W && ls.get('cba-emw:' + W); const lok = ls.get('cba-pin') || {};
-    if (em && lok[em.id]) return pinScherm({ id: em.id, naam: em.naam, heeft_pin: true }, true);
-    loginKader('Geen verbinding', '<p>Je hebt internet nodig om in te loggen.</p><div class="form"><button class="btn" id="opn">Opnieuw proberen</button></div>'); $('#opn').onclick = () => ontgrendel(nm);
+    if (/niet ingelogd|refresh|Invalid Refresh|401|JWT/i.test(e.message) && navigator.onLine) return isMail() ? naarMail('Je sessie is verlopen. Log opnieuw in met je e-mail.') : ontkoppeld();
+    if (!cache) { loginKader('Geen verbinding', '<p>Je hebt internet nodig om in te loggen.</p><div class="form"><button class="btn" id="opn">Opnieuw proberen</button></div>'); $('#opn').onclick = () => inlogScherm(); }
   }
 }
 function naamScherm(namen) {
   loginKader('Wie ben jij?', `<p>Eenmalig: kies je naam of vul hem in. Daarna kies je een pincode.</p><div class="form namen">${namen.map(n => `<button class="btn" data-nm="${esc(n)}">${esc(n)}<small>beheerder</small></button>`).join('')}</div><div class="form"><label for="nmI">${namen.length ? 'Of vul je naam in' : 'Jouw naam'}</label><input type="text" id="nmI" placeholder="Bijv. Carlo" autocomplete="given-name"><button class="btn" id="nmB">Verder</button><div class="msg" id="nmM"></div></div>`);
-  document.querySelectorAll('[data-nm]').forEach(b => b.onclick = () => ontgrendel(b.dataset.nm));
-  $('#nmB').onclick = () => { const n = $('#nmI').value.trim(); if (!n) return ($('#nmM').textContent = 'Vul je naam in.'); ontgrendel(n); };
+  const kies = async n => { try { const r = await rpc('eigenaar_mw', { w: W, nm: n }); ls.set('cba-emw:' + W, { id: r.id, naam: r.naam }); IN.keuze = r.id; inlogScherm(); } catch (e) { $('#nmM').textContent = e.message; } };
+  document.querySelectorAll('[data-nm]').forEach(b => b.onclick = () => kies(b.dataset.nm));
+  $('#nmB').onclick = () => { const n = $('#nmI').value.trim(); if (!n) return ($('#nmM').textContent = 'Vul je naam in.'); kies(n); };
+}
+const FACE_SVG = '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M8.5 9v1.5M15.5 9v1.5M12 9v4h-1M9 16.2c1.8 1.3 4.2 1.3 6 0"/></svg>';
+function faceKan() { return !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext !== false); }
+function faceVoor(g) { const f = ls.get('cba-face:' + W); return !!(g && g.eigen && f && f.mid === g.id && faceKan()); }
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = t => { t = t.replace(/-/g, '+').replace(/_/g, '/'); t += '='.repeat((4 - t.length % 4) % 4); return Uint8Array.from(atob(t), c => c.charCodeAt(0)); };
+function tekenInlog() {
+  const lijst = IN.namen || [];
+  if (!IN.keuze || !lijst.some(m => m.id === IN.keuze)) { const l = ls.get('cba-laatste:' + W); IN.keuze = lijst.some(m => m.id === l) ? l : null; }
+  const g = lijst.find(m => m.id === IN.keuze); const nieuw = g && !g.heeft_pin;
+  const label = !g ? '' : nieuw ? (IN.eerste ? 'Herhaal je pincode' : 'Kies je pincode (4 cijfers)') : 'Pincode';
+  const face = faceVoor(g);
+  loginKader('Inloggen', `<div class="form inlog"><label for="iNaam">Naam</label><div class="naamkeuze"><select id="iNaam" aria-label="Kies je naam"><option value="" ${g ? '' : 'selected'} disabled>Kies je naam</option>${lijst.map(m => `<option value="${m.id}" ${m.id === IN.keuze ? 'selected' : ''}>${esc(m.naam)}</option>`).join('')}</select>${g && g.rol === 'beheerder' ? '<span class="rol">Beheerder</span>' : ''}<span class="pijlneer">▾</span></div>
+  ${g ? `<label>${label}</label><div class="pinbolletjes" id="iDots">${[0, 1, 2, 3].map(i => `<i class="${i < IN.pin.length ? 'vol' : ''}"></i>`).join('')}</div><div class="msg" id="iM">${esc(IN.msg)}</div>
+  <div class="cijferblok">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-cijfer="${n}">${n}</button>`).join('')}${face ? `<button class="wis" id="iFace" aria-label="Inloggen met Face ID">${FACE_SVG}</button>` : '<span></span>'}<button data-cijfer="0">0</button><button class="wis" id="iWis" aria-label="Wissen">⌫</button></div>
+  <p class="merkhint">${face ? 'Tik linksonder voor Face ID, of vul je pincode in' : nieuw && g.mail && !g.eigen ? 'Deze pincode stel je eenmalig in op je eigen telefoon.' : 'Na het 4e cijfer log je automatisch in'}</p>
+  ${g.eigen ? '<button class="merklink" id="iVerg">Pincode vergeten</button>' : ''}` : `<div class="msg">${esc(IN.msg)}</div><p class="merkhint">${lijst.length ? 'Kies eerst je naam.' : 'Er zijn nog geen medewerkers. De beheerder voegt ze toe via Meer → Medewerkers.'}</p>`}
+  ${winkels.length > 1 ? '<button class="merklink" id="iWinkel">Andere winkel</button>' : ''}</div>`, true);
+  $('#iNaam').onchange = e => { IN.keuze = e.target.value; IN.pin = ''; IN.eerste = null; IN.msg = ''; tekenInlog(); if (faceVoor(lijst.find(m => m.id === IN.keuze))) faceLogin(); };
+  const wk = $('#iWinkel'); if (wk) wk.onclick = () => { W = null; ls.del('cba-w'); kiesWinkel(); };
+  if (!g) return;
+  const dots = () => { const d = $('#iDots'); if (d) d.querySelectorAll('i').forEach((x, i) => x.classList.toggle('vol', i < IN.pin.length)); };
+  document.querySelectorAll('[data-cijfer]').forEach(b => b.onclick = () => { if (IN.pin.length >= 4) return; IN.pin += b.dataset.cijfer; dots(); if (IN.pin.length === 4) setTimeout(() => probeerPin(g), 120); });
+  $('#iWis').onclick = () => { IN.pin = IN.pin.slice(0, -1); dots(); };
+  const fb = $('#iFace'); if (fb) fb.onclick = () => faceLogin();
+  const vg = $('#iVerg'); if (vg) vg.onclick = () => DEMO ? toast('In de echte app log je dan opnieuw in met je e-mail') : naarMail('Log in met je e-mail. Daarna kies je een nieuwe pincode.', true);
+}
+function pinFout(t) { IN.pin = ''; IN.msg = t; tekenInlog(); const d = $('#iDots'); if (d) d.classList.add('fout'); }
+async function probeerPin(g) {
+  const p = IN.pin;
+  if (!g.heeft_pin && !IN.eerste) { IN.eerste = p; IN.pin = ''; IN.msg = ''; return tekenInlog(); }
+  if (!g.heeft_pin && IN.eerste !== p) { IN.eerste = null; return pinFout('De twee pincodes zijn niet gelijk. Kies opnieuw.'); }
+  if (Date.now() < IN.blokTot) return pinFout(`Te vaak fout. Probeer het over ${Math.ceil((IN.blokTot - Date.now()) / 1000)} seconden opnieuw.`);
+  IN.msg = 'Bezig…'; const m = $('#iM'); if (m) m.textContent = IN.msg;
+  let ok = false;
+  if (DEMO) ok = !g.heeft_pin || p === '1234';
+  else {
+    const lok = ls.get('cba-pin') || {}; let r = null;
+    try { r = await rpc('pin_login', { w: W, mid: g.id, pin: p }); }
+    catch (e) { if (!lok[g.id]) return pinFout('Geen internet. Probeer het opnieuw zodra je verbinding hebt.'); }
+    if (r) {
+      ok = !!r.ok;
+      if (r.wacht) { IN.blokTot = Date.now() + r.wacht * 1000; return pinFout(`5 keer fout. Wacht ${r.wacht} seconden.`); }
+      if (r.mail) { IN.eerste = null; return pinFout('Deze pincode stel je eenmalig in op je eigen telefoon (inloggen met e-mail).'); }
+      if (!ok) { IN.eerste = null; return pinFout(r.fout ? `Pincode klopt niet (${r.fout} van 5).` : 'Pincode klopt niet.'); }
+    } else {
+      ok = lok[g.id] === await pinHash(g.id, p);
+      if (!ok) { const f = (ls.get('cba-pinfout') || 0) + 1; if (f >= 5) { ls.set('cba-pinfout', 0); IN.blokTot = Date.now() + 30000; return pinFout('5 keer fout. Wacht 30 seconden.'); } ls.set('cba-pinfout', f); return pinFout(`Pincode klopt niet (${f} van 5).`); }
+    }
+  }
+  if (!ok) return pinFout('Pincode klopt niet.');
+  const lok = ls.get('cba-pin') || {}; lok[g.id] = await pinHash(g.id, p); ls.set('cba-pin', lok); ls.set('cba-pinfout', 0);
+  g.heeft_pin = true; ingelogd(g);
+}
+async function faceLogin() {
+  const g = (IN.namen || []).find(m => m.id === IN.keuze); if (!faceVoor(g)) return;
+  const f = ls.get('cba-face:' + W);
+  try {
+    await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ type: 'public-key', id: unb64u(f.cred) }], userVerification: 'required', timeout: 60000 } });
+    const r = await rpc('face_login', { w: W, geheim: f.geheim });
+    if (!r || !r.ok) { ls.del('cba-face:' + W); return pinFout('Face ID is uitgezet. Gebruik je pincode.'); }
+    ingelogd(g);
+  } catch (e) { pinFout(e && e.name === 'NotAllowedError' ? 'Face ID geannuleerd. Gebruik je pincode.' : 'Face ID lukte niet. Gebruik je pincode.'); }
+}
+function ingelogd(g) {
+  ls.set('cba-laatste:' + W, g.id); IN.msg = ''; IN.eerste = null; IN.pin = '';
+  mw = { id: g.id, naam: g.naam }; ls.set('cba-mw', mw); OPEN = true; VERS_IN = false;
+  eigenaar = berekenEigenaar(); rol = eigenaar ? 'admin' : 'winkel';
+  if (!DEMO) return start();
+  S.pref = Object.assign({}, (ls.get('cba-pref-' + wieSleutel()) || {})); pasPrefToe();
+  shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig();
+}
+async function faceInstellen() {
+  if (DEMO) return toast('Face ID werkt alleen in de echte app');
+  const f = ls.get('cba-face:' + W);
+  if (f) { try { await rpc('face_uit', { w: W }); } catch (e) { } ls.del('cba-face:' + W); toast('Face ID staat uit'); return render(); }
+  if (!faceKan()) return toast('Face ID wordt op dit toestel niet ondersteund');
+  try {
+    const c = await navigator.credentials.create({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: 'Besteladvies' }, user: { id: new TextEncoder().encode(mw.id), name: mw.naam, displayName: mw.naam }, pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }], authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' }, timeout: 60000 } });
+    const geheim = [...crypto.getRandomValues(new Uint8Array(32))].map(x => x.toString(16).padStart(2, '0')).join('');
+    if (!(await rpc('face_aan', { w: W, geheim }))) throw new Error('Niet gelukt');
+    ls.set('cba-face:' + W, { cred: b64u(c.rawId), geheim, mid: mw.id }); toast('Face ID staat aan'); render();
+  } catch (e) { toast(e && e.name === 'NotAllowedError' ? 'Face ID geannuleerd' : 'Face ID aanzetten lukte niet'); }
 }
 document.addEventListener('click', e => { if (e.target && e.target.matches && e.target.matches('input[type=file]')) kiestBestand = true; }, true);
 document.addEventListener('change', e => { if (e.target && e.target.matches && e.target.matches('input[type=file]')) kiestBestand = false; }, true);
@@ -1083,31 +1149,28 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) { verborgen = Date.now(); return; }
   const lang = verborgen && Date.now() - verborgen > 15000; verborgen = 0;
   if (kiestBestand) { kiestBestand = false; return; }
-  if (lang && OPEN && isMail() && !OEFEN) vergrendelNu();
+  if (lang && OPEN && !OEFEN) inlogScherm();
 });
 function startDemo(r) {
   const d = window.DEMO_DATA;
   Object.assign(S, { dagen: d.dagen, kassa: d.kassa, boeken: d.boeken, acties: d.acties, agenda: d.agenda, inst: d.inst, medewerkers: DEMO_MW, winkel: { code: 'K7MX4PQ2', tot: C.add(C.today(), 30) + 'T12:00:00Z', toestellen: 2, naam: 'Coop Vogelenzang', plaats: 'Vogelenzang' }, assort: d.assort || {}, notities: {}, act: [] });
   S.dagMeta = {}; Object.keys(d.dagen).forEach(k => S.dagMeta[k] = 'demo');
   W = 'demo'; WINKEL = { id: 'demo', naam: 'Coop Vogelenzang', plaats: 'Vogelenzang', rol: r === 'admin' ? 'beheer' : 'toestel' }; winkels = [WINKEL];
-  eigenaar = r === 'admin'; rol = eigenaar ? 'admin' : 'winkel';
-  sess = { email: eigenaar ? 'carlo@coopvogelenzang.nl' : '', kind: eigenaar ? 'email' : 'anon' };
-  rebuild();
-  mw = null; OPEN = false;
-  if (!eigenaar) { kiesMedewerker(); return; }
-  pinScherm(DEMO_MW[0], true);
+  sess = { email: r === 'admin' ? 'carlo@coopvogelenzang.nl' : '', kind: r === 'admin' ? 'email' : 'anon' };
+  rebuild(); IN.keuze = r === 'admin' ? 'd1' : null; inlogScherm();
 }
 async function start() {
-  if (isMail() && !OPEN) return ontgrendel();
+  if (!OPEN) return inlogScherm();
   shell();
   const had = await loadCache();
+  eigenaar = berekenEigenaar(); rol = eigenaar ? 'admin' : 'winkel';
   S.pref = ls.get('cba-pref-' + wieSleutel()) || S.pref || {}; pasPrefToe();
-  if (had) { rebuild(); if (!eigenaar && !geldigeMw()) kiesMedewerker(); else { ui.tab = startTab(); render(); } }
+  if (had) { rebuild(); ui.tab = startTab(); render(); }
   else $('#view').innerHTML = '<div class="empty">Gegevens laden…</div>';
   await sync(!had);
   if (document.body.classList.contains('inlog')) return;
   if (!M) { rebuild(); render(); }
-  if (eigenaar || geldigeMw()) tourAlsNodig();
+  tourAlsNodig();
 }
 function startTab() { const s = (S.pref && S.pref.start) || 'home'; return s === 'home' || (BESTEL_OD.includes(s) && mag('o_' + s)) || (s === 'overig' && mag('o_overig')) ? s : 'home'; }
 function shell() {
@@ -1115,7 +1178,7 @@ function shell() {
   if (!$('#view')) $('#app').innerHTML = '<div id="view"></div>';
   document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => ga(b.dataset.t));
   $('#hulpB').onclick = hulp; $('#terugB').onclick = () => ga(MEER_SUB.includes(ui.tab) ? (ui.tab === 'mwedit' ? 'medewerkers' : 'meer') : 'home');
-  $('#wieB').onclick = () => { if (OEFEN) return toast('Stop eerst met oefenen'); if (isMail()) return vergrendelNu(); mw = null; ls.del('cba-mw'); kiesMedewerker(); };
+  $('#wieB').onclick = () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); };
   $('.koplogo').src = logoSrc(); setSync(); oefenBalk();
 }
 const MEER_SUB = ['medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer'];
@@ -1310,7 +1373,7 @@ function renderMeer() {
   v.innerHTML = `<div class="blk lijstblok">
   ${knop('mApp', 'App-instellingen', 'Licht of donker, tekstgrootte, eenvoudige modus')}
   ${knop('mMeld', 'Meldingen', 'Pushmeldingen aan of uit zetten')}
-  ${mw ? knop('mPin', 'Pincode wijzigen', '') + (isMail() ? knop('mWis', 'Vergrendelen', 'Daarna weer inloggen met je pincode') : knop('mWis', 'Andere medewerker', `Nu: ${esc(mijnNaam())}`)) : ''}
+  ${mw ? knop('mPin', 'Pincode wijzigen', '') + (eigenaar && isMail() ? knop('mFace', 'Face ID', ls.get('cba-face:' + W) ? 'Staat aan op dit toestel' : 'Inloggen met je gezicht in plaats van pincode') : '') + knop('mWis', 'Wisselen of vergrendelen', `Nu: ${esc(mijnNaam())}`) : ''}
   </div><div class="blk lijstblok">
   ${mag('team') ? knop('mVan', 'Vandaag gedaan', 'Wie heeft wat gedaan') : ''}
   ${mag('upload') || mag('bestellen') ? knop('mExp', 'Exporteren', 'Bestellijst, verkoop of acties naar Excel') : ''}
@@ -1322,12 +1385,12 @@ function renderMeer() {
   ${knop('mTour', 'Rondleiding', 'De uitleg van het begin nog eens zien')}
   ${knop('mUpd', 'Controleren op updates', `Je hebt versie ${VERSIE}`)}
   ${knop('mSync', 'Gegevens opnieuw laden', '')}
-  ${knop('mUit', DEMO ? 'Terug naar startscherm' : sess && sess.kind === 'anon' ? 'Toestel ontkoppelen' : 'Uitloggen', DEMO ? '' : sess && sess.kind === 'anon' ? 'Daarna is de koppelcode weer nodig' : esc(sess && sess.email))}
+  ${isMail() && !eigenaar && !DEMO ? '' : knop('mUit', DEMO ? 'Terug naar startscherm' : sess && sess.kind === 'anon' ? 'Toestel ontkoppelen' : 'Uitloggen', DEMO ? '' : sess && sess.kind === 'anon' ? 'Daarna is de koppelcode weer nodig' : esc(sess && sess.email))}
   </div><p class="small" style="text-align:center">Coop Besteladvies · versie ${VERSIE}</p>`;
   const on = (id, f) => { const b = $('#' + id); if (b) b.onclick = f; };
   on('mApp', () => ga('appinst')); on('mMeld', () => ga('meldingen')); on('mVan', () => ga('vandaag')); on('mExp', () => ga('export')); on('mMw', () => ga('medewerkers')); on('mWi', () => ga('winkel')); on('mBe', () => ga('beheer'));
   on('mWw', () => { if (OEFEN) return toast('Stop eerst met oefenen'); kiesWinkel(); });
-  on('mPin', pinWijzigen); on('mWis', () => { if (OEFEN) return toast('Stop eerst met oefenen'); if (isMail()) return vergrendelNu(); mw = null; ls.del('cba-mw'); kiesMedewerker(); });
+  on('mPin', pinWijzigen); on('mFace', faceInstellen); on('mWis', () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); });
   on('mOef', () => OEFEN ? stopOefenen() : startOefenen());
   on('mUpd', () => zoekUpdate(false)); on('mTour', () => tour()); on('mSync', () => { if (DEMO || OEFEN) toast(OEFEN ? 'Niet tijdens oefenen' : 'Testversie: geen server'); else sync(true); });
   on('mUit', () => { if (DEMO) showLogin(); else logout(); });
