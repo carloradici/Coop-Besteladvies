@@ -373,6 +373,28 @@ body.vast{position:fixed;inset:0;width:100%;overflow:hidden;overscroll-behavior:
 .tafel .vak.vast b{font-size:12px;color:var(--tekst)}
 .tafel.kies .vak.vastaan{background:repeating-linear-gradient(45deg,#9e9e9e 0 6px,#cfcfcf 6px 12px);color:#222;opacity:1}
 @media print{#printArea .tafel .vak.vast{background:repeating-linear-gradient(45deg,#bbb 0 5px,#fff 5px 10px)!important;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+/* 1.11 eenvoudiger */
+.lijstkop{display:flex;flex-direction:column;gap:8px}
+.bdkop{display:flex;align-items:center;gap:8px;background:var(--kaart);border:1px solid var(--lijn);border-radius:14px;padding:6px}
+.bdpijl{width:44px;height:44px;border-radius:10px;border:0;background:var(--oranje-licht,rgba(241,125,4,.12));color:var(--oranje);font-size:26px;font-weight:800;flex:none}
+.bdpijl:disabled{opacity:.25}
+.bdmid{flex:1;text-align:center;display:flex;flex-direction:column}.bdmid b{font-size:17px}.bdmid span{font-size:13px;color:var(--grijs)}
+.vgbalk{height:10px;background:var(--lijn);border-radius:5px;overflow:hidden}.vgbalk div{height:100%;background:var(--oranje);border-radius:5px}
+.vgtxt{font-size:14px;color:var(--grijs)}.vgtxt b{color:var(--tekst)}
+.zoekrij{gap:8px}.zoekrij input{flex:1}
+.segment.modus{display:flex;margin:0}.segment.modus button{flex:1;padding:9px 2px;font-size:14px}
+.meeropties{align-self:flex-start;font-weight:700}
+.leegblok{border:2px dashed var(--oranje)}
+.weer.klein{font-size:13px;padding:0;margin:0;background:none;border:0;display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--grijs)}
+.weer.klein b{width:100%;color:var(--tekst)}
+.meerknop{display:block;width:100%;border:0;background:none;color:var(--oranje);font-weight:700;font-size:14px;padding:10px 0 2px;text-align:left}
+.card .kaartmeer{display:none}
+.card.open .kaartmeer,body.detailsaan .card .kaartmeer{display:block}
+body.detailsaan .card .meerknop{display:none}
+.ovklein{max-width:640px;margin:10px auto 0;padding:0 16px;text-align:right}
+.telbol{display:inline-block;min-width:20px;padding:1px 6px;border-radius:10px;background:#e30613;color:#fff;font-size:12px;text-align:center}
+.grp .grpbtn{border-color:rgba(255,255,255,.9);color:#fff;background:rgba(255,255,255,.18);margin-left:4px;font-size:12px;padding:3px 9px}
+.grp small{white-space:normal;text-align:right}
 </style>
 </head>
 <body>
@@ -905,7 +927,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.10';
+const VERSIE = '1.11';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -1357,12 +1379,12 @@ function shell() {
   document.body.classList.remove('inlog', 'vast'); $('#kop').classList.remove('hide'); $('nav.tabs').classList.remove('hide');
   if (!$('#view')) $('#app').innerHTML = '<div id="view"></div>';
   document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => ga(b.dataset.t));
- $('#belB').onclick = belSheet; $('#terugB').onclick = () => { if (ui.tab === 'tafels' && ui.tafel) { ui.tafel = null; return render(); } ga(MEER_SUB.includes(ui.tab) ? (ui.tab === 'mwedit' ? 'medewerkers' : 'meer') : 'home'); };
+ $('#belB').onclick = belSheet; $('#terugB').onclick = () => { if (ui.tab === 'tafels' && ui.tafel) { ui.tafel = null; return render(); } if (ui.tab === 'beheer' && ui.bsub) { ui.bsub = null; return render(); } ga(MEER_SUB.includes(ui.tab) ? (ui.tab === 'mwedit' ? 'medewerkers' : 'meer') : 'home'); };
   $('#wieB').onclick = () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); };
   $('.koplogo').src = logoSrc(); setSync(); oefenBalk();
 }
 const MEER_SUB = ['medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer', 'uitleg', 'hoegoed', 'leverancier', 'levering', 'acties'];
-function ga(tab) { const u = $('#undoBalk'); if (u) u.remove(); ui.tab = tab; ui.q = ''; ui.groep = ''; render(); window.scrollTo(0, 0); }
+function ga(tab) { const u = $('#undoBalk'); if (u) u.remove(); if (tab === 'beheer' && ui.tab !== 'beheer') ui.bsub = null; ui.tab = tab; ui.q = ''; ui.groep = ''; render(); window.scrollTo(0, 0); }
 async function logout() {
   if (!ask(sess && sess.kind === 'anon' ? 'Dit toestel ontkoppelen? Daarna is de koppelcode weer nodig.' : 'Uitloggen op dit apparaat?')) return;
   sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); OPEN = false; outbox = []; await iset('outbox', []); showLogin();
@@ -1375,6 +1397,7 @@ function render(soft) {
   if (ui.tab in kan && !kan[ui.tab]) ui.tab = 'home';
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === (ui.tab === 'home' ? 'home' : ui.tab === 'meer' || MEER_SUB.includes(ui.tab) ? 'meer' : '')));
   const v = $('#view'); if (!v) return;
+  v.onclick = null; v.onchange = null;
   kop(); oefenBalk();
   if (ui.tab === 'home') renderHome();
   else if (BESTEL_OD.includes(ui.tab)) renderLijst(ui.tab, soft);
@@ -1401,12 +1424,12 @@ function kop() {
   const bron = ui.tab === 'kw' ? 'kw' : 'vers'; const b = S.boeken[bron];
   const d = new Date(); const datum = `${C.DAGNAAM[C.wd(C.today())]} ${d.getDate()} ${['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'][d.getMonth()]}`;
   const boekTxt = ui.tab === 'kw' ? (b ? `Bestelboek Van Tol${b.datum ? ' · ' + C.fmtDag(b.datum) : ''}` : 'Bestelboek Van Tol') : (b ? `Bestelboek Versunie · week ${b.week || '?'}` : 'Bestelboek Versunie');
-  const t = { home: [mijnNaam(), datum + (winkels.length > 1 && WINKEL ? ' · ' + WINKEL.naam : '')], agf: ['AGF', boekTxt], vers: ['Vers', boekTxt], brood: ['Brood', boekTxt], diep: ['Diepvries', boekTxt], kw: ['KW', boekTxt], overig: ['Overig', 'Andere leveranciers en in/out. Alleen verwachte verkoop.'], assort: ['Assortiment', 'Nieuw, uit, gesaneerd en opgenomen'], beheer: ['Beheer', 'Bestanden uploaden en instellingen'], meer: ['Meer', `${mijnNaam()} · ${isBeheer() ? 'beheerder' : 'medewerker'}`], medewerkers: ['Medewerkers', 'Namen, pincodes en rechten'], mwedit: ['Rechten', ''], winkel: ['Winkel', (WINKEL && WINKEL.naam) || ''], meldingen: ['Meldingen', 'Pushmeldingen op dit toestel'], appinst: ['App-instellingen', 'Alleen voor jou'], vandaag: ['Vandaag gedaan', 'Wie heeft wat gedaan'], export: ['Exporteren', 'Naar Excel'], uitleg: ['Uitleg', 'Hoe de app werkt'], hoegoed: ['Hoe goed was het advies', 'Advies, besteld en verkocht per week'], leverancier: ['Per leverancier', 'Wat er besteld moet worden'], levering: ['Leverdag-check', 'Afvinken bij het uitpakken'], acties: ['Actieweek voorbereiden', 'Acties en advies'], tafels: ['Actietafels', ui.tafel && S.tafels[ui.tafel] ? 'Week ' + +tafelWeek().split('-')[1] : 'Wat moet waar'] }[ui.tab] || ['', ''];
+  const t = { home: [mijnNaam(), datum + (winkels.length > 1 && WINKEL ? ' · ' + WINKEL.naam : '')], agf: ['AGF', boekTxt], vers: ['Vers', boekTxt], brood: ['Brood', boekTxt], diep: ['Diepvries', boekTxt], kw: ['KW', boekTxt], overig: ['Overig', 'Andere leveranciers en in/out. Alleen verwachte verkoop.'], assort: ['Assortiment', 'Nieuw, uit, gesaneerd en opgenomen'], beheer: ['Beheer', ui.bsub ? (BEHEER_SEC.find(x => x[0] === ui.bsub) || [])[2] || '' : 'Kies wat je wilt doen'], meer: ['Meer', `${mijnNaam()} · ${isBeheer() ? 'beheerder' : 'medewerker'}`], medewerkers: ['Medewerkers', 'Namen, pincodes en rechten'], mwedit: ['Rechten', ''], winkel: ['Winkel', (WINKEL && WINKEL.naam) || ''], meldingen: ['Meldingen', 'Pushmeldingen op dit toestel'], appinst: ['App-instellingen', 'Alleen voor jou'], vandaag: ['Vandaag gedaan', 'Wie heeft wat gedaan'], export: ['Exporteren', 'Naar Excel'], uitleg: ['Uitleg', 'Hoe de app werkt'], hoegoed: ['Hoe goed was het advies', 'Advies, besteld en verkocht per week'], leverancier: ['Per leverancier', 'Wat er besteld moet worden'], levering: ['Leverdag-check', 'Afvinken bij het uitpakken'], acties: ['Actieweek voorbereiden', 'Acties en advies'], tafels: ['Actietafels', ui.tafel && S.tafels[ui.tafel] ? 'Week ' + +tafelWeek().split('-')[1] : 'Wat moet waar'] }[ui.tab] || ['', ''];
   if (ui.tab === 'mwedit') { const m = mwLijst().find(x => x.id === ui.mwId); t[1] = m ? m.naam : ''; }
   $('#kopG').textContent = ui.tab === 'home' ? groet() : ''; $('#kopG').classList.toggle('hide', ui.tab !== 'home');
   $('#terugB').classList.toggle('hide', ui.tab === 'home' || ui.tab === 'meer');
   belTel();
-  $('#terugB').textContent = ui.tab === 'mwedit' ? '‹ Medewerkers' : ui.tab === 'tafels' && ui.tafel ? '‹ Alle tafels' : MEER_SUB.includes(ui.tab) ? '‹ Meer' : '‹ Home';
+  $('#terugB').textContent = ui.tab === 'mwedit' ? '‹ Medewerkers' : ui.tab === 'tafels' && ui.tafel ? '‹ Alle tafels' : ui.tab === 'beheer' && ui.bsub ? '‹ Beheer' : MEER_SUB.includes(ui.tab) ? '‹ Meer' : '‹ Home';
   $('#kopT').textContent = t[0]; $('#kopS').textContent = t[1];
   const wb = $('#wieB'); wb.classList.toggle('hide', !mw); if (mw) wb.textContent = `👤 ${mw.naam} ⇄`;
   $('.koplogo').src = logoSrc();
@@ -1424,16 +1447,17 @@ function bestelStatus(od) {
   return { titel: dag, sub: `${st.advies} met advies · ${st.open ? `nog ${st.open} te gaan` : 'alles besteld'}`, actief: cur.besteldag === C.today() && st.open > 0 };
 }
 function voortgang(od, bd) {
-  let advies = 0, open = 0;
+  let advies = 0, open = 0, nodigN = 0;
   for (const a of lijstArtikelen(od)) {
     if (a.uit || assStatus(a) !== 'in') continue;
     const be = S.bestel[a.key + '|' + bd.besteldag];
     const ad = C.advies(M, a.key, bd, S.voorraad[a.key], bestellingenVan(a.key));
     if (ad.adv) advies++;
     const nodig = be && be.aantal !== null && be.aantal !== undefined ? be.aantal > 0 : ad.adv > 0;
+    if (nodig) nodigN++;
     if (nodig && !(be && be.besteld)) open++;
   }
-  return { advies, open };
+  return { advies, open, nodig: nodigN };
 }
 function homeIndeling() { const l = ls.get('cba-home'); const alle = TEGELS.map(t => t[0]); if (!l) return alle.map(k => ({ k, aan: true })); const out = l.filter(x => alle.includes(x.k)); alle.forEach(k => { if (!out.some(x => x.k === k)) out.push({ k, aan: true }); }); return out; }
 function tegelZichtbaar(k) { return k === 'assort' || k === 'tafels' || (k === 'beheer' ? mag('upload') || mag('instellingen') : mag('o_' + k)); }
@@ -1658,7 +1682,7 @@ function pasPrefToe() {
   const p = S.pref || {}; const r = document.documentElement;
   if (p.thema === 'licht') r.dataset.theme = 'light'; else if (p.thema === 'donker') r.dataset.theme = 'dark'; else delete r.dataset.theme;
   r.classList.toggle('tekst-groot', p.tekst === 'groot'); r.classList.toggle('tekst-xl', p.tekst === 'xl');
-  document.body.classList.toggle('compact', !!p.compact); document.body.classList.toggle('eenvoudig', !!p.eenvoudig);
+  document.body.classList.toggle('compact', !!p.compact); document.body.classList.toggle('eenvoudig', !!p.eenvoudig); document.body.classList.toggle('detailsaan', !!p.details);
 }
 function zetPref(k, val) { S.pref = Object.assign({}, S.pref || {}, { [k]: val }); ls.set('cba-pref-' + wieSleutel(), S.pref); pasPrefToe(); write('voorkeuren', [{ wie: wieSleutel(), data: S.pref }]); render(); }
 function renderAppInst() {
@@ -1668,6 +1692,7 @@ function renderAppInst() {
   v.innerHTML = `<div class="blk"><h2>Weergave</h2><label class="small">Licht of donker</label>${seg('thema', [['auto', 'Automatisch'], ['licht', 'Licht'], ['donker', 'Donker']])}
   <label class="small">Tekstgrootte</label>${seg('tekst', [['normaal', 'Normaal'], ['groot', 'Groot'], ['xl', 'Extra groot']])}
   <div class="list"><div class="it"><span><b>Compacte lijst</b><br><span class="small">Alleen vorige week en het gemiddelde per dag</span></span><input type="checkbox" class="schak" data-pb="compact" ${p.compact ? 'checked' : ''}></div>
+  <div class="it"><span><b>Verkooptabel altijd tonen</b><br><span class="small">Anders zie je die pas na een tik op "▾ Meer" bij een artikel</span></span><input type="checkbox" class="schak" data-pb="details" ${p.details ? 'checked' : ''}></div>
   <div class="it"><span><b>Eenvoudige modus</b><br><span class="small">Minder informatie en grotere knoppen</span></span><input type="checkbox" class="schak" data-pb="eenvoudig" ${p.eenvoudig ? 'checked' : ''}></div></div></div>
   <div class="blk"><h2>Startpagina</h2><select id="pStart" style="width:100%">${starts.map(s => `<option value="${s[0]}" ${(p.start || 'home') === s[0] ? 'selected' : ''}>${s[1]}</option>`).join('')}</select><p class="small">Deze instellingen gelden alleen voor jou (${esc(mijnNaam())}) en werken op elk toestel waar je inlogt.</p></div>`;
   v.querySelectorAll('[data-pk]').forEach(b => b.onclick = () => zetPref(b.dataset.pk, b.dataset.pv));
@@ -1753,7 +1778,7 @@ async function toonWeer(od, lv) {
     const data = await weer(); const dagen = C.dekking(M, '', lv).filter(d => data[d]); if (!dagen.length || !$('#weer')) return;
     const max = Math.max(...dagen.map(d => data[d].t)), regen = dagen.reduce((s, d) => s + data[d].r, 0);
     let hint = ''; if (max >= 25) hint = `${max >= 30 ? 'Heet' : 'Warm'}: ${HINT[od][0]}.`; else if (regen >= 8) hint = `Veel ${HINT[od][1]}.`;
-    el.innerHTML = `<div class="weer">${dagen.map(d => `<span>${C.DAGEN[C.wd(d)]} ${WEER_IC(data[d].c)} ${Math.round(data[d].t)}°</span>`).join('')}${hint ? `<b>${hint}</b>` : ''}</div>`;
+    el.innerHTML = `<div class="weer klein">${dagen.map(d => `<span>${C.DAGEN[C.wd(d)]} ${WEER_IC(data[d].c)} ${Math.round(data[d].t)}°</span>`).join('')}${hint ? `<b>${hint}</b>` : ''}</div>`;
   } catch (e) { }
 }
 
@@ -1899,6 +1924,24 @@ function zichtbaar(a, bd) {
 }
 function bestellingenVan(key) { const out = []; for (const k in S.bestel) if (k.startsWith(key + '|')) out.push(S.bestel[k]); return out; }
 
+function lijstMenu(od, cur, arts, bdSleutel) {
+  const st = cur ? voortgang(od, cur) : null; const opties = [];
+  if (cur && mag('bestellen') && st && st.advies) opties.push(['allesAdv', '✨', 'Alles volgens advies invullen', 'Bij alles zonder eigen bestelling']);
+  if (mag('tellen')) opties.push(['telB', '🔢', 'Tellen', 'Eén artikel tegelijk, groot in beeld']);
+  opties.push(['prt', '🖨️', 'Printen', 'Bestellijst met barcodes']);
+  if (cur) opties.push(['bdNot', '📝', S.notities[bdSleutel] ? 'Notitie bij deze besteldag wijzigen' : 'Notitie bij deze besteldag', '']);
+  if (mag('saneren')) opties.push(['eigAdd', '➕', 'Artikel toevoegen', 'Een artikel dat niet in het bestelboek staat']);
+  opties.push(['heleBoek', ui.fAlles ? '✅' : '📚', ui.fAlles ? 'Hele boek tonen: aan' : 'Hele boek tonen', 'Ook artikelen buiten jullie assortiment']);
+  const ov = sheet(`<h2 style="margin:0 0 4px">Meer opties</h2>${opties.map(o => `<button class="belrij" data-lm="${o[0]}"><span class="ic">${o[1]}</span><span><b>${o[2]}</b>${o[3] ? `<small>${o[3]}</small>` : ''}</span><span class="pijl">›</span></button>`).join('')}<button class="btn sec" data-x style="margin-top:10px">Sluiten</button>`, (e, o) => {
+    const b = e.target.closest('[data-lm]'); if (!b) return; o.remove(); const k = b.dataset.lm;
+    if (k === 'allesAdv') allesVolgensAdvies(od, cur);
+    if (k === 'telB') telModus(od, arts.filter(a => !a.uit && assStatus(a) === 'in'));
+    if (k === 'prt') printOpties(od, lijstArtikelen(od));
+    if (k === 'bdNot') notitieBewerk(bdSleutel, `${odNaam(od)} – bestellen ${C.fmtDag(cur.besteldag)}`);
+    if (k === 'eigAdd') eigenBewerk(null, od);
+    if (k === 'heleBoek') { ui.fAlles = !ui.fAlles; saveUi(); render(); }
+  });
+}
 let lazy = null;
 function renderLijst(od, soft) {
   const v = $('#view'); const bron = bronVan(od);
@@ -1908,36 +1951,36 @@ function renderLijst(od, soft) {
   const alleArts = lijstArtikelen(od);
   const groepen = [...new Set(alleArts.filter(a => ui.fAlles || assStatus(a) === 'in').map(groepVan))];
   const bdSleutel = cur ? `b:${od}:${cur.besteldag}` : '';
-  let html = `<div class="bar"><div class="chips">${lijst.map(l => `<button class="chip ${l === cur ? 'on' : ''}" data-bd="${l.besteldag}"><b>Bestellen ${C.fmtDag(l.besteldag)}</b><span>levering ${C.fmtDag(l.L)} · t/m ${C.DAGEN[C.wd(C.add(l.L2, -1))]}</span></button>`).join('')}</div>
-  ${cur ? (() => { const st = voortgang(od, cur); return `<div class="voortgang"><span>${st.advies} met advies</span><b>${st.open ? `nog ${st.open} te gaan` : '✓ alles besteld'}</b></div>`; })() : ''}
-  ${cur && mag('bestellen') ? '<button class="btn sm sec" id="allesAdv" style="width:100%;margin-top:6px">✨ Alles volgens advies invullen</button>' : ''}
+  if (!ui.modus) ui.modus = ui.fOpen ? 'todo' : ui.fAdv ? 'advies' : ui.fActie ? 'acties' : 'alles';
+  const zetModus = m => { ui.modus = m; ui.fOpen = m === 'todo'; ui.fAdv = m === 'advies'; ui.fActie = m === 'acties'; ui.groep = ''; saveUi(); };
+  zetModus(ui.modus);
+  const ci = cur ? lijst.indexOf(cur) : -1;
+  const st = cur ? voortgang(od, cur) : null; const klaar = st ? st.nodig - st.open : 0;
+  const leeg = !boek || !M.dagLijst.length;
+  let html = `<div class="bar lijstkop">
+  ${cur ? `<div class="bdkop"><button class="bdpijl" id="bdV" ${ci > 0 ? '' : 'disabled'} aria-label="Vorige besteldag">‹</button><div class="bdmid"><b>Bestellen ${C.DAGNAAM[C.wd(cur.besteldag)]} ${C.fmtDag(cur.besteldag).split(' ')[1]}</b><span>levering ${C.fmtDag(cur.L)} t/m ${C.DAGEN[C.wd(C.add(cur.L2, -1))]}</span></div><button class="bdpijl" id="bdN" ${ci < lijst.length - 1 ? '' : 'disabled'} aria-label="Volgende besteldag">›</button></div>` : '<div class="bdkop"><div class="bdmid"><b>Geen besteldag</b><span>Stel de besteldagen in onder Beheer</span></div></div>'}
+  ${cur && !leeg ? (st.nodig ? `<div class="vgbalk"><div style="width:${Math.round(klaar / st.nodig * 100)}%"></div></div><div class="vgtxt">${st.open ? `<b>${klaar} van ${st.nodig} besteld</b> · nog ${st.open} te gaan` : `<b>✓ Alles besteld</b> · ${st.nodig} artikelen`}</div>` : '<div class="vgtxt">Voor deze besteldag is er geen advies.</div>') : ''}
   <div id="weer"></div>
-  ${cur ? notitieHtml(bdSleutel) + `<button class="link" id="bdNot">📝 ${S.notities[bdSleutel] ? 'Notitie bij deze besteldag wijzigen' : 'Notitie bij deze besteldag'}</button>` : ''}
-  <div class="row"><input type="search" id="q" placeholder="Zoek naam of nummer" value="${esc(ui.q)}"><select id="grp"><option value="">Alle groepen</option>${groepen.map(g => `<option ${g === ui.groep ? 'selected' : ''}>${esc(g)}</option>`).join('')}</select></div>
-  <div class="row filters"><button class="tog ${ui.fOpen ? 'on' : ''}" id="fOpen">Nog niet besteld</button><button class="tog ${ui.fAdv ? 'on' : ''}" id="fAdv">Alleen advies</button><button class="tog ${ui.fActie ? 'on' : ''}" id="fActie">Acties</button><button class="tog ${ui.fAlles ? 'on' : ''}" id="fAlles">Hele boek</button><button class="tog" id="scanB">📷 Scannen</button>${mag('tellen') ? '<button class="tog" id="telB">Tellen</button>' : ''}<button class="tog" id="prt">Printen</button></div></div>`;
-  if (!boek) html += `<div class="banner warn"><h3>Nog geen bestelboek ${bron === 'vers' ? 'Versunie' : 'Van Tol'}</h3><div class="sub">${mag('upload') ? 'Upload het bestelboek via Beheer.' : 'De beheerder moet het bestelboek nog uploaden.'}</div></div>`;
-  if (!M.dagLijst.length) html += `<div class="banner warn"><h3>Nog geen verkoopcijfers</h3><div class="sub">${mag('upload') ? 'Upload de dag-exports uit CasPos via Beheer.' : 'De beheerder moet de dag-exports nog uploaden.'}</div></div>`;
+  ${cur ? notitieHtml(bdSleutel) : ''}
+  <div class="row zoekrij"><input type="search" id="q" placeholder="🔍 Zoek naam of nummer" value="${esc(ui.q)}"><button class="btn sm sec" id="scanB" aria-label="Scannen">📷</button></div>
+  <div class="segment licht modus">${[['todo', 'Te doen'], ['advies', 'Advies'], ['acties', 'Acties'], ['alles', 'Alles']].map(([k, l]) => `<button class="${ui.modus === k ? 'aan' : ''}" data-mod="${k}">${l}</button>`).join('')}</div>
+  <button class="link meeropties" id="lijstMenu">⋯ Meer opties${ui.fAlles ? ' · hele boek aan' : ''}</button></div>`;
+  if (leeg) html += `<div class="blk leegblok"><h2>Nog geen bestelboek of verkoopcijfers</h2><p class="small">${!boek ? `Het bestelboek van ${bron === 'vers' ? 'Versunie' : 'Van Tol'} ontbreekt. ` : ''}${!M.dagLijst.length ? 'Er zijn nog geen dag-exports uit CasPos. ' : ''}${mag('upload') ? 'Upload ze via Beheer, daarna zie je hier het advies.' : 'De beheerder zet dit klaar. Daarna zie je hier het advies.'}</p>${mag('upload') ? '<button class="btn" id="naarBeheer" style="width:100%">Naar Beheer</button>' : ''}</div>`;
   else { const last = M.dagLijst[M.dagLijst.length - 1]; const oud = C.diff(last, C.today()); if (oud > 2) html += `<div class="banner warn"><h3>Verkoop t/m ${C.fmtDag(last)}</h3><div class="sub">De laatste dag-export is ${oud} dagen oud. Het advies is minder nauwkeurig.</div></div>`; }
   const t = (() => { let n = 0, u = 0; if (boek) { n = (boek.nieuw || []).filter(nr => M.art[bron + ':' + nr] && onderdeelVan(M.art[bron + ':' + nr]) === od).length; u = (boek.uit || []).filter(a => !S.schapOk.has(bron + ':' + a.nr) && M.art[bron + ':' + a.nr] && onderdeelVan(M.art[bron + ':' + a.nr]) === od).length; } for (const k in S.assort) { const r = S.assort[k], a = M.art[k]; if (!a || onderdeelVan(a) !== od || r.schap_ok) continue; if (r.status === 'gesaneerd') u++; if (r.status === 'in' && r.opgenomen) n++; } return { n, u }; })();
   if (t.n || t.u) html += `<div class="banner"><h3><span>Assortiment gewijzigd</span><button class="btn sm sec" id="assT">Bekijk</button></h3><div class="sub">${t.n} nieuw · ${t.u} schap opnieuw indelen</div></div>`;
-  if (mag('upload')) { const ob = M.onbekend.filter(o => o.bron === bron).length; if (ob && od === (bron === 'kw' ? 'kw' : 'vers')) html += `<div class="banner info"><h3>${ob} verkochte artikelen niet in dit bestelboek</h3><div class="sub">Zie Beheer › Niet gekoppeld.</div></div>`; }
   const arts = alleArts.filter(a => zichtbaar(a, cur));
   html += `<div id="lst"></div>`;
-  if (mag('saneren')) html += `<div style="padding:0 16px 8px"><button class="toevoegknop" id="eigAdd">+ Artikel toevoegen</button></div>`;
-  if (!arts.length && boek) html += `<div class="empty">Geen artikelen voor deze selectie.${!ui.fAlles ? '<br>Tip: zet "Hele boek" aan om alle artikelen uit het bestelboek te zien.' : ''}</div>`;
+  if (!arts.length && !leeg) html += `<div class="empty">${ui.modus === 'todo' ? '✓ Niets meer te doen voor deze besteldag.' : 'Geen artikelen voor deze keuze.'}</div>`;
   v.innerHTML = html;
-  v.querySelectorAll('[data-bd]').forEach(b => b.onclick = () => { ui.bd[od] = b.dataset.bd; render(); });
+  const bv = $('#bdV'); if (bv) bv.onclick = () => { ui.bd[od] = lijst[ci - 1].besteldag; render(); };
+  const bnx = $('#bdN'); if (bnx) bnx.onclick = () => { ui.bd[od] = lijst[ci + 1].besteldag; render(); };
+  v.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => { zetModus(b.dataset.mod); render(); });
+  const nb = $('#naarBeheer'); if (nb) nb.onclick = () => ga('beheer');
+  $('#lijstMenu').onclick = () => lijstMenu(od, cur, arts, bdSleutel);
   const q = $('#q'); q.oninput = () => { ui.q = q.value.trim(); clearTimeout(q._t); q._t = setTimeout(() => { render(); const n = $('#q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
-  $('#grp').onchange = e => { ui.groep = e.target.value; render(); };
-  $('#fAdv').onclick = () => { ui.fAdv = !ui.fAdv; saveUi(); render(); };
-  $('#fOpen').onclick = () => { ui.fOpen = !ui.fOpen; saveUi(); render(); };
-  $('#fActie').onclick = () => { ui.fActie = !ui.fActie; saveUi(); render(); };
-  $('#fAlles').onclick = () => { ui.fAlles = !ui.fAlles; saveUi(); render(); };
-  const pb = $('#prt'); if (pb) pb.onclick = () => printOpties(od, lijstArtikelen(od));
   const at = $('#assT'); if (at) at.onclick = () => ga('assort');
-  $('#scanB').onclick = () => scanStart(od); const tb = $('#telB'); if (tb) tb.onclick = () => telModus(od, arts.filter(a => !a.uit && assStatus(a) === 'in'));
-  const ea = $('#eigAdd'); if (ea) ea.onclick = () => eigenBewerk(null, od);
-  const bn = $('#bdNot'); if (bn) bn.onclick = () => notitieBewerk(bdSleutel, `${odNaam(od)} – bestellen ${C.fmtDag(cur.besteldag)}`);
+  $('#scanB').onclick = () => scanStart(od);
   const lst = $('#lst'); let pos = 0, lastG = null;
   const tel = {}; arts.forEach(a => { const g = groepVan(a); tel[g] = (tel[g] || 0) + 1; });
   const chunk = () => {
@@ -1950,9 +1993,13 @@ function renderLijst(od, soft) {
   chunk();
   if (soft) { while (pos < arts.length && document.body.scrollHeight < y + innerHeight + 400) chunk(); window.scrollTo(0, y); }
   lst.onclick = e => { const gb = e.target.closest('[data-gb]'); if (gb) return groepBesteld(od, cur, gb.dataset.gb); onKaartKlik(e); }; lst.onchange = onKaartWijzig;
-  const aa = $('#allesAdv'); if (aa) aa.onclick = () => allesVolgensAdvies(od, cur);
+
   if (cur) toonWeer(od, cur);
 }
+const EH = { DS: ['doos', 'dozen'], KR: ['krat', 'kratten'], ZK: ['zak', 'zakken'], PK: ['pak', 'pakken'], TR: ['tray', 'trays'], BS: ['bos', 'bossen'], KI: ['kist', 'kisten'], BK: ['bak', 'bakken'], NT: ['net', 'netten'], EM: ['emmer', 'emmers'], FL: ['fles', 'flessen'], CO: ['colli', 'colli'], HE: ['doos', 'dozen'], OM: ['omdoos', 'omdozen'], ST: ['stuk', 'stuks'], BL: ['blik', 'blikken'], PL: ['plaat', 'platen'], RL: ['rol', 'rollen'] };
+const ehCode = a => String(a.eh || '').trim().toUpperCase().slice(0, 2);
+function ehMv(a) { return (EH[ehCode(a)] || ['verpakking', 'verpakkingen'])[1]; }
+function heTekst(a) { if (!a.perHE) return 'per stuk'; const e = EH[ehCode(a)] || ['verpakking']; return `${e[0]} van ${C.fmt(a.he)}${a.kg ? ' kg' : ''}`; }
 function eenheid(a) { const k = M.keys[a.key]; return k && k.kg ? 'kg' : 'st'; }
 function kaart(a, bd, laatste) {
   const k = M.keys[a.key]; const wt = C.weekTabel(M, a.key); const lbl = C.actieLabel(M, a.key);
@@ -1961,13 +2008,13 @@ function kaart(a, bd, laatste) {
   const ad = san || niet ? { adv: 0, need: 0, days: [], stock: null } : C.advies(M, a.key, bd, vr, bestellingenVan(a.key));
   const be = S.bestel[a.key + '|' + bd.besteldag];
   const u = eenheid(a); const rT = mag('tellen'), rB = mag('bestellen'), rA = mag('afvinken'); const isB = !!(be && be.besteld);
-  const heTxt = a.perHE ? `${a.eh} · ${C.fmt(a.he)} ${a.kg ? 'kg' : 'st'}` : (a.eh || 'ST') + ' · per 1';
-  const advTxt = ad.adv ? (a.perHE ? `${ad.adv} HE` : `${ad.adv}`) : '0';
-  const advSub = ad.adv && a.perHE ? `= ${C.fmt(ad.adv * a.he)} ${u}` : (ad.adv ? u : 'geen');
+  const heTxt = heTekst(a);
+  const advTxt = ad.adv ? `${ad.adv}` : '0';
+  const advSub = ad.adv ? (a.perHE ? `${ad.adv === 1 ? (EH[ehCode(a)] || ['verpakking'])[0] : ehMv(a)} · ${C.fmt(ad.adv * a.he)} ${u === 'st' ? 'st' : u}` : (u === 'st' ? (ad.adv === 1 ? 'stuk' : 'stuks') : u)) : 'geen advies';
   const comp = S.pref && S.pref.compact;
   let tbl = `<table class="wk"><tr><th></th>${C.DAGEN.map(d => `<th>${d}</th>`).join('')}<th>wk</th></tr>`;
   for (const [ri, r2] of wt.rows.entries()) { if (comp && ri !== 2) continue; let s = 0, any = false; tbl += `<tr><td class="l">${r2.week}</td>${r2.cells.map(c => { if (c.v !== null) { s += c.v; any = true; } return `<td class="${c.actie ? 'a' : ''} ${c.dag === C.today() ? 'today' : ''}">${c.v === null ? '' : C.fmt(c.v)}</td>`; }).join('')}<td>${any ? C.fmt(s) : ''}</td></tr>`; }
-  tbl += `<tr class="gd"><td class="l">Gd</td>${wt.gd.map(g => `<td>${C.fmt(g)}</td>`).join('')}<td class="gwt">${C.fmt(wt.gwt)}</td></tr></table>`;
+  tbl += `<tr class="gd"><td class="l">gem.</td>${wt.gd.map(g => `<td>${C.fmt(g)}</td>`).join('')}<td class="gwt">${C.fmt(wt.gwt)}</td></tr></table>`;
   const labels = [];
   if (lbl) for (const l of lbl) { labels.push(`<span class="lbl ${l.t}">Actie ${l.t} week${l.dag !== null && l.dag !== undefined ? ' (' + C.DAGNAAM[l.dag] + ')' : ''}</span><span class="lbl ${l.folder ? 'folder' : 'instore'}">${l.folder ? 'Folder' : 'Instore'}</span>`); }
   if (lbl) { const l0 = lbl[0]; labels.push(`<span class="lbl info">${l0.cap ? '€ ' + l0.cap.toFixed(2).replace('.', ',') : ''}${l0.opm && !/^(maandag|dinsdag|woensdag|donderd|vrijdag|zaterdag|zondag)$/i.test(l0.opm) ? ' · ' + esc(l0.opm) : ''}${l0.disc ? ' · −' + Math.round(l0.disc * 100) + '%' : ''}</span>`); }
@@ -1990,21 +2037,24 @@ function kaart(a, bd, laatste) {
   let onder;
   if (a.uit || san) onder = `${(a.uit && !S.schapOk.has(a.key)) || (san && !(r && r.schap_ok)) ? (mag('schap') ? `<div style="margin-top:10px"><button class="btn sm" data-schap="1">Schap aangepast</button></div>` : '') : ''}`;
   else if (niet) onder = '';
-  else onder = `<div class="ctl"><div><label>Voorraad nu (${u})</label><div class="stp ${rT ? '' : 'uit'}"><button data-s="v" data-d="-1" ${rT ? '' : 'disabled'}>−</button><input type="number" inputmode="decimal" data-in="v" value="${vrVandaag}" placeholder="–" ${rT ? '' : 'disabled'}><button data-s="v" data-d="1" ${rT ? '' : 'disabled'}>+</button></div></div>
-  <div><label>Bestelling ${C.fmtDag(bd.besteldag)} (${a.perHE ? 'HE' : u})</label><div class="stp ${rB ? '' : 'uit'}"><button data-s="b" data-d="-1" ${rB ? '' : 'disabled'}>−</button><input type="number" inputmode="decimal" data-in="b" value="${be && be.aantal !== null && be.aantal !== undefined ? be.aantal : ''}" placeholder="${ad.adv || 0}" ${rB ? '' : 'disabled'}><button data-s="b" data-d="1" ${rB ? '' : 'disabled'}>+</button></div></div></div>
-  <div class="why">${why}</div>${rB ? `<button class="minlink" data-min="1">Min. schap: ${M.min[a.key] ? C.fmt(M.min[a.key]) + ' ' + u : 'niet ingesteld'} ✎</button>` : ''}
+  else onder = `<div class="ctl"><div><label>Voorraad nu (${u === 'st' ? 'stuks' : u})</label><div class="stp ${rT ? '' : 'uit'}"><button data-s="v" data-d="-1" ${rT ? '' : 'disabled'}>−</button><input type="number" inputmode="decimal" data-in="v" value="${vrVandaag}" placeholder="–" ${rT ? '' : 'disabled'}><button data-s="v" data-d="1" ${rT ? '' : 'disabled'}>+</button></div></div>
+  <div><label>Bestellen (${a.perHE ? ehMv(a) : u})</label><div class="stp ${rB ? '' : 'uit'}"><button data-s="b" data-d="-1" ${rB ? '' : 'disabled'}>−</button><input type="number" inputmode="decimal" data-in="b" value="${be && be.aantal !== null && be.aantal !== undefined ? be.aantal : ''}" placeholder="${ad.adv || 0}" ${rB ? '' : 'disabled'}><button data-s="b" data-d="1" ${rB ? '' : 'disabled'}>+</button></div></div></div>
   ${rA ? `<button class="besteld ${isB ? 'aan' : ''}" data-besteld="1">${isB ? besteldTxt : 'Besteld afvinken'}</button>` : isB ? `<div class="besteld aan">${besteldTxt}</div>` : ''}`;
-  return `<div class="card ${a.uit || san ? 'uit' : ''} ${niet ? 'niet' : ''} ${laatste ? 'laatste' : ''} ${isB ? 'isbesteld' : ''}" data-k="${a.key}">
+  return `<div class="card ${a.uit || san ? 'uit' : ''} ${niet ? 'niet' : ''} ${laatste ? 'laatste' : ''} ${isB ? 'isbesteld' : ''} ${ui.open && ui.open.has(a.key) ? 'open' : ''}" data-k="${a.key}">
   <div class="hd"><div class="nm" ${a.eigen && mag('saneren') ? 'data-eig="' + esc(a.nr) + '"' : ''}>${a.foto ? `<img class="duimfoto" src="${a.foto}" alt="">` : ''}${esc(a.naam)}${a.eigen && mag('saneren') ? ' <span class="small">✎</span>' : ''}</div><div class="adv ${ad.adv ? '' : 'nul'}"><b>${advTxt}</b><span>${advSub}</span></div></div>
-  <div class="meta">${a.eigen ? esc(a.artNr || 'zonder nummer') + ' · ' + esc(LEV_NAAM[a.lev] || '') : a.nr}${a.bst && !a.eigen ? ' · bst ' + esc(a.bst) : ''}${a.merk ? ' · ' + esc(a.merk) : ''} · ${heTxt} · ${C.eur(a.cons)}${mag('inkoop') && a.ink ? ' · ink ' + C.eur(a.ink) : ''}</div>
+  <div class="meta">${a.eigen ? esc(a.artNr || 'zonder nummer') + ' · ' + esc(LEV_NAAM[a.lev] || '') : a.nr} · ${heTxt}</div>
   ${labels.length ? `<div class="lbls">${labels.join('')}</div>` : ''}
   ${notitieHtml('a:' + a.key)}
-  ${k ? tbl : '<div class="hint">Nog geen verkoop van dit artikel.</div>'}
   ${onder}
-  <div class="kaartvoet"><button class="link" data-not="1">📝 Notitie</button>${mag('tellen') && !a.uit ? '<button class="link" data-derv="1">🗑️ Derving</button>' : ''}${assKnop}</div></div>`;
+  <button class="meerknop" data-meer="1">${ui.open && ui.open.has(a.key) ? '▴ Minder' : '▾ Meer'}</button>
+  <div class="kaartmeer"><div class="meta">${a.merk ? esc(a.merk) + ' · ' : ''}${a.cons ? 'prijs ' + C.eur(a.cons) : ''}${mag('inkoop') && a.ink ? ' · inkoop ' + C.eur(a.ink) : ''}${a.bst && !a.eigen ? ' · bestelnr ' + esc(a.bst) : ''}</div>
+  ${k ? tbl : '<div class="hint">Nog geen verkoop van dit artikel.</div>'}
+  ${!(a.uit || san || niet) ? `<div class="why">${why}</div>${rB ? `<button class="minlink" data-min="1">Min. schap: ${M.min[a.key] ? C.fmt(M.min[a.key]) + ' ' + u : 'niet ingesteld'} ✎</button>` : ''}` : ''}
+  <div class="kaartvoet"><button class="link" data-not="1">📝 Notitie</button>${mag('tellen') && !a.uit ? '<button class="link" data-derv="1">🗑️ Derving</button>' : ''}${assKnop}</div></div></div>`;
 }
 async function onKaartKlik(e) {
   const card = e.target.closest('.card'); if (!card) return; const key = card.dataset.k; const a = M.art[key]; const { cur } = besteldag(onderdeelVan(a));
+  if (e.target.closest('[data-meer]')) { ui.open = ui.open || new Set(); ui.open.has(key) ? ui.open.delete(key) : ui.open.add(key); card.classList.toggle('open', ui.open.has(key)); e.target.closest('[data-meer]').textContent = ui.open.has(key) ? '▴ Minder' : '▾ Meer'; return; }
   if (e.target.dataset.not !== undefined) return notitieBewerk('a:' + key, a.naam);
   const eg = e.target.closest('[data-eig]'); if (eg) return eigenBewerk(S.eigen[eg.dataset.eig], a.od);
   if (e.target.dataset.min !== undefined) return minBewerk(a);
@@ -2045,7 +2095,7 @@ async function opslaan(card, s, val, getypt) {
     const grens = Math.max(ad.adv * 3, ad.adv + (a.perHE ? 3 : 10));
     if (getypt && n >= 5 && n > grens) {
       if (card._vraagt) return; card._vraagt = true;
-      const ok = await bevestig('Klopt dit?', `Je bestelt <b>${C.fmt(n)} ${a.perHE ? 'HE' : eenheid(a)}</b> ${esc(a.naam)}.<br>Het advies is ${ad.adv}.`, 'Ja, klopt', 'Aanpassen');
+      const ok = await bevestig('Klopt dit?', `Je bestelt <b>${C.fmt(n)} ${a.perHE ? ehMv(a) : eenheid(a) === 'st' ? 'stuks' : eenheid(a)}</b> ${esc(a.naam)}.<br>Het advies is ${ad.adv}.`, 'Ja, klopt', 'Aanpassen');
       card._vraagt = false;
       if (!ok) { const i = card.querySelector('[data-in="b"]'); i.value = vorig && vorig.aantal !== null && vorig.aantal !== undefined ? vorig.aantal : ''; return; }
     }
@@ -2072,8 +2122,10 @@ function renderOverig() {
   let h = `<div class="bar"><div class="row"><input type="search" id="q" placeholder="Zoek naam, leverancier of EAN" value="${esc(ui.q)}"></div></div>`;
   const sect = (titel, lst, isIo) => {
     lst = lst.filter(match); if (!lst.length) return '';
+    let voor = '';
+    if (isIo) { const meld = lst.filter(k => C.overig(M, k, S.inout[k.slice(2)] || {}).melding); if (meld.length) { voor = `<div class="grp top" style="margin-top:18px">⚠️ Let op</div>`; meld.forEach((k, i) => voor += kaartOverig(k, true, i === meld.length - 1)); lst = lst.filter(k => !meld.includes(k)); if (!lst.length) return voor; } }
     const groups = {}; lst.forEach(k => { const m = meta(k); const g = isIo ? (m.l || '') + ' › ' + (m.so || '') : (m.l || m.m || 'Onbekende leverancier'); (groups[g] = groups[g] || []).push(k); });
-    let s = `<div class="grp top" style="margin-top:18px">${titel}</div>`;
+    let s = voor + `<div class="grp top" style="margin-top:18px">${titel}</div>`;
     for (const g of Object.keys(groups).sort()) { const l = groups[g].sort((x, y) => C.weekTabel(M, y).gwt - C.weekTabel(M, x).gwt); s += `<div class="grp"><span>${esc(g)}</span><small>${l.length}</small></div>`; l.forEach((k, i) => s += kaartOverig(k, isIo, i === l.length - 1)); }
     return s;
   };
@@ -2081,6 +2133,7 @@ function renderOverig() {
   if (!keys.length) h += '<div class="empty">Nog geen verkoopcijfers van deze artikelen.</div>';
   v.innerHTML = h;
   const q = $('#q'); q.oninput = () => { ui.q = q.value.trim(); clearTimeout(q._t); q._t = setTimeout(() => { render(); const n = $('#q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
+  v.onclick = e => { const mb = e.target.closest('[data-meer]'); if (!mb) return; const c = mb.closest('.card'); const key = 'o:' + c.dataset.ean; ui.open = ui.open || new Set(); ui.open.has(key) ? ui.open.delete(key) : ui.open.add(key); c.classList.toggle('open', ui.open.has(key)); mb.textContent = ui.open.has(key) ? '▴ Minder' : '▾ Meer'; };
   v.onchange = e => {
     const c = e.target.closest('.card'); if (!c || !e.target.dataset.io) return; const ean = c.dataset.ean; const cur = Object.assign({ ean }, S.inout[ean] || {});
     cur[e.target.dataset.io] = e.target.type === 'number' ? C.num(e.target.value) : (e.target.value || null);
@@ -2091,16 +2144,18 @@ function kaartOverig(k, isIo, laatste) {
   const ean = k.slice(2); const m = M.kassa[ean] || {}; const wt = C.weekTabel(M, k); const s = M.keys[k]; const u = s.kg ? 'kg' : 'st';
   let tbl = `<table class="wk"><tr><th></th>${C.DAGEN.map(d => `<th>${d}</th>`).join('')}<th>wk</th></tr>`;
   for (const r of wt.rows) { let t = 0, any = false; tbl += `<tr><td class="l">${r.week}</td>${r.cells.map(c => { if (c.v !== null) { t += c.v; any = true; } return `<td class="${c.dag === C.today() ? 'today' : ''}">${c.v === null ? '' : C.fmt(c.v)}</td>`; }).join('')}<td>${any ? C.fmt(t) : ''}</td></tr>`; }
-  tbl += `<tr class="gd"><td class="l">Gd</td>${wt.gd.map(g => `<td>${C.fmt(g)}</td>`).join('')}<td class="gwt">${C.fmt(wt.gwt)}</td></tr></table>`;
+  tbl += `<tr class="gd"><td class="l">gem.</td>${wt.gd.map(g => `<td>${C.fmt(g)}</td>`).join('')}<td class="gwt">${C.fmt(wt.gwt)}</td></tr></table>`;
   const exp = []; for (let i = 1; i <= 7; i++) { const d = C.add(C.today(), i); exp.push(C.verwacht(M, k, d)); }
-  let x = `<div class="why">Verwacht komende 7 dagen: <b>${C.fmt(exp.reduce((a, b) => a + b, 0))} ${u}</b> (${exp.map((e, i) => C.DAGEN[C.wd(C.add(C.today(), i + 1))] + ' ' + C.fmt(e)).join(' · ')})</div>`;
+  const verw7 = exp.reduce((a, b) => a + b, 0);
+  let x = `<div class="why">Verwacht per dag: ${exp.map((e, i) => C.DAGEN[C.wd(C.add(C.today(), i + 1))] + ' ' + C.fmt(e)).join(' · ')}</div>`; let boven = '';
   if (isIo) {
     const io = S.inout[ean] || {}; const o = C.overig(M, k, io); const dis = mag('inout') ? '' : 'disabled';
-    x += `<div class="why">Verkocht sinds ${C.fmtDag(o.start)}: <b>${C.fmt(o.totaal)} ${u}</b> · gemiddeld ${C.fmt(o.perDag)} per dag${o.rest !== null ? ` · nog ±<b>${C.fmt(Math.max(0, o.rest))}</b> op voorraad` : ''}</div>
-    <div class="ctl"><div><label>Ingekocht (${u})</label><input type="number" inputmode="decimal" data-io="ingekocht" value="${io.ingekocht ?? ''}" ${dis} style="width:100%"></div><div><label>Actie loopt t/m</label><input type="date" data-io="eind" value="${io.eind || ''}" ${dis} style="width:100%"></div></div>
-    ${o.melding ? `<div class="melding ${o.melding.t}">${esc(o.melding.txt)}</div>` : ''}`;
+    boven = `${o.melding ? `<div class="melding ${o.melding.t}">${esc(o.melding.txt)}</div>` : ''}<div class="why">Verkocht sinds ${C.fmtDag(o.start)}: <b>${C.fmt(o.totaal)} ${u}</b>${o.rest !== null ? ` · nog ±<b>${C.fmt(Math.max(0, o.rest))}</b> over` : ''}</div>
+    <div class="ctl"><div><label>Ingekocht (${u === 'st' ? 'stuks' : u})</label><input type="number" inputmode="decimal" data-io="ingekocht" value="${io.ingekocht ?? ''}" ${dis} style="width:100%"></div><div><label>Laatste actiedag</label><input type="date" data-io="eind" value="${io.eind || ''}" ${dis} style="width:100%"></div></div>${dis ? '' : '<p class="small" style="margin:4px 0 0">Tik op het datumveld om een dag te kiezen.</p>'}`;
   }
-  return `<div class="card ${laatste ? 'laatste' : ''}" data-ean="${ean}"><div class="hd"><div class="nm">${esc(m.n)}</div></div><div class="meta">${esc(m.m || '')} · ${ean}${m.b ? ' · bestelnr ' + m.b : ''} · ${esc(m.so || '')}</div>${tbl}${x}</div>`;
+  const open = ui.open && ui.open.has('o:' + ean);
+  return `<div class="card ${laatste ? 'laatste' : ''} ${open ? 'open' : ''}" data-ean="${ean}"><div class="hd"><div class="nm">${esc(m.n)}</div><div class="adv"><b>${C.fmt(verw7, 0)}</b><span>deze week</span></div></div><div class="meta">gem. ${C.fmt(wt.gwt / 7)} per dag · ${esc(m.m || m.l || '')}</div>${boven}
+  <button class="meerknop" data-meer="1">${open ? '▴ Minder' : '▾ Meer'}</button><div class="kaartmeer"><div class="meta">EAN ${ean}${m.b ? ' · bestelnr ' + m.b : ''}${m.so ? ' · ' + esc(m.so) : ''}</div>${tbl}${x}</div></div>`;
 }
 
 /* ---------- beheer ---------- */
@@ -2118,18 +2173,18 @@ function renderBeheer() {
   const schemaVan = o => st.schema[o] || st.schema.vers;
   const schemaRij = (bron, r, i) => `<div class="f"><label>Bestellen <select data-sch="${bron}" data-i="${i}" data-f="b">${C.DAGNAAM.map((d, j) => `<option value="${j}" ${j === r.b ? 'selected' : ''}>${d}</option>`).join('')}</select></label><label>levering <select data-sch="${bron}" data-i="${i}" data-f="l">${C.DAGNAAM.map((d, j) => `<option value="${j}" ${j === r.l ? 'selected' : ''}>${d}</option>`).join('')}</select></label><button class="btn sm sec" data-schdel="${bron}" data-i="${i}">×</button></div>`;
   v.innerHTML = `${kU ? `
-  <div class="blk"><h2>Bestanden uploaden</h2><p class="small">Kies één of meer bestanden tegelijk: dag-exports uit CasPos (.xls), bestelboek Vers of KW (.pdf) en de actie-pdf. De app herkent zelf wat het is.</p>
+  <div class="blk" data-sec="upload"><h2>Bestanden uploaden</h2><p class="small">Kies één of meer bestanden tegelijk: dag-exports uit CasPos (.xls), bestelboek Vers of KW (.pdf) en de actie-pdf. De app herkent zelf wat het is.</p>
   <label class="btn" style="display:block;text-align:center">Bestanden kiezen<input type="file" id="up" multiple accept=".xls,.xlsx,.pdf" class="hide"></label><div class="log hide" id="upLog"></div></div>
-  <div class="blk"><h2>Status</h2><div class="kv">
+  <div class="blk" data-sec="upload"><h2>Status</h2><div class="kv">
   <span>Verkoopdagen</span><b>${dagen.length ? `${dagen.length} dagen · ${C.fmtDag(dagen[0])} t/m ${C.fmtDag(last)}` : 'nog geen'}</b>
   <span>Bestelboek Vers</span><b>${S.boeken.vers ? 'week ' + (S.boeken.vers.week || '?') + ' · ' + S.boeken.vers.artikelen.length + ' artikelen' : 'nog niet geüpload'}</b>
   <span>Bestelboek KW</span><b>${S.boeken.kw ? (S.boeken.kw.datum ? C.fmtDag(S.boeken.kw.datum) : '') + ' · ' + S.boeken.kw.artikelen.length + ' artikelen' : 'nog niet geüpload'}</b>
   <span>Acties</span><b>${S.acties.length ? S.acties.map(a => 'wk ' + a.week).join(', ') : 'nog geen'}</b></div>
   ${gaten.length ? `<p class="small" style="color:var(--red)">Ontbrekende dagen (laatste 60): ${gaten.map(C.fmtDag).join(', ')}</p>` : ''}
   ${dagen.length < 56 ? `<p class="small">Tip: upload minstens 8 weken aan dag-exports voor een betrouwbaar gemiddelde.</p>` : ''}</div>
-  <div class="blk"><h2>Uploads verwijderen</h2><h3>Acties</h3><div class="list">${S.acties.map(a => `<div class="it"><span>Week ${a.week} · ${C.fmtDag(a.van)} t/m ${C.fmtDag(a.tm)} · ${a.items.length} artikelen</span><button class="btn sm red" data-delac="${a.id}">Verwijder</button></div>`).join('') || '<div class="small">Geen</div>'}</div>
-  <h3>Dag-exports (laatste 21)</h3><div class="list">${dagen.slice(-21).reverse().map(d => `<div class="it"><span>${C.fmtDag(d)} ${d.slice(0, 4)}</span><button class="btn sm red" data-deldag="${d}">Verwijder</button></div>`).join('') || '<div class="small">Geen</div>'}</div></div>` : ''}
-  ${kI ? `<div class="blk"><h2>Instellingen advies</h2><div class="form">
+  <div class="blk" data-sec="verwijderen"><h2>Uploads verwijderen</h2><p class="small">Alleen nodig als je per ongeluk een verkeerd bestand hebt geüpload. Je krijgt eerst de vraag of je het zeker weet.</p><h3>Acties</h3><div class="list">${S.acties.map(a => `<div class="it"><span>Week ${a.week} · ${C.fmtDag(a.van)} t/m ${C.fmtDag(a.tm)} · ${a.items.length} artikelen</span><button class="btn sm sec" data-delac="${a.id}" aria-label="Verwijderen">🗑️</button></div>`).join('') || '<div class="small">Geen</div>'}</div>
+  <h3>Dag-exports (laatste 21)</h3><div class="list">${dagen.slice(-21).reverse().map(d => `<div class="it"><span>${C.fmtDag(d)} ${d.slice(0, 4)}</span><button class="btn sm sec" data-deldag="${d}" aria-label="Verwijderen">🗑️</button></div>`).join('') || '<div class="small">Geen</div>'}</div></div>` : ''}
+  ${kI ? `<div class="blk" data-sec="advies"><h2>Advies-instellingen</h2><p class="small">Voor gevorderden. Meestal hoef je hier niets aan te veranderen.</p><div class="form">
   <div class="f"><label>Weken voor gemiddelde</label><input type="number" id="iW" min="3" max="26" value="${st.weken}"></div>
   <div class="f"><label>Buffer Vers (%)</label><input type="number" id="iBV" min="0" max="100" value="${st.buffer.vers}"></div>
   <div class="f"><label>Buffer KW (%)</label><input type="number" id="iBK" min="0" max="100" value="${st.buffer.kw}"></div>
@@ -2137,22 +2192,25 @@ function renderBeheer() {
   <div class="f"><label>Actie-effect instore bij 50% korting (×)</label><input type="number" step="0.1" id="iAI" value="${st.actieFactor.instore}"></div>
   <div class="f"><label>Actievoorraad vooraf (levering vóór de actiemaandag dekt ook maandag)</label><input type="checkbox" id="iVo" ${st.vooraf ? 'checked' : ''} style="width:auto"></div>
   <p class="small">Geleerd uit je eigen acties: folder ${M.slope.folder.length >= 5 ? `×${C.fmt(1 + M.slopeF * 0.5)} bij 50% (${M.slope.folder.length} acties)` : 'nog te weinig acties, standaard gebruikt'} · instore ${M.slope.instore.length >= 5 ? `×${C.fmt(1 + M.slopeI * 0.5)} (${M.slope.instore.length} acties)` : 'nog te weinig acties'}.</p>
+  <button class="btn" data-isave>Opslaan</button></div></div>
+  <div class="blk" data-sec="dagen"><h2>Besteldagen en deadlines</h2><p class="small">Per onderdeel op welke dag je bestelt en wanneer het geleverd wordt.</p><div class="form">
   ${BESTEL_OD.map(o => `<h3>Bestelschema ${odNaam(o)}</h3>${schemaVan(o).map((r, i) => schemaRij(o, r, i)).join('')}<button class="btn sm sec" data-schadd="${o}">+ besteldag</button>`).join('')}
   <h3>Besteldeadline</h3><p class="small">Tot hoe laat je bij de leverancier kunt bestellen. Op Home zie je hoe lang je nog hebt; een half uur ervoor komt er een melding als er nog iets open staat. Leeg = geen deadline.</p><div class="f"><label style="width:90px">Versunie</label><input type="time" id="dlV" value="${((S.inst || {}).deadline || {}).versunie || ''}" style="width:110px"></div><div class="f"><label style="width:90px">Van Tol</label><input type="time" id="dlT" value="${((S.inst || {}).deadline || {}).vantol || ''}" style="width:110px"></div>
-  <h3>Openingstijden</h3>${C.DAGNAAM.map((d, i) => `<div class="f"><label style="width:90px">${d}</label><input type="time" data-op="${i}" data-f="0" value="${st.open[i][0]}" style="width:110px"><input type="time" data-op="${i}" data-f="1" value="${st.open[i][1]}" style="width:110px"></div>`).join('')}<p class="small">Laat beide tijden leeg als de winkel die dag dicht is.</p>
-  <button class="btn" id="iSave">Instellingen opslaan</button></div></div>
-  <div class="blk"><h2>Feestdagen en bijzondere dagen</h2><p class="small">Komend jaar. Het effect op de verkoop wordt elk jaar onthouden en de volgende keer gebruikt.</p><div class="list">
+  <button class="btn" data-isave>Opslaan</button></div></div>
+  <div class="blk" data-sec="open"><h2>Openingstijden</h2><div class="form">${C.DAGNAAM.map((d, i) => `<div class="f"><label style="width:90px">${d}</label><input type="time" data-op="${i}" data-f="0" value="${st.open[i][0]}" style="width:110px"><input type="time" data-op="${i}" data-f="1" value="${st.open[i][1]}" style="width:110px"></div>`).join('')}<p class="small">Laat beide tijden leeg als de winkel die dag dicht is.</p>
+  <button class="btn" data-isave>Opslaan</button></div></div>
+  <div class="blk" data-sec="open"><h2>Feestdagen en bijzondere dagen</h2><p class="small">Komend jaar. Het effect op de verkoop wordt elk jaar onthouden en de volgende keer gebruikt.</p><div class="list">
   ${bz.map(d => { const b = M.bijz[d]; return `<div class="it" style="flex-wrap:wrap"><span style="flex:1 1 180px"><b>${esc(b.naam)}</b><br><span class="small">${C.fmtDag(d)} ${d.slice(0, 4)}${effTxt(b.naam)}${voorEff(b.naam)}</span></span>
   <select data-ag="${d}" data-f="soort"><option value="normaal" ${b.soort === 'normaal' ? 'selected' : ''}>Normaal open</option><option value="aangepast" ${b.soort === 'aangepast' ? 'selected' : ''}>Aangepaste tijden</option><option value="gesloten" ${b.soort === 'gesloten' ? 'selected' : ''}>Gesloten</option></select>
   ${b.soort === 'aangepast' ? `<input type="time" data-ag="${d}" data-f="open" value="${b.open || ''}" style="width:105px"><input type="time" data-ag="${d}" data-f="dicht" value="${b.dicht || ''}" style="width:105px">` : ''}</div>`; }).join('')}</div>
   <h3>Eigen bijzondere dag toevoegen</h3><div class="row"><input type="date" id="agD"><input type="text" id="agN" placeholder="Naam (bijv. Braderie)" style="flex:1"><button class="btn sm" id="agAdd">Toevoegen</button></div></div>
-  <div class="blk"><h2>Onderdelen</h2><p class="small">Bij welk onderdeel elke groep uit het Versunie-boek hoort. Een nieuwe groep komt automatisch bij het onderdeel van de groep ervoor.</p><div class="list">${vg.map(g => `<div class="it"><span style="flex:1">${esc(g)}</span><select data-odg="${esc(g)}">${['agf', 'vers', 'brood', 'diep'].map(o => `<option value="${o}" ${odVan(g) === o ? 'selected' : ''}>${odNaam(o)}</option>`).join('')}</select></div>`).join('') || '<div class="small">Upload eerst het Versunie-boek.</div>'}</div></div>` + volgordeHtml() : ''}
-  ${kU ? `<div class="blk"><h2>Niet gekoppeld (${M.onbekend.length})</h2><p class="small">Verkocht via Versunie of Van Tol, maar het bestelnummer staat niet in het bestelboek. Meestal nieuw of uit het assortiment.</p><div class="list">${M.onbekend.slice(0, 200).map(o => `<div class="it"><span>${esc(o.n)} <span class="small">· ${esc(o.l)} · bestelnr ${esc(o.b)} · ${o.ean}</span></span></div>`).join('') || '<div class="small">Alles gekoppeld.</div>'}</div></div>
-  <div class="blk"><h2>Besteleenheid controleren (${chk.length})</h2><p class="small">Bij deze artikelen is de besteleenheid uit de naam afgeleid. Pas aan als het niet klopt.</p><div class="list">${chk.map(a => `<div class="it" style="flex-wrap:wrap"><span style="flex:1 1 200px">${esc(a.naam)} <span class="small">${a.nr} · ${a.eh}</span></span><label class="small">per HE <input type="checkbox" data-he="${a.key}" data-f="perHE" ${a.perHE ? 'checked' : ''}></label><input type="number" step="0.1" data-he="${a.key}" data-f="he" value="${a.he}" style="width:80px"><button class="btn sm sec" data-heok="${a.key}">Klopt</button></div>`).join('') || '<div class="small">Niets te controleren.</div>'}</div></div>` : ''}`;
+  <div class="blk" data-sec="onderdelen"><h2>Onderdelen</h2><p class="small">Bij welk onderdeel elke groep uit het Versunie-boek hoort. Een nieuwe groep komt automatisch bij het onderdeel van de groep ervoor.</p><div class="list">${vg.map(g => `<div class="it"><span style="flex:1">${esc(g)}</span><select data-odg="${esc(g)}">${['agf', 'vers', 'brood', 'diep'].map(o => `<option value="${o}" ${odVan(g) === o ? 'selected' : ''}>${odNaam(o)}</option>`).join('')}</select></div>`).join('') || '<div class="small">Upload eerst het Versunie-boek.</div>'}</div></div>` + volgordeHtml() : ''}
+  ${kU ? `<div class="blk" data-sec="controle"><h2>Niet gekoppeld (${M.onbekend.length})</h2><p class="small">Verkocht via Versunie of Van Tol, maar het bestelnummer staat niet in het bestelboek. Meestal nieuw of uit het assortiment.</p><div class="list">${M.onbekend.slice(0, 200).map(o => `<div class="it"><span>${esc(o.n)} <span class="small">· ${esc(o.l)} · bestelnr ${esc(o.b)} · ${o.ean}</span></span></div>`).join('') || '<div class="small">Alles gekoppeld.</div>'}</div></div>
+  <div class="blk" data-sec="controle"><h2>Besteleenheid controleren (${chk.length})</h2><p class="small">Bij deze artikelen is de besteleenheid uit de naam afgeleid. Pas aan als het niet klopt.</p><div class="list">${chk.map(a => `<div class="it" style="flex-wrap:wrap"><span style="flex:1 1 200px">${esc(a.naam)} <span class="small">${a.nr} · ${a.eh}</span></span><label class="small">per HE <input type="checkbox" data-he="${a.key}" data-f="perHE" ${a.perHE ? 'checked' : ''}></label><input type="number" step="0.1" data-he="${a.key}" data-f="he" value="${a.he}" style="width:80px"><button class="btn sm sec" data-heok="${a.key}">Klopt</button></div>`).join('') || '<div class="small">Niets te controleren.</div>'}</div></div>` : ''}`;
   // events
   const upI = $('#up'); if (upI) upI.onchange = e => { if (OEFEN) return toast('Uploaden kan niet tijdens oefenen'); uploads([...e.target.files]); };
-  v.querySelectorAll('[data-delac]').forEach(b => b.onclick = async () => { if (!ask('Deze actieweek verwijderen?')) return; await adminDo(async () => { if (!DEMO) await remove('acties', `id=eq.${b.dataset.delac}&winkel_id=eq.${W}`); S.acties = S.acties.filter(a => a.id !== b.dataset.delac); }); });
-  v.querySelectorAll('[data-deldag]').forEach(b => b.onclick = async () => { if (!ask('Dag-export van ' + b.dataset.deldag + ' verwijderen?')) return; await adminDo(async () => { const d = b.dataset.deldag; if (!DEMO) await remove('dagverkoop', `dag=eq.${d}&winkel_id=eq.${W}`); delete S.dagen[d]; delete S.dagMeta[d]; await idel('d:' + W + ':' + d); }); });
+  v.querySelectorAll('[data-delac]').forEach(b => b.onclick = async () => { if (!await bevestig('Weet je het zeker?', 'Deze actieweek wordt verwijderd.', 'Verwijderen', 'Annuleren')) return; await adminDo(async () => { if (!DEMO) await remove('acties', `id=eq.${b.dataset.delac}&winkel_id=eq.${W}`); S.acties = S.acties.filter(a => a.id !== b.dataset.delac); }); });
+  v.querySelectorAll('[data-deldag]').forEach(b => b.onclick = async () => { if (!await bevestig('Weet je het zeker?', 'De dag-export van ' + C.fmtDag(b.dataset.deldag) + ' wordt verwijderd.', 'Verwijderen', 'Annuleren')) return; await adminDo(async () => { const d = b.dataset.deldag; if (!DEMO) await remove('dagverkoop', `dag=eq.${d}&winkel_id=eq.${W}`); delete S.dagen[d]; delete S.dagMeta[d]; await idel('d:' + W + ':' + d); }); });
   const inst = () => JSON.parse(JSON.stringify(Object.assign({}, S.inst || {}, { weken: st.weken, buffer: st.buffer, actieFactor: st.actieFactor, vooraf: st.vooraf, schema: Object.fromEntries(BESTEL_OD.map(o => [o, schemaVan(o)])), open: st.open, he: st.he })));
   const work = inst();
   v.querySelectorAll('[data-sch]').forEach(s => s.onchange = () => { work.schema[s.dataset.sch][+s.dataset.i][s.dataset.f] = +s.value; });
@@ -2160,12 +2218,24 @@ function renderBeheer() {
   v.querySelectorAll('[data-schadd]').forEach(b => b.onclick = () => { work.schema[b.dataset.schadd].push({ b: 0, l: 2 }); saveInst(work); });
   if ($('#volgOd')) volgordeEvents(v);
   v.querySelectorAll('[data-odg]').forEach(s => s.onchange = () => { work.onderdelen = Object.assign({}, work.onderdelen || {}, { [s.dataset.odg]: s.value }); odCache = null; saveInst(work); });
-  const iS = $('#iSave'); if (!iS) return;
+  if (!v.querySelector('[data-isave]')) { beheerMenu(v, chk); return; }
   v.querySelectorAll('[data-op]').forEach(i => i.onchange = () => { work.open[+i.dataset.op][+i.dataset.f] = i.value; });
-  $('#iSave').onclick = () => { work.weken = Math.max(3, Math.min(26, +$('#iW').value || 8)); work.buffer = { vers: +$('#iBV').value || 0, kw: +$('#iBK').value || 0 }; work.actieFactor = { folder: C.num($('#iAF').value) || 3, instore: C.num($('#iAI').value) || 1.5 }; work.vooraf = $('#iVo').checked; work.deadline = { versunie: $('#dlV').value || '', vantol: $('#dlT').value || '' }; saveInst(work); };
+  const opslaanInst = () => { work.weken = Math.max(3, Math.min(26, +$('#iW').value || 8)); work.buffer = { vers: +$('#iBV').value || 0, kw: +$('#iBK').value || 0 }; work.actieFactor = { folder: C.num($('#iAF').value) || 3, instore: C.num($('#iAI').value) || 1.5 }; work.vooraf = $('#iVo').checked; work.deadline = { versunie: $('#dlV').value || '', vantol: $('#dlT').value || '' }; saveInst(work); };
+  v.querySelectorAll('[data-isave]').forEach(b => b.onclick = opslaanInst);
   v.querySelectorAll('[data-ag]').forEach(i => i.onchange = () => { const d = i.dataset.ag; const b = M.bijz[d]; const row = Object.assign({ dag: d, naam: b.naam, soort: b.soort || 'normaal', open: b.open || null, dicht: b.dicht || null }, S.agenda.find(x => x.dag === d) || {}); row[i.dataset.f] = i.value || null; if (row.soort === 'aangepast' && !row.open) { row.open = M.st.open[C.wd(d)][0] || '08:00'; row.dicht = '16:00'; } saveAgenda(row); });
   $('#agAdd').onclick = () => { const d = $('#agD').value, n = $('#agN').value.trim(); if (!d || !n) return toast('Vul datum en naam in'); saveAgenda({ dag: d, naam: n, soort: 'normaal', open: null, dicht: null }); };
   v.querySelectorAll('[data-heok]').forEach(b => b.onclick = () => { const key = b.dataset.heok; const row = b.closest('.it'); const he = C.num(row.querySelector('[data-f="he"]').value) || 1; const perHE = row.querySelector('[data-f="perHE"]').checked; work.he[key] = { he, perHE, check: false }; saveInst(work); });
+  beheerMenu(v, chk);
+}
+const BEHEER_SEC = [['upload', '📤', 'Bestanden uploaden', 'Dag-exports, bestelboeken en acties · status'], ['dagen', '🗓️', 'Besteldagen en deadlines', 'Wanneer je bestelt en tot hoe laat'], ['open', '🕘', 'Openingstijden en feestdagen', 'Ook aangepaste tijden en gesloten dagen'], ['onderdelen', '🗂️', 'Onderdelen en volgorde', 'Welke groep bij welk onderdeel, en in welke volgorde'], ['controle', '🔍', 'Controleren', 'Niet gekoppelde artikelen en besteleenheden'], ['advies', '⚙️', 'Advies-instellingen', 'Voor gevorderden'], ['verwijderen', '🗑️', 'Uploads verwijderen', 'Als je per ongeluk een verkeerd bestand hebt geüpload']];
+function beheerMenu(v, chk) {
+  const blks = [...v.querySelectorAll('[data-sec]')]; const er = new Set(blks.map(b => b.dataset.sec));
+  if (ui.bsub && er.has(ui.bsub)) { blks.forEach(b => b.classList.toggle('hide', b.dataset.sec !== ui.bsub)); window.scrollTo(0, 0); return; }
+  ui.bsub = null; blks.forEach(b => b.classList.add('hide'));
+  const tel = { controle: (M.onbekend.length || 0) + ((chk || []).length || 0) };
+  const m = document.createElement('div'); m.className = 'blk lijstblok';
+  m.innerHTML = BEHEER_SEC.filter(x => er.has(x[0])).map(x => `<button class="rijknop" data-bs="${x[0]}"><span class="meeric">${x[1]}</span><span style="flex:1"><b>${x[2]}</b>${tel[x[0]] ? ` <span class="telbol">${tel[x[0]]}</span>` : ''}<br><span class="small">${x[3]}</span></span><span class="pijl">›</span></button>`).join('');
+  v.prepend(m); m.querySelectorAll('[data-bs]').forEach(b => b.onclick = () => { ui.bsub = b.dataset.bs; render(); });
 }
 async function adminDo(fn) {
   try { if (OEFEN) throw new Error('niet tijdens oefenen'); if (!DEMO && !navigator.onLine) throw new Error('Je bent offline'); await fn(); await saveCache(); rebuild(); render(); toast('Opgeslagen'); }
@@ -2351,6 +2421,7 @@ function belItems() {
   }
   if (mag('o_overig')) { let n = 0; for (const ean in S.inout) { const io = S.inout[ean]; if (!(io.ingekocht > 0)) continue; const r = C.overig(M, 'e:' + ean, io); if (r.melding && r.melding.t === 'op') n++; } if (n) out.push({ ic: '📦', t: `${n} in/out-${n === 1 ? 'artikel' : 'artikelen'} bijna op`, sub: 'Telefonisch bijbestellen?', ga: 'overig' }); }
   const ovd = Object.values(S.overdracht || {}).filter(r => !r.klaar).length; if (ovd) out.unshift({ ic: '📋', t: `${ovd} ${ovd === 1 ? 'punt' : 'punten'} in de overdracht`, sub: 'Staat op Home', ga: 'home' });
+  if (mag('upload') && M.onbekend.length) out.push({ ic: '🔍', t: `${M.onbekend.length} verkochte artikelen niet gekoppeld`, sub: 'Bekijk bij Beheer → Controleren', ga: 'beheer', bsub: 'controle' });
   const pr = prijsLijst().length; if (pr) out.push({ ic: '🏷️', t: `${pr} schapkaartje${pr === 1 ? '' : 's'} vervangen`, sub: 'Prijs gewijzigd in het bestelboek', ga: 'assort' });
   const lv = leverRegels(C.today()); const lvOpen = lv.filter(x => !x.chk).length; if (lvOpen) out.push({ ic: '📦', t: 'Levering van vandaag controleren', sub: `Nog ${lvOpen} van ${lv.length} af te vinken`, ga: 'levering' });
   const tt = tafelTelling(); if (tt.ombouw && tt.open) out.push({ ic: '🗂️', t: 'Actietafels ombouwen', sub: `${tt.klaar} van ${tt.totaal} klaar`, ga: 'tafels' });
@@ -2359,7 +2430,7 @@ function belItems() {
 function belTel() { const el = $('#belN'); if (!el) return; let n = 0; try { n = belItems().length; } catch (e) { } el.textContent = n > 9 ? '9+' : n; el.classList.toggle('hide', !n); }
 function belSheet() {
   const l = belItems();
-  const ov = sheet(`<h2 style="margin:0 0 6px">Vandaag</h2>${l.length ? l.map((x, i) => `<button class="belrij" data-bi="${i}"><span class="ic">${x.ic}</span><span><b>${esc(x.t)}</b><small>${esc(x.sub)}</small></span><span class="pijl">›</span></button>`).join('') : '<p class="small">Alles is bijgewerkt. Er is nu niets dat aandacht nodig heeft.</p>'}<button class="btn sec" data-x style="margin-top:12px">Sluiten</button>`, (e, o) => { const b = e.target.closest('[data-bi]'); if (b) { o.remove(); ga(l[+b.dataset.bi].ga); } });
+  const ov = sheet(`<h2 style="margin:0 0 6px">Vandaag</h2>${l.length ? l.map((x, i) => `<button class="belrij" data-bi="${i}"><span class="ic">${x.ic}</span><span><b>${esc(x.t)}</b><small>${esc(x.sub)}</small></span><span class="pijl">›</span></button>`).join('') : '<p class="small">Alles is bijgewerkt. Er is nu niets dat aandacht nodig heeft.</p>'}<button class="btn sec" data-x style="margin-top:12px">Sluiten</button>`, (e, o) => { const b = e.target.closest('[data-bi]'); if (b) { o.remove(); const it = l[+b.dataset.bi]; ga(it.ga); if (it.bsub) { ui.bsub = it.bsub; render(); } } });
 }
 /* ---------- uitleg ---------- */
 function renderUitleg() {
@@ -2483,7 +2554,7 @@ function renderLeverancier() {
 function volgordeHtml() {
   const od = ui.volgOd && BESTEL_OD.includes(ui.volgOd) ? ui.volgOd : 'agf'; ui.volgOd = od;
   const g = [...new Set(lijstArtikelen(od).map(groepVan))];
-  return `<div class="blk"><h2>Volgorde van de groepen</h2><p class="small">Zet de groepen in de volgorde van je winkel. De lijst, het tellen en de print volgen deze volgorde.</p><div class="chips2" id="volgOd">${BESTEL_OD.map(o => `<button class="${o === od ? 'aan' : ''}" data-vo="${o}">${odNaam(o)}</button>`).join('')}</div><div id="volgL" style="margin-top:8px">${g.map((x, i) => `<div class="volgrij"><span>${esc(x)}</span><button data-vu="${i}" ${i ? '' : 'disabled'}>▲</button><button data-vd="${i}" ${i < g.length - 1 ? '' : 'disabled'}>▼</button></div>`).join('') || '<div class="small">Nog geen groepen.</div>'}</div>${(S.inst && S.inst.groepVolgorde && S.inst.groepVolgorde[od]) ? '<button class="btn sm sec" id="volgR" style="margin-top:8px">Terug naar de volgorde van het bestelboek</button>' : ''}</div>`;
+  return `<div class="blk" data-sec="onderdelen"><h2>Volgorde van de groepen</h2><p class="small">Zet de groepen in de volgorde van je winkel. De lijst, het tellen en de print volgen deze volgorde.</p><div class="chips2" id="volgOd">${BESTEL_OD.map(o => `<button class="${o === od ? 'aan' : ''}" data-vo="${o}">${odNaam(o)}</button>`).join('')}</div><div id="volgL" style="margin-top:8px">${g.map((x, i) => `<div class="volgrij"><span>${esc(x)}</span><button data-vu="${i}" ${i ? '' : 'disabled'}>▲</button><button data-vd="${i}" ${i < g.length - 1 ? '' : 'disabled'}>▼</button></div>`).join('') || '<div class="small">Nog geen groepen.</div>'}</div>${(S.inst && S.inst.groepVolgorde && S.inst.groepVolgorde[od]) ? '<button class="btn sm sec" id="volgR" style="margin-top:8px">Terug naar de volgorde van het bestelboek</button>' : ''}</div>`;
 }
 function volgordeEvents(v) {
   const od = ui.volgOd; const g = [...new Set(lijstArtikelen(od).map(groepVan))];
@@ -2533,6 +2604,7 @@ function homeZoekRes() {
 }
 function overdrachtHtml() {
   const l = Object.values(S.overdracht || {}).filter(r => !r.klaar).sort((a, b) => (a.ts || '') < (b.ts || '') ? -1 : 1);
+  if (!l.length) return '<div class="ovklein"><button class="btn sm sec" id="ovAdd">📋 Overdracht toevoegen</button></div>';
   return `<div class="blk overdracht"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">📋 Overdracht</h2><button class="btn sm sec" id="ovAdd">+ Toevoegen</button></div>${l.length ? `<div class="list">${l.map(r => `<div class="it"><span style="flex:1">${esc(r.tekst)}<br><span class="small">${esc(r.wie || '')} · ${C.fmtDag((r.ts || C.today()).slice(0, 10))} ${hhmm(r.ts)}</span></span><button class="btn sm" data-ovok="${esc(r.id)}">✓ Gedaan</button></div>`).join('')}</div>` : '<p class="small" style="margin:6px 0 0">Geen openstaande punten voor de volgende dienst.</p>'}</div>`;
 }
 function deadlineHtml() {
