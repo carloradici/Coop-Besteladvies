@@ -369,6 +369,10 @@ body.vast{position:fixed;inset:0;width:100%;overflow:hidden;overscroll-behavior:
   #printArea .kleurstip{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 .sheetIn{max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;max-width:640px;margin:0 auto}
+.tafel .vak.vast{background:repeating-linear-gradient(45deg,var(--lijn) 0 6px,var(--kaart) 6px 12px);color:var(--grijs);align-items:center;justify-content:center;text-align:center}
+.tafel .vak.vast b{font-size:12px;color:var(--tekst)}
+.tafel.kies .vak.vastaan{background:repeating-linear-gradient(45deg,#9e9e9e 0 6px,#cfcfcf 6px 12px);color:#222;opacity:1}
+@media print{#printArea .tafel .vak.vast{background:repeating-linear-gradient(45deg,#bbb 0 5px,#fff 5px 10px)!important;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style>
 </head>
 <body>
@@ -901,7 +905,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.9';
+const VERSIE = '1.10';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -2682,7 +2686,8 @@ function tafelTekening(t, ind, klein) {
     if ((r2 - r1 + 1) * (k2 - k1 + 1) === cel.length) { h += `<div class="vak bezet ${it.klaar ? 'klaar' : ''}" data-ti="${i}" style="grid-area:${r1 + 1}/${k1 + 1}/${r2 + 2}/${k2 + 2};background:${kleur}">${label}</div>`; cel.forEach(c => gedaan.add(c)); }
     else { const eerste = Math.min(...cel); cel.forEach(c => { gedaan.add(c); h += `<div class="vak bezet ${it.klaar ? 'klaar' : ''}" data-ti="${i}" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1};background:${kleur}">${c === eerste ? label : ''}</div>`; }); }
   });
-  for (let c = 0; c < N; c++) if (!gedaan.has(c)) h += `<div class="vak leeg" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1}"></div>`;
+  const vast = new Set((t.vast || []).filter(c => c < N && !gedaan.has(c))); const eersteVast = vast.size ? Math.min(...vast) : -1;
+  for (let c = 0; c < N; c++) if (!gedaan.has(c)) h += vast.has(c) ? `<div class="vak vast" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1}">${klein ? '' : `<span>🔒</span>${c === eersteVast && t.vastTekst ? `<b>${esc(t.vastTekst)}</b>` : ''}`}</div>` : `<div class="vak leeg" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1}"></div>`;
   return h + '</div>';
 }
 function tafelWeken() { const s = new Set([weekSleutel(C.add(C.today(), -7)), weekSleutel(C.today()), weekSleutel(C.add(C.today(), 7))]); for (const a of S.acties || []) if (a.id >= weekSleutel(C.today())) s.add(a.id); return [...s].sort(); }
@@ -2703,7 +2708,7 @@ function renderTafels() {
     h += `<div class="blk"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">${esc(t.naam)}</h2>${kanIn ? '<button class="btn sm sec" id="tbEdit">Tafel ✎</button>' : ''}</div>${t.foto ? `<img class="tafelfoto" src="${t.foto}" alt="">` : ''}
     <p class="small">${kanIn ? 'Tik op een blok om het aan te passen, of voeg een artikel toe.' : 'Tik op een blok of in de lijst als het op de tafel staat.'}</p>${tafelTekening(t, ind)}
     <div class="row" style="margin-top:10px;flex-wrap:wrap">${kanIn ? '<button class="btn sm" id="tiAdd">+ Artikel op tafel</button>' : ''}${kanIn && !items.length && (vi.items || []).length ? `<button class="btn sm sec" id="tiCopy">Indeling week ${+vorig.split('-')[1]} overnemen</button>` : ''}${items.length ? '<button class="btn sm sec" id="tiPrint">Printen</button>' : ''}</div></div>
-    <div class="blk"><h2>Wat moet erop</h2>${items.length ? `<div class="list">${items.map((it, i) => `<div class="it"><span class="kleurstip" style="background:${TKLEUR[(it.kleur ?? i) % TKLEUR.length]}"></span><span style="flex:1"><b>${esc(it.naam)}</b><br><span class="small">${esc(it.nr || '')} · ${plekTekst(t, it.cellen)}${it.aantal ? ' · ' + C.fmt(+it.aantal) + ' stuks' : ''}${it.opm ? ' · ' + esc(it.opm) : ''}${it.klaar ? ` · ✓ ${esc(ini(it.door))} ${hhmm(it.om)}` : ''}</span></span>${kanAf ? `<button class="btn sm ${it.klaar ? 'sec' : ''}" data-tk="${i}">${it.klaar ? 'Terug' : 'Staat erop'}</button>` : ''}</div>`).join('')}</div>` : '<p class="small">Nog niets ingedeeld voor deze week.</p>'}</div>`;
+    <div class="blk"><h2>Wat moet erop</h2>${(t.vast || []).length ? `<p class="small">🔒 Vast assortiment${t.vastTekst ? ': ' + esc(t.vastTekst) : ''} · ${plekTekst(t, t.vast)} – hier komt geen actie.</p>` : ''}${items.length ? `<div class="list">${items.map((it, i) => `<div class="it"><span class="kleurstip" style="background:${TKLEUR[(it.kleur ?? i) % TKLEUR.length]}"></span><span style="flex:1"><b>${esc(it.naam)}</b><br><span class="small">${tafelArts(it).length ? esc(tafelArts(it).map(a => a.nr ? a.nr : a.naam).join(', ')) + ' · ' : ''}${plekTekst(t, it.cellen)}${it.aantal ? ' · ' + C.fmt(+it.aantal) + ' stuks' : ''}${it.opm ? ' · ' + esc(it.opm) : ''}${it.klaar ? ` · ✓ ${esc(ini(it.door))} ${hhmm(it.om)}` : ''}</span></span>${kanAf ? `<button class="btn sm ${it.klaar ? 'sec' : ''}" data-tk="${i}">${it.klaar ? 'Terug' : 'Staat erop'}</button>` : ''}</div>`).join('')}</div>` : '<p class="small">Nog niets ingedeeld voor deze week.</p>'}</div>`;
   }
   v.innerHTML = h;
   v.querySelectorAll('[data-tw]').forEach(b => b.onclick = () => { ui.tafelWeek = b.dataset.tw; render(); });
@@ -2733,27 +2738,47 @@ function tafelBewerk(t) {
   const nieuw = !t; const d = Object.assign({ naam: '', rijen: 2, kol: 3, foto: '', volg: tafelLijst().length }, t || {});
   const ov = sheet(`<h2 style="margin:0">${nieuw ? 'Tafel toevoegen' : 'Tafel aanpassen'}</h2><div class="form"><label>Naam</label><input type="text" id="tbN" value="${esc(d.naam)}" placeholder="Bijv. Tafel 1 bij de ingang">
   <div class="row"><div style="flex:1"><label>Rijen (vakken van voor naar achter)</label><input type="number" id="tbR" min="1" max="8" value="${d.rijen}"></div><div style="flex:1"><label>Kolommen (van links naar rechts)</label><input type="number" id="tbK" min="1" max="10" value="${d.kol}"></div></div>
+  <label>Vast assortiment – tik de vakken aan die geblokkeerd zijn</label><div id="tbVast"></div>
+  <label for="tbVt">Wat ligt er vast (optioneel)</label><input type="text" id="tbVt" value="${esc(d.vastTekst || '')}" placeholder="Bijv. koffie en thee">
   <label>Foto (optioneel)</label><div style="display:flex;gap:12px;align-items:center"><div class="fotovak" id="tbFv">${d.foto ? `<img src="${d.foto}" alt="">` : 'Geen foto'}</div><label class="btn sm sec" style="margin:0">Foto kiezen<input type="file" accept="image/*" id="tbF" class="hide"></label></div>
   <div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="tbO" style="flex:1">Opslaan</button></div>${nieuw ? '' : '<button class="btn sec" id="tbW" style="margin-top:6px;color:#d32f2f;border-color:#d32f2f">Tafel verwijderen</button>'}</div>`);
   $('#tbF').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { d.foto = await fotoVerklein(f); $('#tbFv').innerHTML = `<img src="${d.foto}" alt="">`; } catch (x) { toast('Foto lukt niet'); } };
-  $('#tbO').onclick = () => { d.naam = $('#tbN').value.trim(); if (!d.naam) return toast('Vul een naam in'); d.rijen = Math.max(1, Math.min(8, +$('#tbR').value || 2)); d.kol = Math.max(1, Math.min(10, +$('#tbK').value || 3)); const id = d.id || 'T' + Date.now().toString(36); const data = Object.assign({}, d); delete data.id; write('tafels', [{ id, data }]); ov.remove(); render(); };
+  const vast = new Set(d.vast || []);
+  const rasterR = () => Math.max(1, Math.min(8, +$('#tbR').value || 2)), rasterK = () => Math.max(1, Math.min(10, +$('#tbK').value || 3));
+  const tekenVast = () => { const R = rasterR(), K = rasterK(); [...vast].forEach(c => { if (c >= R * K) vast.delete(c); }); $('#tbVast').innerHTML = `<div class="tafel kies" style="grid-template-columns:repeat(${K},1fr);grid-template-rows:repeat(${R},40px)">${Array.from({ length: R * K }, (_, c) => `<button type="button" class="vak ${vast.has(c) ? 'vastaan' : 'leeg'}" data-v="${c}">${vast.has(c) ? '🔒' : ''}</button>`).join('')}</div>`; $('#tbVast').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const c = +b.dataset.v; vast.has(c) ? vast.delete(c) : vast.add(c); tekenVast(); }); };
+  tekenVast(); $('#tbR').oninput = tekenVast; $('#tbK').oninput = tekenVast;
+  $('#tbO').onclick = () => { d.naam = $('#tbN').value.trim(); if (!d.naam) return toast('Vul een naam in'); d.rijen = rasterR(); d.kol = rasterK(); d.vast = [...vast].sort((a, b) => a - b); d.vastTekst = $('#tbVt').value.trim(); const id = d.id || 'T' + Date.now().toString(36); const data = Object.assign({}, d); delete data.id; write('tafels', [{ id, data }]); ov.remove(); render(); };
   const w = $('#tbW'); if (w) w.onclick = async () => { if (!await bevestig('Tafel verwijderen?', `<b>${esc(d.naam)}</b> en de indeling verdwijnen.`, 'Verwijderen')) return; const data = Object.assign({}, d, { weg: true }); delete data.id; write('tafels', [{ id: d.id, data }]); ui.tafel = null; ov.remove(); render(); };
 }
+function tafelArts(it) { return it.artikelen || (it.key ? [{ key: it.key, naam: it.naam, nr: it.nr }] : []); }
 function tafelItemBewerk(t, week, idx) {
   const ind = JSON.parse(JSON.stringify(indelingVan(week, t.id))); ind.items = ind.items || [];
-  const nieuw = idx === null; const it = nieuw ? { key: '', naam: '', nr: '', cellen: [], aantal: '', opm: '', kleur: (ind.items.length) % TKLEUR.length, klaar: false } : ind.items[idx];
+  const nieuw = idx === null; const it = nieuw ? { naam: '', artikelen: [], cellen: [], aantal: '', opm: '', kleur: (ind.items.length) % TKLEUR.length, klaar: false } : ind.items[idx];
+  it.artikelen = tafelArts(it); delete it.key;
   const R = +t.rijen || 2, K = +t.kol || 3; const sel = new Set(it.cellen || []);
-  const bezet = {}; ind.items.forEach((x, i) => { if (i !== idx) (x.cellen || []).forEach(c => bezet[c] = x); });
+  const bezet = {}; (t.vast || []).forEach(c => bezet[c] = { naam: '🔒', vast: true }); ind.items.forEach((x, i) => { if (i !== idx) (x.cellen || []).forEach(c => bezet[c] = x); });
+  [...sel].forEach(c => { if (bezet[c] && bezet[c].vast) sel.delete(c); });
   const actieKeys = Object.keys(M.actieArt).filter(k => M.art[k] && M.actieArt[k].some(p => p.id === week));
-  const ov = sheet(`<h2 style="margin:0">${nieuw ? 'Artikel op tafel' : 'Aanpassen'} · ${esc(t.naam)}</h2><div class="form">
-  <label>Artikel</label><div id="tiGekozen" class="small" style="font-size:15px">${it.naam ? `<b>${esc(it.naam)}</b> ${esc(it.nr || '')}` : 'Nog geen artikel gekozen'}</div>
+  const ov = sheet(`<h2 style="margin:0">${nieuw ? 'Op de tafel' : 'Aanpassen'} · ${esc(t.naam)}</h2><div class="form">
+  <label for="tiN">Wat komt erop</label><input type="text" id="tiN" value="${esc(it.naam)}" placeholder="Bijv. Meesterhand pakken, alle soorten">
+  <label>Artikelen erbij (optioneel, voor barcodes op de print)</label><div id="tiArt" class="chips2"></div>
   <div class="row"><input type="search" id="tiQ" placeholder="Zoek naam of nummer" style="flex:1"><button class="btn sm sec" id="tiScan">📷</button></div><div id="tiRes" class="list zoekres"></div>
-  <label>Vakken – tik aan waar het komt</label><div class="tafel kies" style="grid-template-columns:repeat(${K},1fr);grid-template-rows:repeat(${R},44px)">${Array.from({ length: R * K }, (_, c) => `<button type="button" class="vak ${sel.has(c) ? 'aan' : ''} ${bezet[c] ? 'bezet' : 'leeg'}" data-c="${c}" ${bezet[c] ? 'disabled' : ''}>${bezet[c] ? esc(ini(bezet[c].naam)) : ''}</button>`).join('')}</div>
-  <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:6px">${R > 1 ? Array.from({ length: R }, (_, r) => `<button type="button" class="btn sm sec" data-rij="${r}">Rij ${r === 0 ? 'boven' : r === R - 1 ? 'onder' : r + 1}</button>`).join('') : ''}${K > 1 ? Array.from({ length: K }, (_, k) => `<button type="button" class="btn sm sec" data-kol="${k}">${k === 0 ? 'Links' : k === K - 1 ? 'Rechts' : 'Kolom ' + (k + 1)}</button>`).join('') : ''}</div>
-  <div class="row"><div style="flex:1"><label>Aantal stuks</label><input type="number" id="tiA" inputmode="numeric" value="${esc(it.aantal)}" placeholder="Bijv. 24"></div><div style="flex:2"><label>Opmerking</label><input type="text" id="tiO" value="${esc(it.opm || '')}" placeholder="Bijv. met prijsbord A4"></div></div>
+  <label>Vakken – tik aan waar het komt</label><div class="tafel kies" style="grid-template-columns:repeat(${K},1fr);grid-template-rows:repeat(${R},44px)">${Array.from({ length: R * K }, (_, c) => `<button type="button" class="vak ${sel.has(c) ? 'aan' : ''} ${bezet[c] ? 'bezet' : 'leeg'}" data-c="${c}" ${bezet[c] ? 'disabled' : ''}>${bezet[c] ? (bezet[c].vast ? '🔒' : esc(ini(bezet[c].naam))) : ''}</button>`).join('')}</div>${(t.vast || []).length ? `<p class="small" style="margin:0">🔒 = vast assortiment${t.vastTekst ? ' (' + esc(t.vastTekst) + ')' : ''}, kun je niet gebruiken.</p>` : ''}
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">${R > 1 ? Array.from({ length: R }, (_, r) => `<button type="button" class="btn sm sec" data-rij="${r}">Rij ${r === 0 ? 'boven' : r === R - 1 ? 'onder' : r + 1}</button>`).join('') : ''}${K > 1 ? Array.from({ length: K }, (_, k) => `<button type="button" class="btn sm sec" data-kol="${k}">${k === 0 ? 'Links' : k === K - 1 ? 'Rechts' : 'Kolom ' + (k + 1)}</button>`).join('') : ''}</div>
+  <label for="tiA">Aantal stuks (optioneel)</label><input type="number" id="tiA" inputmode="numeric" value="${esc(it.aantal)}" placeholder="Bijv. 24">
+  <label for="tiO">Opmerking (optioneel)</label><input type="text" id="tiO" value="${esc(it.opm || '')}" placeholder="Bijv. met prijsbord A4">
   <div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="tiS" style="flex:1">Opslaan</button></div>${nieuw ? '' : '<button class="btn sec" id="tiW" style="margin-top:6px;color:#d32f2f;border-color:#d32f2f">Van de tafel halen</button>'}</div>`);
-  const kies = a => { it.key = a.key; it.naam = a.naam; it.nr = a.eigen ? a.artNr || '' : a.nr; $('#tiGekozen').innerHTML = `<b>${esc(it.naam)}</b> ${esc(it.nr)}`; $('#tiRes').innerHTML = ''; $('#tiQ').value = ''; };
-  const toon = q => { const l = q && q.length >= 2 ? zoekAlles(q) : actieKeys.map(k => M.art[k]); $('#tiRes').innerHTML = (q ? '' : actieKeys.length ? '<div class="small" style="padding:4px 2px">Acties van deze week:</div>' : '') + l.slice(0, 30).map(a => `<button type="button" class="it" data-tk2="${a.key}"><span style="flex:1;text-align:left">${esc(a.naam)} <span class="small">${esc(a.eigen ? a.artNr || '' : a.nr)}</span></span></button>`).join(''); $('#tiRes').querySelectorAll('[data-tk2]').forEach(b => b.onclick = () => kies(M.art[b.dataset.tk2])); };
+  const tekenArts = () => { const el = $('#tiArt'); el.innerHTML = it.artikelen.length ? it.artikelen.map((a, i) => `<button type="button" class="aan" data-xa="${i}">${esc(a.naam)}${a.nr ? ' · ' + esc(a.nr) : ''} ✕</button>`).join('') : '<span class="small">Geen – alleen de tekst is ook goed.</span>'; el.querySelectorAll('[data-xa]').forEach(b => b.onclick = () => { it.artikelen.splice(+b.dataset.xa, 1); tekenArts(); }); };
+  tekenArts();
+  const kies = a => { if (!it.artikelen.some(x => x.key === a.key)) it.artikelen.push({ key: a.key, naam: a.naam, nr: a.eigen ? a.artNr || '' : a.nr }); if (!$('#tiN').value.trim()) $('#tiN').value = a.naam; tekenArts(); $('#tiRes').innerHTML = ''; $('#tiQ').value = ''; };
+  const toon = q => {
+    const l = q && q.length >= 2 ? zoekAlles(q) : actieKeys.map(k => M.art[k]);
+    let h = (!q && actieKeys.length ? '<div class="small" style="padding:4px 2px">Acties van deze week:</div>' : '') + l.slice(0, 30).map(a => `<button type="button" class="it" data-tk2="${a.key}"><span style="flex:1;text-align:left">${esc(a.naam)} <span class="small">${esc(a.eigen ? a.artNr || '' : a.nr)}</span></span><span class="pijl">+</span></button>`).join('');
+    if (q && q.length >= 2) h += `<button type="button" class="it" id="tiTekst"><span style="flex:1;text-align:left">${l.length ? '' : 'Niets gevonden. '}<b>"${esc(q)}" als tekst gebruiken</b></span></button>`;
+    $('#tiRes').innerHTML = h;
+    $('#tiRes').querySelectorAll('[data-tk2]').forEach(b => b.onclick = () => kies(M.art[b.dataset.tk2]));
+    const tt = $('#tiTekst'); if (tt) tt.onclick = () => { $('#tiN').value = q; $('#tiRes').innerHTML = ''; $('#tiQ').value = ''; };
+  };
   if (nieuw) toon('');
   $('#tiQ').oninput = e => toon(e.target.value.trim());
   $('#tiScan').onclick = () => scanStart(null, a => kies(a));
@@ -2761,12 +2786,18 @@ function tafelItemBewerk(t, week, idx) {
   ov.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const c = +b.dataset.c; sel.has(c) ? sel.delete(c) : sel.add(c); teken(); });
   ov.querySelectorAll('[data-rij]').forEach(b => b.onclick = () => { const r = +b.dataset.rij; const cs = Array.from({ length: K }, (_, k) => r * K + k).filter(c => !bezet[c]); const alle = cs.every(c => sel.has(c)); cs.forEach(c => alle ? sel.delete(c) : sel.add(c)); teken(); });
   ov.querySelectorAll('[data-kol]').forEach(b => b.onclick = () => { const k = +b.dataset.kol; const cs = Array.from({ length: R }, (_, r) => r * K + k).filter(c => !bezet[c]); const alle = cs.every(c => sel.has(c)); cs.forEach(c => alle ? sel.delete(c) : sel.add(c)); teken(); });
-  $('#tiS').onclick = () => { if (!it.naam) return toast('Kies eerst een artikel'); if (!sel.size) return toast('Tik minstens één vak aan'); it.cellen = [...sel].sort((a, b) => a - b); it.aantal = C.num($('#tiA').value) || ''; it.opm = $('#tiO').value.trim(); if (nieuw) ind.items.push(it); slaIndelingOp(week, t.id, ind); log('tafels', `${t.naam}: ${it.naam} ${nieuw ? 'ingedeeld' : 'aangepast'}`); ov.remove(); render(true); };
+  $('#tiS').onclick = () => {
+    it.naam = $('#tiN').value.trim() || (it.artikelen[0] && it.artikelen[0].naam) || '';
+    if (!it.naam) return toast('Typ wat er op komt, of kies een artikel');
+    if (!sel.size) return toast('Tik minstens één vak aan');
+    it.cellen = [...sel].sort((a, b) => a - b); it.aantal = C.num($('#tiA').value) || ''; it.opm = $('#tiO').value.trim(); it.nr = it.artikelen.map(a => a.nr).filter(Boolean).join(', ');
+    if (nieuw) ind.items.push(it); slaIndelingOp(week, t.id, ind); log('tafels', `${t.naam}: ${it.naam} ${nieuw ? 'ingedeeld' : 'aangepast'}`); ov.remove(); render(true);
+  };
   const w = $('#tiW'); if (w) w.onclick = () => { ind.items.splice(idx, 1); slaIndelingOp(week, t.id, ind); ov.remove(); render(true); };
 }
 function tafelPrint(t, week) {
   const ind = indelingVan(week, t.id);
-  $('#printArea').innerHTML = `<div class="tafelprint"><h1>${esc(t.naam)} · actieweek ${+week.split('-')[1]} · ${esc((WINKEL && WINKEL.naam) || '')}</h1>${tafelTekening(t, ind)}<table><thead><tr><th>Kleur</th><th>Artikel</th><th>Barcode</th><th>Plek</th><th>Aantal</th><th>Opmerking</th><th>Staat erop</th></tr></thead><tbody>${(ind.items || []).map((it, i) => `<tr><td><span class="kleurstip" style="background:${TKLEUR[(it.kleur ?? i) % TKLEUR.length]}"></span></td><td class="n"><b>${esc(it.nr || '')}</b> ${esc(it.naam)}</td><td>${/^\d{4,}$/.test(it.nr || '') ? C.msi(it.nr, 40, true) : ''}</td><td>${plekTekst(t, it.cellen)}</td><td>${it.aantal ? C.fmt(+it.aantal) : ''}</td><td>${esc(it.opm || '')}</td><td class="bst"></td></tr>`).join('')}</tbody></table></div>`;
+  $('#printArea').innerHTML = `<div class="tafelprint"><h1>${esc(t.naam)} · actieweek ${+week.split('-')[1]} · ${esc((WINKEL && WINKEL.naam) || '')}</h1>${tafelTekening(t, ind)}${(t.vast || []).length ? `<p>🔒 Vast assortiment${t.vastTekst ? ': ' + esc(t.vastTekst) : ''} (${plekTekst(t, t.vast)})</p>` : ''}<table><thead><tr><th>Kleur</th><th>Artikel</th><th>Barcode</th><th>Plek</th><th>Aantal</th><th>Opmerking</th><th>Staat erop</th></tr></thead><tbody>${(ind.items || []).map((it, i) => `<tr><td><span class="kleurstip" style="background:${TKLEUR[(it.kleur ?? i) % TKLEUR.length]}"></span></td><td class="n"><b>${esc(it.naam)}</b>${tafelArts(it).length > 1 || (tafelArts(it)[0] && tafelArts(it)[0].naam !== it.naam) ? '<br>' + tafelArts(it).map(a => esc(a.naam)).join('<br>') : ''}</td><td>${tafelArts(it).filter(a => /^\d{4,}$/.test(a.nr || '')).map(a => C.msi(a.nr, 40, true)).join('')}</td><td>${plekTekst(t, it.cellen)}</td><td>${it.aantal ? C.fmt(+it.aantal) : ''}</td><td>${esc(it.opm || '')}</td><td class="bst"></td></tr>`).join('')}</tbody></table></div>`;
   window.__laatstePrint = { tafel: t.naam, n: (ind.items || []).length };
   setTimeout(() => window.print(), 100);
 }
