@@ -729,7 +729,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.3';
+const VERSIE = '1.4';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -802,6 +802,8 @@ const upsert = (table, rows, conflict) => rest(`${table}?on_conflict=${conflict}
 const remove = (table, q) => rest(`${table}?${q}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' }, noBody: true });
 const PK = { push_abos: 'endpoint', voorraad: 'winkel_id,bron,nr', bestellingen: 'winkel_id,bron,nr,besteldag', schap_ok: 'winkel_id,bron,nr', inout: 'winkel_id,ean', instellingen: 'winkel_id', agenda: 'winkel_id,dag', kassa: 'winkel_id,ean', dagverkoop: 'winkel_id,dag', boeken: 'winkel_id,bron', acties: 'winkel_id,id', assortiment: 'winkel_id,bron,nr', notities: 'winkel_id,sleutel', voorkeuren: 'winkel_id,wie', activiteit: null };
 let W = ls.get('cba-w'); let WINKEL = null; let winkels = []; let eigenaar = false; let OEFEN = false;
+let OPEN = false; let VERS_IN = false; let kiestBestand = false; let verborgen = 0;
+const isMail = () => DEMO ? eigenaar : !!(sess && sess.kind === 'email');
 const wq = p => p + (p.includes('?') ? '&' : '?') + 'winkel_id=eq.' + W;
 const metW = rows => rows.map(r => Object.assign({ winkel_id: W }, r));
 const upW = (t, rows) => upsert(t, metW(rows), PK[t]);
@@ -836,6 +838,7 @@ async function saveCache() {
 }
 async function sync(full) {
   if (DEMO || OEFEN) return;
+  if (isMail() && !OPEN) return;
   try {
     setSync('Bijwerken…');
     await flush();
@@ -846,11 +849,12 @@ async function sync(full) {
       else { kiesWinkel(); return; }
     }
     WINKEL = winkels.find(x => x.id === W); eigenaar = WINKEL.rol === 'beheer';
+    if (isMail() && eigenaar && WINKEL.open === false) { setSync(); vergrendelNu(); return; }
     const [inst, agenda, boekMeta, acties, dagMeta, vr, be, so, io, mws, ass, nts, wr] = await Promise.all([
       rest(wq('instellingen?select=data')), rest(wq('agenda?select=*')), rest(wq('boeken?select=bron,geupload')), rest(wq('acties?select=*&order=van.asc')),
       getAll(wq(`dagverkoop?select=dag,geupload&dag=gte.${C.add(C.today(), -460)}&order=dag.asc`)),
       rest(wq(`voorraad?dag=gte.${C.add(C.today(), -8)}`)), rest(wq(`bestellingen?besteldag=gte.${C.add(C.today(), -21)}`)), rest(wq('schap_ok?select=bron,nr,ok')), rest(wq('inout?select=*')),
-      rest(wq('medewerkers?select=id,naam,rol,rechten,actief,heeft_pin&order=naam.asc')), getAll(wq('assortiment?select=*')), rest(wq('notities?select=*')), rest(`winkels?id=eq.${W}&select=koppelcode,code_tot,naam,plaats`)
+      rest(wq('medewerkers?select=id,naam,rol,rechten,actief,heeft_pin,email&order=naam.asc')), getAll(wq('assortiment?select=*')), rest(wq('notities?select=*')), rest(`winkels?id=eq.${W}&select=koppelcode,code_tot,naam,plaats`)
     ]);
     rol = eigenaar ? 'admin' : 'winkel'; S.medewerkers = mws.filter(m => m.actief !== false);
     S.winkel = Object.assign({}, S.winkel || {}, wr[0] ? { code: wr[0].koppelcode, tot: wr[0].code_tot, naam: wr[0].naam, plaats: wr[0].plaats } : {});
@@ -953,7 +957,7 @@ function huidigeMw() { return mw ? mwLijst().find(x => x.id === mw.id) : null; }
 function mag(r) { if (eigenaar) return true; const m = huidigeMw(); if (!m) return false; if (m.rol === 'beheerder') return true; const R = Object.assign(presetRechten('medewerker'), m.rechten || {}); return !!R[r]; }
 const recht = mag;
 function isBeheer() { return eigenaar || (huidigeMw() || {}).rol === 'beheerder'; }
-function mijnNaam() { if (!eigenaar) return mw ? mw.naam : 'Winkel'; if (S.inst && S.inst.beheerNaam) return S.inst.beheerNaam; const b = mwLijst().filter(m => m.rol === 'beheerder'); return b.length === 1 ? b[0].naam : 'Beheerder'; }
+function mijnNaam() { if (mw) return mw.naam; if (!eigenaar) return 'Winkel'; if (S.inst && S.inst.beheerNaam) return S.inst.beheerNaam; const b = mwLijst().filter(m => m.rol === 'beheerder'); return b.length === 1 ? b[0].naam : 'Beheerder'; }
 function wieSleutel() { return eigenaar ? 'mail:' + ((sess && sess.email) || '') : mw ? 'mw:' + mw.id : 'toestel'; }
 const ini = n => String(n || '').split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 const hhmm = iso => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
@@ -971,13 +975,13 @@ function showLogin(msg) {
   const modus = ui.loginModus || 'code';
   loginKader('Toestel koppelen', `<div class="segment"><button class="${modus === 'code' ? 'aan' : ''}" data-mo="code">Met koppelcode</button><button class="${modus === 'mail' ? 'aan' : ''}" data-mo="mail">Met e-mail</button></div>
   ${modus === 'code' ? `<p>Vraag de beheerder om de koppelcode van de winkel (Meer → Winkel). Daarna kies je je naam en vul je je pincode in.</p><div class="form"><label for="lC">Koppelcode</label><input type="text" id="lC" class="codeveld" placeholder="Bijv. K7MX4PQ2" autocapitalize="characters" autocomplete="off"><button class="btn" id="lK">Koppelen</button><div class="msg" id="lM">${esc(msg || '')}</div></div>` :
-  `<p>Voor de eigenaar van de winkel.</p><div class="form"><label for="lE">E-mailadres</label><input type="email" id="lE" placeholder="Bijv. carlo@coopvogelenzang.nl" autocomplete="username"><label for="lP">Wachtwoord</label><input type="password" id="lP" autocomplete="current-password"><button class="btn" id="lB">Inloggen</button><div class="msg" id="lM">${esc(msg || '')}</div></div>`}`);
+  `<p>${ui.pinVergeten ? 'Log in met je e-mail. Daarna kies je een nieuwe pincode.' : 'Voor de eigenaar van de winkel. Daarna log je in met je pincode.'}</p><div class="form"><label for="lE">E-mailadres</label><input type="email" id="lE" placeholder="voorbeeld@voorbeeld.nl" autocomplete="username"><label for="lP">Wachtwoord</label><input type="password" id="lP" autocomplete="current-password"><button class="btn" id="lB">Inloggen</button><div class="msg" id="lM">${esc(msg || '')}</div></div>`}`);
   document.querySelectorAll('[data-mo]').forEach(b => b.onclick = () => { ui.loginModus = b.dataset.mo; showLogin(); });
   if (modus === 'code') {
     const go = async () => { const code = $('#lC').value.trim().toUpperCase(); if (!code) return; $('#lM').textContent = 'Bezig…'; try { if (!sess || sess.kind !== 'anon') await anoniem(); const w = await rpc('koppel', { code }); if (!w) throw new Error('Deze koppelcode klopt niet of is verlopen.'); W = w; ls.set('cba-w', W); mw = null; ls.del('cba-mw'); start(); } catch (e) { $('#lM').textContent = e.message; } };
     $('#lK').onclick = go; $('#lC').onkeydown = e => { if (e.key === 'Enter') go(); };
   } else {
-    const go = async () => { $('#lM').textContent = 'Bezig…'; try { await authCall('password', { email: $('#lE').value.trim(), password: $('#lP').value }); mw = null; ls.del('cba-mw'); start(); } catch (e) { $('#lM').textContent = /Invalid login/i.test(e.message) ? 'E-mailadres of wachtwoord klopt niet.' : e.message; } };
+    const go = async () => { $('#lM').textContent = 'Bezig…'; try { await authCall('password', { email: $('#lE').value.trim(), password: $('#lP').value }); mw = null; ls.del('cba-mw'); OPEN = false; VERS_IN = true; start(); } catch (e) { $('#lM').textContent = /Invalid login/i.test(e.message) ? 'E-mailadres of wachtwoord klopt niet.' : e.message; } };
     $('#lB').onclick = go; $('#lP').onkeydown = e => { if (e.key === 'Enter') go(); };
   }
 }
@@ -985,7 +989,7 @@ function ontkoppeld() { sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-
 function geenWinkel() { loginKader('Geen winkel', '<p>Dit account hoort nog bij geen enkele winkel. Vraag de eigenaar om je als beheerder toe te voegen.</p><div class="form"><button class="btn sec" id="lUit">Uitloggen</button></div>'); $('#lUit').onclick = () => { sess = null; ls.del('cba-sess'); showLogin(); }; }
 function kiesWinkel() {
   loginKader('Kies een winkel', `<div class="form namen">${winkels.map(w => `<button class="btn" data-w="${w.id}">${esc(w.naam)}<small>${esc(w.plaats || '')}</small></button>`).join('')}</div>`);
-  document.querySelectorAll('[data-w]').forEach(b => b.onclick = async () => { await saveCache(); W = b.dataset.w; ls.set('cba-w', W); mw = null; ls.del('cba-mw'); S.dagen = {}; S.dagMeta = {}; S.boeken = {}; S.kassa = {}; M = null; start(); });
+  document.querySelectorAll('[data-w]').forEach(b => b.onclick = async () => { await saveCache(); W = b.dataset.w; ls.set('cba-w', W); mw = null; ls.del('cba-mw'); if (isMail()) OPEN = false; S.dagen = {}; S.dagMeta = {}; S.boeken = {}; S.kassa = {}; M = null; start(); });
 }
 function geldigeMw() { return !!(mw && mwLijst().some(m => m.id === mw.id)); }
 function kiesMedewerker(msg) {
@@ -995,11 +999,13 @@ function kiesMedewerker(msg) {
   const o = $('#opn'); if (o) o.onclick = () => start();
 }
 async function pinHash(id, pin) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id + ':' + pin)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); } catch (e) { return id + ':' + pin; } }
-function pinScherm(m) {
+function pinScherm(m, eig) {
   const nieuw = !m.heeft_pin;
-  loginKader(esc(m.naam), `<p>${nieuw ? 'Kies je eigen pincode van 4 cijfers.' : 'Voer je pincode in.'}${DEMO && !nieuw ? ' (Testversie: 1234)' : ''}</p><div class="form"><label for="p1">${nieuw ? 'Kies een pincode (4 cijfers)' : 'Pincode'}</label><input type="password" id="p1" inputmode="numeric" maxlength="4" pattern="[0-9]*" class="codeveld" autocomplete="off">
-  ${nieuw ? '<label for="p2">Herhaal pincode</label><input type="password" id="p2" inputmode="numeric" maxlength="4" pattern="[0-9]*" class="codeveld" autocomplete="off">' : ''}<button class="btn" id="pB">${nieuw ? 'Pincode opslaan' : 'Verder'}</button><button class="btn sec" id="pT">Andere naam</button><div class="msg" id="pM"></div></div>`);
-  $('#pT').onclick = () => kiesMedewerker(); $('#p1').focus();
+  loginKader(esc(m.naam), `<p>${nieuw ? (eig ? 'Kies je eigen pincode van 4 cijfers. Daarmee log je voortaan in.' : 'Kies je eigen pincode van 4 cijfers.') : 'Voer je pincode in.'}${DEMO && !nieuw ? ' (Testversie: 1234)' : ''}</p><div class="form"><label for="p1">${nieuw ? 'Kies een pincode (4 cijfers)' : 'Pincode'}</label><input type="password" id="p1" inputmode="numeric" maxlength="4" pattern="[0-9]*" class="codeveld" autocomplete="off">
+  ${nieuw ? '<label for="p2">Herhaal pincode</label><input type="password" id="p2" inputmode="numeric" maxlength="4" pattern="[0-9]*" class="codeveld" autocomplete="off">' : ''}<button class="btn" id="pB">${nieuw ? 'Pincode opslaan' : 'Verder'}</button><button class="btn sec" id="pT">${eig ? 'Pincode vergeten' : 'Andere naam'}</button>${eig && winkels.length > 1 ? '<button class="btn sec" id="pW">Andere winkel</button>' : ''}<div class="msg" id="pM"></div></div>`);
+  $('#pT').onclick = () => eig ? (DEMO ? toast('In de echte app log je dan opnieuw in met je e-mail') : naarMail('Log in met je e-mail. Daarna kies je een nieuwe pincode.', true)) : kiesMedewerker();
+  const pw = $('#pW'); if (pw) pw.onclick = () => { W = null; ls.del('cba-w'); kiesWinkel(); };
+  $('#p1').focus();
   const go = async () => {
     const p1 = $('#p1').value.trim(); const msg = $('#pM');
     if (!/^\d{4}$/.test(p1)) { msg.textContent = 'Een pincode bestaat uit 4 cijfers.'; return; }
@@ -1010,12 +1016,19 @@ function pinScherm(m) {
       if (DEMO) ok = nieuw || p1 === '1234';
       else {
         const lok = ls.get('cba-pin') || {};
-        try { const r = await rpc('pin_login', { w: W, mid: m.id, pin: p1 }); ok = r && r.ok; if (ok) { m.rol = r.rol || m.rol; m.rechten = r.rechten || m.rechten; } }
-        catch (e) { if (!lok[m.id]) throw new Error('Geen internet. Probeer het opnieuw zodra je verbinding hebt.'); ok = lok[m.id] === await pinHash(m.id, p1); }
+        let r = null;
+        try { r = await rpc('pin_login', { w: W, mid: m.id, pin: p1 }); }
+        catch (e) { if (!lok[m.id]) throw new Error('Geen internet. Probeer het opnieuw zodra je verbinding hebt.'); }
+        if (r) { ok = r.ok; if (ok) { m.rol = r.rol || m.rol; m.rechten = r.rechten || m.rechten; } if (r.geblokkeerd) return naarMail('Te vaak een verkeerde pincode. Log opnieuw in met je e-mail en kies een nieuwe pincode.', true); if (!ok && eig && r.over !== undefined) { msg.textContent = `Pincode klopt niet. Nog ${r.over} ${r.over === 1 ? 'poging' : 'pogingen'}.`; return; } }
+        else {
+          ok = lok[m.id] === await pinHash(m.id, p1);
+          if (eig) { const f = ok ? 0 : (ls.get('cba-pinfout') || 0) + 1; ls.set('cba-pinfout', f); if (f >= 5) { delete lok[m.id]; ls.set('cba-pin', lok); return naarMail('Te vaak een verkeerde pincode. Log opnieuw in met je e-mail en kies een nieuwe pincode.', true); } if (!ok) { msg.textContent = `Pincode klopt niet. Nog ${5 - f} ${5 - f === 1 ? 'poging' : 'pogingen'}.`; return; } }
+        }
       }
       if (!ok) { msg.textContent = 'Pincode klopt niet.'; return; }
-      const lok = ls.get('cba-pin') || {}; lok[m.id] = await pinHash(m.id, p1); ls.set('cba-pin', lok);
+      const lok = ls.get('cba-pin') || {}; lok[m.id] = await pinHash(m.id, p1); ls.set('cba-pin', lok); ls.del('cba-pinfout');
       mw = { id: m.id, naam: m.naam }; ls.set('cba-mw', mw); m.heeft_pin = true;
+      if (eig) { OPEN = true; VERS_IN = false; ui.pinVergeten = false; if (!DEMO) return start(); }
       S.pref = Object.assign({}, (ls.get('cba-pref-' + wieSleutel()) || {})); pasPrefToe();
       shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig();
       if (!DEMO) sync();
@@ -1023,6 +1036,55 @@ function pinScherm(m) {
   };
   $('#pB').onclick = go; document.querySelectorAll('.codeveld').forEach(i => i.onkeydown = e => { if (e.key === 'Enter') go(); });
 }
+/* ---------- eigenaar: e-mail eenmalig, daarna pincode ---------- */
+function naarMail(msg, vergeten) { OPEN = false; sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); ui.loginModus = 'mail'; ui.pinVergeten = !!vergeten; showLogin(msg); }
+function vergrendelNu() {
+  if (!isMail()) return;
+  OPEN = false; mw = null; ls.del('cba-mw'); ['#undoBalk'].forEach(x => $(x) && $(x).remove()); document.querySelectorAll('.sheet,.sheetbg,.overlay').forEach(x => x.remove());
+  if (DEMO) return pinScherm(DEMO_MW[0], true);
+  ontgrendel();
+}
+async function ontgrendel(nm) {
+  loginKader('Inloggen', '<p>Even geduld…</p>');
+  try {
+    winkels = await rpc('mijn_winkels');
+    if (!winkels.length) return geenWinkel();
+    if (!W || !winkels.some(x => x.id === W)) { if (winkels.length === 1) { W = winkels[0].id; ls.set('cba-w', W); } else return kiesWinkel(); }
+    WINKEL = winkels.find(x => x.id === W);
+    if (WINKEL.rol !== 'beheer') { OPEN = true; return start(); }
+    eigenaar = true;
+    await rpc('vergrendel', { w: W }).catch(() => { });
+    let r = await rpc('eigenaar_mw', { w: W, nm: nm || null });
+    if (r && r.nodig) return naamScherm(r.namen || []);
+    if (r.geblokkeerd || (ui.pinVergeten && r.heeft_pin)) {
+      if (!VERS_IN) return naarMail(r.geblokkeerd ? 'Te vaak een verkeerde pincode. Log opnieuw in met je e-mail en kies een nieuwe pincode.' : 'Log in met je e-mail. Daarna kies je een nieuwe pincode.', true);
+      const ok = await rpc('eigenaar_pin_reset', { w: W });
+      if (!ok) return naarMail('Log opnieuw in met je e-mail om een nieuwe pincode te kiezen.', true);
+      const lok = ls.get('cba-pin') || {}; delete lok[r.id]; ls.set('cba-pin', lok); ls.del('cba-pinfout');
+      r = await rpc('eigenaar_mw', { w: W, nm: null });
+    }
+    ls.set('cba-emw:' + W, { id: r.id, naam: r.naam });
+    pinScherm({ id: r.id, naam: r.naam, heeft_pin: r.heeft_pin }, true);
+  } catch (e) {
+    if (/niet ingelogd|refresh|Invalid Refresh|401|JWT/i.test(e.message) && navigator.onLine) return naarMail('Je sessie is verlopen. Log opnieuw in met je e-mail.');
+    const em = W && ls.get('cba-emw:' + W); const lok = ls.get('cba-pin') || {};
+    if (em && lok[em.id]) return pinScherm({ id: em.id, naam: em.naam, heeft_pin: true }, true);
+    loginKader('Geen verbinding', '<p>Je hebt internet nodig om in te loggen.</p><div class="form"><button class="btn" id="opn">Opnieuw proberen</button></div>'); $('#opn').onclick = () => ontgrendel(nm);
+  }
+}
+function naamScherm(namen) {
+  loginKader('Wie ben jij?', `<p>Eenmalig: kies je naam of vul hem in. Daarna kies je een pincode.</p><div class="form namen">${namen.map(n => `<button class="btn" data-nm="${esc(n)}">${esc(n)}<small>beheerder</small></button>`).join('')}</div><div class="form"><label for="nmI">${namen.length ? 'Of vul je naam in' : 'Jouw naam'}</label><input type="text" id="nmI" placeholder="Bijv. Carlo" autocomplete="given-name"><button class="btn" id="nmB">Verder</button><div class="msg" id="nmM"></div></div>`);
+  document.querySelectorAll('[data-nm]').forEach(b => b.onclick = () => ontgrendel(b.dataset.nm));
+  $('#nmB').onclick = () => { const n = $('#nmI').value.trim(); if (!n) return ($('#nmM').textContent = 'Vul je naam in.'); ontgrendel(n); };
+}
+document.addEventListener('click', e => { if (e.target && e.target.matches && e.target.matches('input[type=file]')) kiestBestand = true; }, true);
+document.addEventListener('change', e => { if (e.target && e.target.matches && e.target.matches('input[type=file]')) kiestBestand = false; }, true);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { verborgen = Date.now(); return; }
+  const lang = verborgen && Date.now() - verborgen > 15000; verborgen = 0;
+  if (kiestBestand) { kiestBestand = false; return; }
+  if (lang && OPEN && isMail() && !OEFEN) vergrendelNu();
+});
 function startDemo(r) {
   const d = window.DEMO_DATA;
   Object.assign(S, { dagen: d.dagen, kassa: d.kassa, boeken: d.boeken, acties: d.acties, agenda: d.agenda, inst: d.inst, medewerkers: DEMO_MW, winkel: { code: 'K7MX4PQ2', tot: C.add(C.today(), 30) + 'T12:00:00Z', toestellen: 2, naam: 'Coop Vogelenzang', plaats: 'Vogelenzang' }, assort: d.assort || {}, notities: {}, act: [] });
@@ -1031,10 +1093,12 @@ function startDemo(r) {
   eigenaar = r === 'admin'; rol = eigenaar ? 'admin' : 'winkel';
   sess = { email: eigenaar ? 'carlo@coopvogelenzang.nl' : '', kind: eigenaar ? 'email' : 'anon' };
   rebuild();
-  if (!eigenaar) { mw = null; kiesMedewerker(); return; }
-  shell(); ui.tab = 'home'; render(); tourAlsNodig();
+  mw = null; OPEN = false;
+  if (!eigenaar) { kiesMedewerker(); return; }
+  pinScherm(DEMO_MW[0], true);
 }
 async function start() {
+  if (isMail() && !OPEN) return ontgrendel();
   shell();
   const had = await loadCache();
   S.pref = ls.get('cba-pref-' + wieSleutel()) || S.pref || {}; pasPrefToe();
@@ -1051,14 +1115,14 @@ function shell() {
   if (!$('#view')) $('#app').innerHTML = '<div id="view"></div>';
   document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => ga(b.dataset.t));
   $('#hulpB').onclick = hulp; $('#terugB').onclick = () => ga(MEER_SUB.includes(ui.tab) ? (ui.tab === 'mwedit' ? 'medewerkers' : 'meer') : 'home');
-  $('#wieB').onclick = () => { if (OEFEN) return toast('Stop eerst met oefenen'); mw = null; ls.del('cba-mw'); kiesMedewerker(); };
+  $('#wieB').onclick = () => { if (OEFEN) return toast('Stop eerst met oefenen'); if (isMail()) return vergrendelNu(); mw = null; ls.del('cba-mw'); kiesMedewerker(); };
   $('.koplogo').src = logoSrc(); setSync(); oefenBalk();
 }
 const MEER_SUB = ['medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer'];
 function ga(tab) { const u = $('#undoBalk'); if (u) u.remove(); ui.tab = tab; ui.q = ''; ui.groep = ''; render(); window.scrollTo(0, 0); }
 async function logout() {
   if (!ask(sess && sess.kind === 'anon' ? 'Dit toestel ontkoppelen? Daarna is de koppelcode weer nodig.' : 'Uitloggen op dit apparaat?')) return;
-  sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); outbox = []; await iset('outbox', []); showLogin();
+  sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); OPEN = false; outbox = []; await iset('outbox', []); showLogin();
 }
 
 /* ---------- weergave ---------- */
@@ -1094,7 +1158,7 @@ function kop() {
   $('#terugB').classList.toggle('hide', ui.tab === 'home' || ui.tab === 'meer');
   $('#terugB').textContent = ui.tab === 'mwedit' ? '‹ Medewerkers' : MEER_SUB.includes(ui.tab) ? '‹ Meer' : '‹ Home';
   $('#kopT').textContent = t[0]; $('#kopS').textContent = t[1];
-  const wb = $('#wieB'); wb.classList.toggle('hide', eigenaar || !mw); if (mw) wb.textContent = `${mw.naam} ⇄`;
+  const wb = $('#wieB'); wb.classList.toggle('hide', !mw); if (mw) wb.textContent = `👤 ${mw.naam} ⇄`;
   $('.koplogo').src = logoSrc();
 }
 
@@ -1246,7 +1310,7 @@ function renderMeer() {
   v.innerHTML = `<div class="blk lijstblok">
   ${knop('mApp', 'App-instellingen', 'Licht of donker, tekstgrootte, eenvoudige modus')}
   ${knop('mMeld', 'Meldingen', 'Pushmeldingen aan of uit zetten')}
-  ${!eigenaar && mw ? knop('mPin', 'Pincode wijzigen', '') + knop('mWis', 'Andere medewerker', `Nu: ${esc(mijnNaam())}`) : ''}
+  ${mw ? knop('mPin', 'Pincode wijzigen', '') + (isMail() ? knop('mWis', 'Vergrendelen', 'Daarna weer inloggen met je pincode') : knop('mWis', 'Andere medewerker', `Nu: ${esc(mijnNaam())}`)) : ''}
   </div><div class="blk lijstblok">
   ${mag('team') ? knop('mVan', 'Vandaag gedaan', 'Wie heeft wat gedaan') : ''}
   ${mag('upload') || mag('bestellen') ? knop('mExp', 'Exporteren', 'Bestellijst, verkoop of acties naar Excel') : ''}
@@ -1263,7 +1327,7 @@ function renderMeer() {
   const on = (id, f) => { const b = $('#' + id); if (b) b.onclick = f; };
   on('mApp', () => ga('appinst')); on('mMeld', () => ga('meldingen')); on('mVan', () => ga('vandaag')); on('mExp', () => ga('export')); on('mMw', () => ga('medewerkers')); on('mWi', () => ga('winkel')); on('mBe', () => ga('beheer'));
   on('mWw', () => { if (OEFEN) return toast('Stop eerst met oefenen'); kiesWinkel(); });
-  on('mPin', pinWijzigen); on('mWis', () => { if (OEFEN) return toast('Stop eerst met oefenen'); mw = null; ls.del('cba-mw'); kiesMedewerker(); });
+  on('mPin', pinWijzigen); on('mWis', () => { if (OEFEN) return toast('Stop eerst met oefenen'); if (isMail()) return vergrendelNu(); mw = null; ls.del('cba-mw'); kiesMedewerker(); });
   on('mOef', () => OEFEN ? stopOefenen() : startOefenen());
   on('mUpd', () => zoekUpdate(false)); on('mTour', () => tour()); on('mSync', () => { if (DEMO || OEFEN) toast(OEFEN ? 'Niet tijdens oefenen' : 'Testversie: geen server'); else sync(true); });
   on('mUit', () => { if (DEMO) showLogin(); else logout(); });
@@ -1279,12 +1343,12 @@ function pinWijzigen() {
   });
 }
 async function mwOpslaan(f) {
-  await adminDo(async () => { await f(); if (!DEMO) { const r = await rest(wq('medewerkers?select=id,naam,rol,rechten,actief,heeft_pin&order=naam.asc')); S.medewerkers = r.filter(m => m.actief !== false); } });
+  await adminDo(async () => { await f(); if (!DEMO) { const r = await rest(wq('medewerkers?select=id,naam,rol,rechten,actief,heeft_pin,email&order=naam.asc')); S.medewerkers = r.filter(m => m.actief !== false); } });
 }
 function renderMedewerkers() {
   const v = $('#view'); const lijst = mwLijst();
   const samenvat = m => { if (m.rol === 'beheerder') return 'Beheerder · alles'; const R = Object.assign(presetRechten('medewerker'), m.rechten || {}); const od = ONDERDELEN.filter(o => R['o_' + o[0]]).map(o => o[1]); return `${m.rol === 'leider' ? 'Afdelingsleider' : 'Medewerker'} · ${od.length === 6 ? 'alle onderdelen' : od.join(', ') || 'geen onderdelen'}`; };
-  v.innerHTML = `<div class="blk lijstblok">${lijst.map(m => `<button class="rijknop" data-mwid="${m.id}"><span><b>${esc(m.naam)}</b><br><span class="small">${samenvat(m)} · ${m.heeft_pin ? 'pincode ingesteld' : 'nog geen pincode'}</span></span><span class="pijl">›</span></button>`).join('') || '<div class="small" style="padding:14px 16px">Nog geen medewerkers.</div>'}</div>
+  v.innerHTML = `<div class="blk lijstblok">${lijst.map(m => `<button class="rijknop" data-mwid="${m.id}"><span><b>${esc(m.naam)}</b><br><span class="small">${m.email ? 'Eigenaar · ' : ''}${samenvat(m)} · ${m.heeft_pin ? 'pincode ingesteld' : 'nog geen pincode'}</span></span><span class="pijl">›</span></button>`).join('') || '<div class="small" style="padding:14px 16px">Nog geen medewerkers.</div>'}</div>
   <div class="blk"><h2>Medewerker toevoegen</h2><div class="row"><input type="text" id="mwN" placeholder="Naam" style="flex:1"><button class="btn sm" id="mwAdd">Toevoegen</button></div><p class="small">Nieuwe medewerkers krijgen de rechten van "Medewerker". Tik daarna op de naam om ze aan te passen. Ze kiezen zelf hun pincode bij de eerste keer.</p></div>`;
   v.querySelectorAll('[data-mwid]').forEach(b => b.onclick = () => { ui.mwId = b.dataset.mwid; ga('mwedit'); });
   $('#mwAdd').onclick = () => { const n = $('#mwN').value.trim(); if (!n) return toast('Vul een naam in'); mwOpslaan(async () => { const row = { naam: n, rol: 'medewerker', rechten: presetRechten('medewerker') }; if (DEMO) DEMO_MW.push(Object.assign({ id: 'd' + Date.now(), heeft_pin: false }, row)); else await rest('medewerkers', { method: 'POST', body: metW([row]), headers: { Prefer: 'return=minimal' }, noBody: true }); log('team', `Medewerker toegevoegd: ${n}`); }); };
@@ -1309,7 +1373,7 @@ function renderWinkel() {
   <p class="small" style="text-align:center">${verlopen ? '<b class="rood">Verlopen</b>' : `Geldig tot ${datum} · vaker te gebruiken`} · ${w.toestellen ?? '?'} toestel${w.toestellen === 1 ? '' : 'len'} gekoppeld</p>
   <div class="row"><button class="btn sm" id="wDeel" style="flex:1">Delen</button><button class="btn sm sec" id="wVerl" style="flex:1">30 dagen verlengen</button></div>
   <button class="btn sm red" id="wNieuw" style="width:100%;margin-top:10px">Nieuwe code maken</button><p class="small">Een nieuwe code ontkoppelt alle toestellen van deze winkel. Gebruik dit als een toestel kwijt is.</p></div>
-  <div class="blk"><h2>Winkelgegevens</h2><div class="form"><div class="f"><label>Plaats (voor het weer)</label><input type="text" id="wPl" value="${esc(plaatsNu())}"></div>${eigenaar ? `<div class="f"><label>Jouw naam</label><input type="text" id="wNaam" value="${esc((S.inst && S.inst.beheerNaam) || '')}" placeholder="Bijv. Carlo"></div>` : ''}<button class="btn" id="wSave">Opslaan</button></div></div>`;
+  <div class="blk"><h2>Winkelgegevens</h2><div class="form"><div class="f"><label>Plaats (voor het weer)</label><input type="text" id="wPl" value="${esc(plaatsNu())}"></div><button class="btn" id="wSave">Opslaan</button></div></div>`;
   if (eigenaar) h += `<div class="blk"><h2>Winkels</h2><div class="list">${winkels.map(x => `<div class="it"><span><b>${esc(x.naam)}</b><br><span class="small">${esc(x.plaats || '')}</span></span>${x.id === W ? '<span class="small">huidig</span>' : `<button class="btn sm sec" data-ww="${x.id}">Wisselen</button>`}</div>`).join('')}</div>
   <h3>Nieuwe winkel</h3><div class="form"><input type="text" id="nwN" placeholder="Naam, bijv. Coop Lisse"><input type="text" id="nwP" placeholder="Plaats"><button class="btn sm" id="nwB">Winkel aanmaken</button></div>
   <h3>Beheerder toevoegen</h3><p class="small">Bijvoorbeeld een collega-ondernemer. Die logt in met e-mail en wachtwoord (account aanmaken in Supabase → Users).</p><div class="row"><input type="email" id="bhE" placeholder="E-mailadres" style="flex:1"><button class="btn sm" id="bhB">Toevoegen</button></div></div>`;

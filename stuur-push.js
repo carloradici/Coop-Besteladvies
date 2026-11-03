@@ -1,6 +1,6 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
 // Wordt door de korte stuur-push in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
-// Soorten: test (één toestel), boek (na upload bestelboek, beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
+// Soorten: test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };
 const ONDERDELEN = [['agf', 'AGF'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries'], ['kw', 'KW']];
 const STD_OPEN = [['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['', '']];
@@ -40,14 +40,10 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date() }) {
     if (!token || !body.winkel) return { status: 401, fout: 'Niet ingelogd' };
     const { data: u } = await sb.auth.getUser(token);
     const user = u && u.user; if (!user) return { status: 401, fout: 'Niet ingelogd' };
-    const email = (user.email || '').toLowerCase();
-    const { data: b } = await sb.from('winkel_beheer').select('email').eq('winkel_id', body.winkel);
-    let ok = !!email && (b || []).some(x => x.email === email);
-    if (!ok) {
-      const { data: se } = await sb.from('sessies').select('medewerker_id,tot').eq('uid', user.id).eq('winkel_id', body.winkel);
-      const sessie = (se || []).find(x => new Date(x.tot) > nu);
-      if (sessie) { const { data: m } = await sb.from('medewerkers').select('rol,rechten').eq('id', sessie.medewerker_id); const mw = m && m[0]; ok = !!mw && (mw.rol === 'beheerder' || !!(mw.rechten && mw.rechten.upload)); }
-    }
+    let ok = false;
+    const { data: se } = await sb.from('sessies').select('medewerker_id,tot').eq('uid', user.id).eq('winkel_id', body.winkel);
+    const sessie = (se || []).find(x => new Date(x.tot) > nu);
+    if (sessie) { const { data: m } = await sb.from('medewerkers').select('rol,rechten,actief').eq('id', sessie.medewerker_id); const mw = m && m[0]; ok = !!mw && mw.actief !== false && (mw.rol === 'beheerder' || !!(mw.rechten && mw.rechten.upload)); }
     if (!ok) return { status: 403, fout: 'Geen recht' };
     const naam = body.bron === 'kw' ? 'KW' : 'Vers';
     const tekst = `${body.nieuw || 0} nieuw, ${body.uit || 0} uit assortiment${body.uit ? ' – schap aanpassen' : ''}.`;
