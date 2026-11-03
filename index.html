@@ -250,6 +250,7 @@ input.schak:checked::after{left:23px}
 .login.compact h1{font-size:26px}
 .login.compact .inlog label{margin-top:10px}
 .login.compact .cijferblok button{height:54px}
+.naamkeuze.fout{animation:schud .35s}
 </style>
 </head>
 <body>
@@ -754,7 +755,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.5';
+const VERSIE = '1.6';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -1069,19 +1070,18 @@ function tekenInlog() {
   const lijst = IN.namen || [];
   if (!IN.keuze || !lijst.some(m => m.id === IN.keuze)) { const l = ls.get('cba-laatste:' + W); IN.keuze = lijst.some(m => m.id === l) ? l : null; }
   const g = lijst.find(m => m.id === IN.keuze); const nieuw = g && !g.heeft_pin;
-  const label = !g ? '' : nieuw ? (IN.eerste ? 'Herhaal je pincode' : 'Kies je pincode (4 cijfers)') : 'Pincode';
+  const label = !g ? 'Pincode' : nieuw ? (IN.eerste ? 'Herhaal je pincode' : 'Kies je pincode (4 cijfers)') : 'Pincode';
   const face = faceVoor(g);
   loginKader('Inloggen', `<div class="form inlog"><label for="iNaam">Naam</label><div class="naamkeuze"><select id="iNaam" aria-label="Kies je naam"><option value="" ${g ? '' : 'selected'} disabled>Kies je naam</option>${lijst.map(m => `<option value="${m.id}" ${m.id === IN.keuze ? 'selected' : ''}>${esc(m.naam)}</option>`).join('')}</select>${g && g.rol === 'beheerder' ? '<span class="rol">Beheerder</span>' : ''}<span class="pijlneer">▾</span></div>
-  ${g ? `<label>${label}</label><div class="pinbolletjes" id="iDots">${[0, 1, 2, 3].map(i => `<i class="${i < IN.pin.length ? 'vol' : ''}"></i>`).join('')}</div><div class="msg" id="iM">${esc(IN.msg)}</div>
+  ${`<label>${label}</label><div class="pinbolletjes" id="iDots">${[0, 1, 2, 3].map(i => `<i class="${i < IN.pin.length ? 'vol' : ''}"></i>`).join('')}</div><div class="msg" id="iM">${esc(IN.msg)}</div>
   <div class="cijferblok">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-cijfer="${n}">${n}</button>`).join('')}${face ? `<button class="wis" id="iFace" aria-label="Inloggen met Face ID">${FACE_SVG}</button>` : '<span></span>'}<button data-cijfer="0">0</button><button class="wis" id="iWis" aria-label="Wissen">⌫</button></div>
-  <p class="merkhint">${face ? 'Tik linksonder voor Face ID, of vul je pincode in' : nieuw && g.mail && !g.eigen ? 'Deze pincode stel je eenmalig in op je eigen telefoon.' : 'Na het 4e cijfer log je automatisch in'}</p>
-  ${g.eigen ? '<button class="merklink" id="iVerg">Pincode vergeten</button>' : ''}` : `<div class="msg">${esc(IN.msg)}</div><p class="merkhint">${lijst.length ? 'Kies eerst je naam.' : 'Er zijn nog geen medewerkers. De beheerder voegt ze toe via Meer → Medewerkers.'}</p>`}
+  <p class="merkhint">${!g ? (lijst.length ? 'Kies eerst je naam.' : 'Er zijn nog geen medewerkers. De beheerder voegt ze toe via Meer → Medewerkers.') : face ? 'Tik linksonder voor Face ID, of vul je pincode in' : nieuw && g.mail && !g.eigen ? 'Deze pincode stel je eenmalig in op je eigen telefoon.' : 'Na het 4e cijfer log je automatisch in'}</p>
+  ${g && g.eigen ? '<button class="merklink" id="iVerg">Pincode vergeten</button>' : ''}`}
   ${winkels.length > 1 ? '<button class="merklink" id="iWinkel">Andere winkel</button>' : ''}</div>`, true);
   $('#iNaam').onchange = e => { IN.keuze = e.target.value; IN.pin = ''; IN.eerste = null; IN.msg = ''; tekenInlog(); if (faceVoor(lijst.find(m => m.id === IN.keuze))) faceLogin(); };
   const wk = $('#iWinkel'); if (wk) wk.onclick = () => { W = null; ls.del('cba-w'); kiesWinkel(); };
-  if (!g) return;
   const dots = () => { const d = $('#iDots'); if (d) d.querySelectorAll('i').forEach((x, i) => x.classList.toggle('vol', i < IN.pin.length)); };
-  document.querySelectorAll('[data-cijfer]').forEach(b => b.onclick = () => { if (IN.pin.length >= 4) return; IN.pin += b.dataset.cijfer; dots(); if (IN.pin.length === 4) setTimeout(() => probeerPin(g), 120); });
+  document.querySelectorAll('[data-cijfer]').forEach(b => b.onclick = () => { if (!g) { const m = $('#iM'); if (m) m.textContent = 'Kies eerst je naam.'; const s2 = $('.naamkeuze'); if (s2) { s2.classList.remove('fout'); void s2.offsetWidth; s2.classList.add('fout'); } return; } if (IN.pin.length >= 4) return; IN.pin += b.dataset.cijfer; dots(); if (IN.pin.length === 4) setTimeout(() => probeerPin(g), 120); });
   $('#iWis').onclick = () => { IN.pin = IN.pin.slice(0, -1); dots(); };
   const fb = $('#iFace'); if (fb) fb.onclick = () => faceLogin();
   const vg = $('#iVerg'); if (vg) vg.onclick = () => DEMO ? toast('In de echte app log je dan opnieuw in met je e-mail') : naarMail('Log in met je e-mail. Daarna kies je een nieuwe pincode.', true);
@@ -1373,7 +1373,7 @@ function renderMeer() {
   v.innerHTML = `<div class="blk lijstblok">
   ${knop('mApp', 'App-instellingen', 'Licht of donker, tekstgrootte, eenvoudige modus')}
   ${knop('mMeld', 'Meldingen', 'Pushmeldingen aan of uit zetten')}
-  ${mw ? knop('mPin', 'Pincode wijzigen', '') + (eigenaar && isMail() ? knop('mFace', 'Face ID', ls.get('cba-face:' + W) ? 'Staat aan op dit toestel' : 'Inloggen met je gezicht in plaats van pincode') : '') + knop('mWis', 'Wisselen of vergrendelen', `Nu: ${esc(mijnNaam())}`) : ''}
+  ${mw ? knop('mPin', eigenaar && isMail() && !DEMO ? 'Pincode en Face ID' : 'Pincode wijzigen', eigenaar && isMail() && !DEMO ? (ls.get('cba-face:' + W) ? 'Face ID staat aan op dit toestel' : 'Face ID staat uit') : '') + knop('mWis', 'Wisselen of vergrendelen', `Nu: ${esc(mijnNaam())}`) : ''}
   </div><div class="blk lijstblok">
   ${mag('team') ? knop('mVan', 'Vandaag gedaan', 'Wie heeft wat gedaan') : ''}
   ${mag('upload') || mag('bestellen') ? knop('mExp', 'Exporteren', 'Bestellijst, verkoop of acties naar Excel') : ''}
@@ -1390,13 +1390,14 @@ function renderMeer() {
   const on = (id, f) => { const b = $('#' + id); if (b) b.onclick = f; };
   on('mApp', () => ga('appinst')); on('mMeld', () => ga('meldingen')); on('mVan', () => ga('vandaag')); on('mExp', () => ga('export')); on('mMw', () => ga('medewerkers')); on('mWi', () => ga('winkel')); on('mBe', () => ga('beheer'));
   on('mWw', () => { if (OEFEN) return toast('Stop eerst met oefenen'); kiesWinkel(); });
-  on('mPin', pinWijzigen); on('mFace', faceInstellen); on('mWis', () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); });
+  on('mPin', pinWijzigen); on('mWis', () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); });
   on('mOef', () => OEFEN ? stopOefenen() : startOefenen());
   on('mUpd', () => zoekUpdate(false)); on('mTour', () => tour()); on('mSync', () => { if (DEMO || OEFEN) toast(OEFEN ? 'Niet tijdens oefenen' : 'Testversie: geen server'); else sync(true); });
   on('mUit', () => { if (DEMO) showLogin(); else logout(); });
 }
 function pinWijzigen() {
-  sheet(`<h2 style="margin:0">Pincode wijzigen</h2><div class="form"><label>Huidige pincode</label><input type="password" id="pw0" inputmode="numeric" maxlength="4" class="codeveld"><label>Nieuwe pincode</label><input type="password" id="pw1" inputmode="numeric" maxlength="4" class="codeveld"><label>Herhaal nieuwe pincode</label><input type="password" id="pw2" inputmode="numeric" maxlength="4" class="codeveld"><div class="msg" id="pwM"></div><div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" data-pw style="flex:1">Opslaan</button></div></div>`, async (e, ov) => {
+  sheet(`<h2 style="margin:0">Pincode wijzigen</h2><div class="form"><label>Huidige pincode</label><input type="password" id="pw0" inputmode="numeric" maxlength="4" class="codeveld"><label>Nieuwe pincode</label><input type="password" id="pw1" inputmode="numeric" maxlength="4" class="codeveld"><label>Herhaal nieuwe pincode</label><input type="password" id="pw2" inputmode="numeric" maxlength="4" class="codeveld"><div class="msg" id="pwM"></div><div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" data-pw style="flex:1">Opslaan</button></div></div>${eigenaar && isMail() && !DEMO ? `<h2 style="margin:18px 0 0">Face ID</h2><p class="small">${ls.get('cba-face:' + W) ? 'Face ID staat aan op dit toestel. Je kunt ook altijd met je pincode inloggen.' : 'Log in met je gezicht in plaats van je pincode. Alleen voor jou, op dit toestel.'}</p><button class="btn ${ls.get('cba-face:' + W) ? 'sec' : ''}" data-face>${ls.get('cba-face:' + W) ? 'Face ID uitzetten' : 'Face ID aanzetten'}</button>` : ''}`, async (e, ov) => {
+    if (e.target.closest && e.target.closest('[data-face]')) { if (ls.get('cba-face:' + W) && !(await bevestig('Face ID uitzetten?', 'Daarna log je op dit toestel alleen nog in met je pincode.', 'Uitzetten', 'Annuleren'))) return; ov.remove(); return faceInstellen(); }
     if (e.target.dataset.pw === undefined) return;
     const o = $('#pw0').value.trim(), n = $('#pw1').value.trim(), msg = $('#pwM');
     if (!/^\d{4}$/.test(n)) return msg.textContent = 'Een pincode bestaat uit 4 cijfers.';
