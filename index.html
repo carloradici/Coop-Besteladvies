@@ -320,6 +320,55 @@ table.hg{width:100%;border-collapse:collapse;font-size:14px}table.hg th,table.hg
 #printArea thead .pkop th{text-align:left;font-size:12px;border:0;padding:0 0 4px}
 #printArea tbody.nieuwepagina{break-before:page;page-break-before:always}
 .uitleg{border-bottom:1px solid var(--lijn);padding:12px 16px}.uitleg summary{cursor:pointer;font-size:16px}.uitleg .hulptekst{margin-top:8px}
+/* 1.9 */
+.toast{bottom:auto;top:calc(env(safe-area-inset-top) + 118px);z-index:120}
+body.vast{position:fixed;inset:0;width:100%;overflow:hidden;overscroll-behavior:none}
+.login.compact{position:fixed;inset:0;min-height:0;height:100%;overflow:hidden;padding-top:calc(env(safe-area-inset-top) + clamp(6px,2vh,14px));padding-bottom:calc(env(safe-area-inset-bottom) + 8px)}
+.login.compact .merklogo{width:clamp(110px,19vh,160px)}
+.login.compact .merkregel{margin:clamp(2px,1vh,6px) 0 0}
+.login.compact .inlog label{margin-top:clamp(4px,1.2vh,10px)}
+.login.compact .naamkeuze{height:clamp(46px,6.5vh,56px)}
+.login.compact .pinbolletjes{margin:clamp(4px,1vh,10px) 0 2px}
+.login.compact .cijferblok{gap:clamp(6px,1.1vh,10px)}
+.login.compact .cijferblok button{height:clamp(42px,7vh,56px)}
+.login.compact .merkhint{margin-top:6px}
+.login.compact .merklink{margin-top:8px}
+.login.compact .versie{display:none}
+.meerkop{margin:18px 20px 6px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--grijs)}
+.meeric{font-size:22px;width:34px;flex:none;text-align:center;margin-right:6px}
+.rijknop{align-items:center}
+.homezoek{padding-top:12px}
+.zoekres .it{width:100%;border:0;background:none;color:var(--tekst);text-align:left;padding:10px 4px;border-bottom:1px solid var(--lijn)}
+.overdracht{border:2px solid var(--oranje)}
+.deadlines{margin:10px 16px 0;display:flex;flex-direction:column;gap:6px;max-width:640px}
+@media (min-width:760px){.deadlines{margin-left:auto;margin-right:auto}}
+.deadline{border-radius:12px;padding:10px 14px;font-weight:700;font-size:15px;color:#fff}
+.deadline.oranje{background:var(--oranje)}.deadline.rood{background:#d32f2f}.deadline.groen{background:#2e7d32}
+.grpbtn{border:1.5px solid var(--oranje);background:none;color:var(--oranje);border-radius:12px;padding:2px 8px;font-weight:700;font-size:12px}
+.groen{color:#2e7d32}.rood{color:#d32f2f}
+.tafelgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:12px 16px;max-width:672px;margin:0 auto}
+.tafelkaart{display:flex;flex-direction:column;gap:6px;text-align:left;border:1px solid var(--lijn);border-radius:14px;background:var(--kaart);color:var(--tekst);padding:10px}
+.tafelkaart img{width:100%;height:80px;object-fit:cover;border-radius:10px}
+.tafelfoto{width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin:8px 0}
+.tafel{display:grid;gap:3px;background:var(--lijn);border:3px solid var(--grijs);border-radius:10px;padding:3px;margin-top:8px}
+.tafel .vak{border-radius:6px;min-height:22px;position:relative;color:#fff;padding:6px;font-size:13px;line-height:1.2;display:flex;flex-direction:column;gap:2px;overflow:hidden;border:0;text-align:left}
+.tafel .vak.leeg{background:var(--kaart)}
+.tafel .vak b{font-size:13px}.tafel .vak span{font-weight:800}
+.tafel .vak.klaar{opacity:.55}.tafel .vak.klaar i{position:absolute;right:6px;top:4px;font-style:normal;font-size:18px;font-weight:900}
+.tafel.klein{gap:2px;padding:2px;border-width:2px}.tafel.klein .vak{padding:0;min-height:0}
+.tafel.kies .vak{min-height:44px;align-items:center;justify-content:center;font-weight:800;color:var(--grijs)}
+.tafel.kies .vak.aan{background:var(--oranje);color:#fff}
+.tafel.kies .vak.bezet{background:var(--lijn);opacity:.6}
+.kleurstip{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:10px;flex:none}
+@media print{
+  #printArea .tafelprint h1{font-size:16px;margin:0 0 8px}
+  #printArea .tafel{display:grid;border:2px solid #000;background:#fff;gap:2px;padding:2px;margin-bottom:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #printArea .tafel .vak{color:#fff;font-size:11px;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #printArea .tafel .vak.leeg{background:#fff;border:1px dashed #999}
+  #printArea .tafelprint table td{font-size:11px;vertical-align:middle}
+  #printArea .kleurstip{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+.sheetIn{max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;max-width:640px;margin:0 auto}
 </style>
 </head>
 <body>
@@ -741,6 +790,8 @@ C.advies = (M, key, lv, voorraad, bestellingen) => {
   const days = C.dekking(M, key, lv);
   let need = 0; for (const d of days) need += C.verwacht(M, key, d);
   const buf = (M.st.buffer[a ? a.bron : 'vers'] || 0) / 100; need *= 1 + buf;
+  let derv = 0, dervKorting = 0;
+  if (M.derv && M.derv[key] > 0) { derv = M.derv[key]; const sk = M.keys[key]; let v28 = 0; if (sk) for (let i = Math.max(0, M.N - 28); i < M.N; i++) v28 += sk.v[i]; const ratio = derv / (v28 + derv); if (ratio > 0.05) { dervKorting = Math.min(0.25, ratio * 0.5); need *= 1 - dervKorting; } }
   let stock = null;
   if (voorraad && voorraad.dag && C.diff(voorraad.dag, M.vandaag) <= 7) {
     stock = voorraad.aantal;
@@ -751,7 +802,7 @@ C.advies = (M, key, lv, voorraad, bestellingen) => {
   const netto = stock !== null ? Math.max(0, need + min - Math.max(0, stock)) : Math.max(need, min);
   const x = netto / he;
   const adv = x < 0.3 ? 0 : (a && a.perHE ? Math.max(1, Math.round(x)) : Math.max(1, Math.round(x)));
-  return { need, stock, netto, adv, he, min, perHE: !!(a && a.perHE), days, kg: !!(M.keys[key] && M.keys[key].kg) };
+  return { need, stock, netto, adv, he, min, derv, dervKorting, perHE: !!(a && a.perHE), days, kg: !!(M.keys[key] && M.keys[key].kg) };
 };
 // weekoverzicht: laatste 3 volle weken + lopende week + Gd
 C.weekTabel = (M, key) => {
@@ -850,7 +901,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.8';
+const VERSIE = '1.9';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -922,7 +973,7 @@ async function getAll(path) {
 }
 const upsert = (table, rows, conflict) => rest(`${table}?on_conflict=${conflict}`, { method: 'POST', body: rows, headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, noBody: true });
 const remove = (table, q) => rest(`${table}?${q}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' }, noBody: true });
-const PK = { push_abos: 'endpoint', voorraad: 'winkel_id,bron,nr', bestellingen: 'winkel_id,bron,nr,besteldag', schap_ok: 'winkel_id,bron,nr', inout: 'winkel_id,ean', instellingen: 'winkel_id', agenda: 'winkel_id,dag', kassa: 'winkel_id,ean', dagverkoop: 'winkel_id,dag', boeken: 'winkel_id,bron', acties: 'winkel_id,id', assortiment: 'winkel_id,bron,nr', notities: 'winkel_id,sleutel', voorkeuren: 'winkel_id,wie', eigen_artikelen: 'winkel_id,id', schap_min: 'winkel_id,bron,nr', activiteit: null };
+const PK = { push_abos: 'endpoint', voorraad: 'winkel_id,bron,nr', bestellingen: 'winkel_id,bron,nr,besteldag', schap_ok: 'winkel_id,bron,nr', inout: 'winkel_id,ean', instellingen: 'winkel_id', agenda: 'winkel_id,dag', kassa: 'winkel_id,ean', dagverkoop: 'winkel_id,dag', boeken: 'winkel_id,bron', acties: 'winkel_id,id', assortiment: 'winkel_id,bron,nr', notities: 'winkel_id,sleutel', voorkeuren: 'winkel_id,wie', eigen_artikelen: 'winkel_id,id', schap_min: 'winkel_id,bron,nr', overdracht: 'winkel_id,id', levercheck: 'winkel_id,bron,nr,lever', derving: 'winkel_id,id', prijs_ok: 'winkel_id,bron,nr', tafels: 'winkel_id,id', tafel_indeling: 'winkel_id,week,tafel_id', activiteit: null };
 let W = ls.get('cba-w'); let WINKEL = null; let winkels = []; let eigenaar = false; let OEFEN = false;
 let OPEN = false; let VERS_IN = false; let kiestBestand = false; let verborgen = 0;
 const isMail = () => !!(sess && sess.kind === 'email');
@@ -931,7 +982,7 @@ const metW = rows => rows.map(r => Object.assign({ winkel_id: W }, r));
 const upW = (t, rows) => upsert(t, metW(rows), PK[t]);
 
 /* ---------- toestand ---------- */
-const S = { dagen: {}, dagMeta: {}, kassa: {}, boeken: {}, acties: [], agenda: [], inst: null, voorraad: {}, bestel: {}, schapOk: new Set(), inout: {}, medewerkers: [], winkel: null, assort: {}, notities: {}, act: [], pref: {}, eigen: {}, min: {} };
+const S = { dagen: {}, dagMeta: {}, kassa: {}, boeken: {}, acties: [], agenda: [], inst: null, voorraad: {}, bestel: {}, schapOk: new Set(), inout: {}, medewerkers: [], winkel: null, assort: {}, notities: {}, act: [], pref: {}, eigen: {}, min: {}, overdracht: {}, lever: {}, derving: {}, prijsOk: {}, tafels: {}, indeling: {} };
 let mw = ls.get('cba-mw');
 let M = null;
 let rol = 'winkel';
@@ -955,7 +1006,7 @@ async function loadCache() {
 }
 async function saveCache() {
   if (!W || OEFEN) return;
-  const c = { kassa: S.kassa, boeken: S.boeken, acties: S.acties, agenda: S.agenda, inst: S.inst, voorraad: S.voorraad, bestel: S.bestel, schapOk: [...S.schapOk], inout: S.inout, dagMeta: S.dagMeta, medewerkers: S.medewerkers, winkel: S.winkel, assort: S.assort, notities: S.notities, pref: S.pref, eigen: S.eigen, min: S.min, rol, eigenaar, WINKEL, winkels };
+  const c = { kassa: S.kassa, boeken: S.boeken, acties: S.acties, agenda: S.agenda, inst: S.inst, voorraad: S.voorraad, bestel: S.bestel, schapOk: [...S.schapOk], inout: S.inout, dagMeta: S.dagMeta, medewerkers: S.medewerkers, winkel: S.winkel, assort: S.assort, notities: S.notities, pref: S.pref, eigen: S.eigen, min: S.min, overdracht: S.overdracht, lever: S.lever, derving: S.derving, prijsOk: S.prijsOk, tafels: S.tafels, indeling: S.indeling, rol, eigenaar, WINKEL, winkels };
   await iset('cache:' + W, c);
 }
 async function sync(full) {
@@ -972,13 +1023,21 @@ async function sync(full) {
     WINKEL = winkels.find(x => x.id === W); eigenaar = berekenEigenaar();
     if (WINKEL.open === false) { setSync(); inlogScherm(); return; }
     await flush();
-    const [inst, agenda, boekMeta, acties, dagMeta, vr, be, so, io, mws, ass, nts, wr, eig, mins] = await Promise.all([
+    const [inst, agenda, boekMeta, acties, dagMeta, vr, be, so, io, mws, ass, nts, wr, eig, mins, ovd, lvc, drv, pok, tfl, tfi] = await Promise.all([
       rest(wq('instellingen?select=data')), rest(wq('agenda?select=*')), rest(wq('boeken?select=bron,geupload')), rest(wq('acties?select=*&order=van.asc')),
       getAll(wq(`dagverkoop?select=dag,geupload&dag=gte.${C.add(C.today(), -460)}&order=dag.asc`)),
       rest(wq(`voorraad?dag=gte.${C.add(C.today(), -8)}`)), rest(wq(`bestellingen?besteldag=gte.${C.add(C.today(), -21)}`)), rest(wq('schap_ok?select=bron,nr,ok')), rest(wq('inout?select=*')),
       rest(wq('medewerkers?select=id,naam,rol,rechten,actief,heeft_pin,email&order=naam.asc')), getAll(wq('assortiment?select=*')), rest(wq('notities?select=*')), rest(`winkels?id=eq.${W}&select=koppelcode,code_tot,naam,plaats`),
-      rest(wq('eigen_artikelen?select=id,data')).catch(() => []), rest(wq('schap_min?select=bron,nr,min')).catch(() => [])
+      rest(wq('eigen_artikelen?select=id,data')).catch(() => []), rest(wq('schap_min?select=bron,nr,min')).catch(() => []),
+      rest(wq('overdracht?klaar=eq.false&select=*')).catch(() => []), rest(wq(`levercheck?lever=gte.${C.add(C.today(), -10)}&select=*`)).catch(() => []), getAll(wq(`derving?dag=gte.${C.add(C.today(), -60)}&select=*`)).catch(() => []),
+      rest(wq('prijs_ok?select=bron,nr,prijs')).catch(() => []), rest(wq('tafels?select=id,data')).catch(() => []), rest(wq(`tafel_indeling?week=gte.${weekSleutel(C.add(C.today(), -7))}&select=week,tafel_id,data`)).catch(() => [])
     ]);
+    S.overdracht = {}; ovd.forEach(r => S.overdracht[r.id] = r);
+    S.lever = {}; lvc.forEach(r => S.lever[r.bron + ':' + r.nr + '|' + r.lever] = r);
+    S.derving = {}; drv.forEach(r => S.derving[r.id] = r);
+    S.prijsOk = {}; pok.forEach(r => S.prijsOk[r.bron + ':' + r.nr] = +r.prijs);
+    S.tafels = {}; tfl.forEach(r => S.tafels[r.id] = Object.assign({ id: r.id }, r.data || {}));
+    S.indeling = {}; tfi.forEach(r => S.indeling[r.week + '|' + r.tafel_id] = r.data || { items: [] });
     S.eigen = {}; eig.forEach(r => S.eigen[r.id] = Object.assign({ id: r.id }, r.data || {}));
     S.min = {}; mins.forEach(r => { if (+r.min > 0) S.min[r.bron + ':' + r.nr] = +r.min; });
     rol = eigenaar ? 'admin' : 'winkel'; S.medewerkers = mws.filter(m => m.actief !== false);
@@ -997,7 +1056,7 @@ async function sync(full) {
     for (const d of Object.keys(S.dagMeta)) if (!(d in want)) { delete S.dagMeta[d]; delete S.dagen[d]; await idel('d:' + W + ':' + d); }
     if (need.length || full || !Object.keys(S.kassa).length) { const k = await getAll(wq('kassa?select=*')); S.kassa = {}; k.forEach(r => S.kassa[r.ean] = r); }
     S.voorraad = {}; vr.forEach(r => S.voorraad[r.bron + ':' + r.nr] = { aantal: +r.aantal, dag: r.dag, door: r.door });
-    S.bestel = {}; be.forEach(r => S.bestel[r.bron + ':' + r.nr + '|' + r.besteldag] = { aantal: r.aantal === null ? null : +r.aantal, lever: r.lever, besteldag: r.besteldag, besteld: !!r.besteld, besteld_door: r.besteld_door, besteld_om: r.besteld_om });
+    S.bestel = {}; be.forEach(r => S.bestel[r.bron + ':' + r.nr + '|' + r.besteldag] = { aantal: r.aantal === null ? null : +r.aantal, lever: r.lever, besteldag: r.besteldag, besteld: !!r.besteld, besteld_door: r.besteld_door, besteld_om: r.besteld_om, advies: r.advies === null || r.advies === undefined ? null : +r.advies });
     S.schapOk = new Set(so.filter(r => r.ok !== false).map(r => r.bron + ':' + r.nr)); S.inout = {}; io.forEach(r => S.inout[r.ean] = r);
     S.assort = {}; ass.forEach(r => S.assort[r.bron + ':' + r.nr] = r);
     S.notities = {}; nts.forEach(r => { if (r.tekst) S.notities[r.sleutel] = r; });
@@ -1016,12 +1075,18 @@ function applyOutboxLocal() { for (const o of outbox) applyLocal(o); }
 function applyLocal(o) {
   for (const r of o.rows || []) {
     if (o.t === 'voorraad') S.voorraad[r.bron + ':' + r.nr] = { aantal: +r.aantal, dag: r.dag, door: r.door };
-    if (o.t === 'bestellingen') { const k = r.bron + ':' + r.nr + '|' + r.besteldag; const o2 = Object.assign({}, S.bestel[k] || {}); if ('aantal' in r) o2.aantal = r.aantal === null ? null : +r.aantal; if ('besteld' in r) { o2.besteld = !!r.besteld; o2.besteld_door = r.besteld_door; o2.besteld_om = r.besteld_om; } o2.lever = r.lever || o2.lever; o2.besteldag = r.besteldag; S.bestel[k] = o2; }
+    if (o.t === 'bestellingen') { const k = r.bron + ':' + r.nr + '|' + r.besteldag; const o2 = Object.assign({}, S.bestel[k] || {}); if ('aantal' in r) o2.aantal = r.aantal === null ? null : +r.aantal; if ('besteld' in r) { o2.besteld = !!r.besteld; o2.besteld_door = r.besteld_door; o2.besteld_om = r.besteld_om; } o2.lever = r.lever || o2.lever; o2.besteldag = r.besteldag; if ('advies' in r) o2.advies = r.advies; S.bestel[k] = o2; }
     if (o.t === 'schap_ok') { if (r.ok === false) S.schapOk.delete(r.bron + ':' + r.nr); else S.schapOk.add(r.bron + ':' + r.nr); }
     if (o.t === 'assortiment') S.assort[r.bron + ':' + r.nr] = Object.assign({}, S.assort[r.bron + ':' + r.nr] || {}, r);
     if (o.t === 'notities') { if (r.tekst) S.notities[r.sleutel] = r; else delete S.notities[r.sleutel]; }
     if (o.t === 'activiteit') S.act.push(r);
     if (o.t === 'inout') S.inout[r.ean] = r;
+    if (o.t === 'overdracht') { if (r.klaar) delete S.overdracht[r.id]; else S.overdracht[r.id] = Object.assign({}, S.overdracht[r.id] || {}, r); }
+    if (o.t === 'levercheck') S.lever[r.bron + ':' + r.nr + '|' + r.lever] = r;
+    if (o.t === 'derving') S.derving[r.id] = r;
+    if (o.t === 'prijs_ok') S.prijsOk[r.bron + ':' + r.nr] = +r.prijs;
+    if (o.t === 'tafels') S.tafels[r.id] = Object.assign({ id: r.id }, r.data || {});
+    if (o.t === 'tafel_indeling') S.indeling[r.week + '|' + r.tafel_id] = r.data || { items: [] };
     if (o.t === 'eigen_artikelen') S.eigen[r.id] = Object.assign({ id: r.id }, r.data || {});
     if (o.t === 'schap_min') { if (+r.min > 0) S.min[r.bron + ':' + r.nr] = +r.min; else delete S.min[r.bron + ':' + r.nr]; }
   }
@@ -1064,6 +1129,7 @@ window.addEventListener('offline', () => { online = false; setSync(); });
 function rebuild() {
   M = C.buildModel({ dagen: S.dagen, kassa: S.kassa, boeken: S.boeken, acties: S.acties, agenda: S.agenda, inst: S.inst, vandaag: C.today(), eigen: Object.values(S.eigen || {}) });
   M.min = S.min || {};
+  M.derv = {}; const grens = C.add(C.today(), -28); for (const r of Object.values(S.derving || {})) if (r.dag >= grens && r.soort === 'weg') M.derv[r.bron + ':' + r.nr] = (M.derv[r.bron + ':' + r.nr] || 0) + (+r.aantal || 0);
 }
 
 /* ---------- login, koppelen, winkels en medewerkers ---------- */
@@ -1074,10 +1140,10 @@ function logoSrc() { return /^vogelenzang$/i.test(plaatsNu()) ? LOGO : LOGO_KAAL
 const ONDERDELEN = [['agf', 'AGF', '🥬'], ['vers', 'Vers', '🧀'], ['brood', 'Brood', '🥖'], ['diep', 'Diepvries', '🧊'], ['kw', 'KW', '🥫'], ['overig', 'Overig', '📦']];
 const BESTEL_OD = ['agf', 'vers', 'brood', 'diep', 'kw'];
 const odNaam = k => (ONDERDELEN.find(o => o[0] === k) || [k, k])[1];
-const RECHTEN = [['Onderdelen zien', [['o_agf', 'AGF'], ['o_vers', 'Vers'], ['o_brood', 'Brood'], ['o_diep', 'Diepvries'], ['o_kw', 'KW'], ['o_overig', 'Overig']]], ['Doen', [['tellen', 'Voorraad tellen'], ['bestellen', 'Bestelling aanpassen'], ['afvinken', 'Besteld afvinken'], ['schap', 'Schap aangepast afvinken'], ['saneren', 'Saneren en opnemen in assortiment'], ['inout', 'In/out: ingekocht invullen']]], ['Beheer', [['inkoop', 'Inkoopprijzen zien'], ['upload', 'Bestanden uploaden'], ['instellingen', 'Instellingen, besteldagen en feestdagen'], ['team', 'Medewerkers en koppelcode']]]];
+const RECHTEN = [['Onderdelen zien', [['o_agf', 'AGF'], ['o_vers', 'Vers'], ['o_brood', 'Brood'], ['o_diep', 'Diepvries'], ['o_kw', 'KW'], ['o_overig', 'Overig']]], ['Doen', [['tellen', 'Voorraad tellen'], ['bestellen', 'Bestelling aanpassen'], ['afvinken', 'Besteld afvinken'], ['schap', 'Schap aangepast afvinken'], ['saneren', 'Saneren en opnemen in assortiment'], ['inout', 'In/out: ingekocht invullen']]], ['Beheer', [['inkoop', 'Inkoopprijzen zien'], ['upload', 'Bestanden uploaden'], ['instellingen', 'Instellingen, besteldagen en feestdagen'], ['team', 'Medewerkers en koppelcode'], ['tafels', 'Actietafels indelen']]]];
 const ALLE_R = RECHTEN.flatMap(g => g[1].map(r => r[0]));
 const PRESET = { medewerker: ['o_agf', 'o_vers', 'o_brood', 'o_diep', 'o_kw', 'o_overig', 'tellen', 'afvinken', 'schap'] };
-PRESET.leider = PRESET.medewerker.concat(['bestellen', 'saneren', 'inout', 'upload', 'inkoop']);
+PRESET.leider = PRESET.medewerker.concat(['bestellen', 'saneren', 'inout', 'upload', 'inkoop', 'tafels']);
 PRESET.beheerder = ALLE_R.slice();
 const presetRechten = p => Object.fromEntries(ALLE_R.map(r => [r, PRESET[p].includes(r)]));
 const DEMO_MW = [{ id: 'd1', naam: 'Carlo', rol: 'beheerder', rechten: presetRechten('beheerder'), heeft_pin: true }, { id: 'd2', naam: 'Medewerker A', rol: 'medewerker', rechten: Object.assign(presetRechten('medewerker'), { afvinken: false }), heeft_pin: true }, { id: 'd3', naam: 'Medewerker B', rol: 'medewerker', rechten: Object.assign(presetRechten('medewerker'), { o_kw: false, o_overig: false, o_diep: false }), heeft_pin: false }];
@@ -1093,6 +1159,7 @@ const hhmm = iso => { if (!iso) return ''; const d = new Date(iso); return isNaN
 const log = (wat, tekst) => write('activiteit', [{ wie: mijnNaam(), wat, tekst, dag: C.today(), ts: new Date().toISOString() }]);
 
 function loginKader(onder, inhoud, compact) {
+  document.body.classList.toggle('vast', !!compact); window.scrollTo(0, 0);
   document.body.classList.add('inlog'); $('nav.tabs').classList.add('hide'); $('#kop').classList.add('hide'); ['#updBalk', '#oefenBalk'].forEach(s => $(s) && $(s).remove());
   $('#app').innerHTML = compact ? `<div class="login compact"><img class="merklogo" src="${logoSrc()}" alt="Coop"><div class="merkregel">${KLEMBORD}<h1>Besteladvies</h1></div>${inhoud}` : `<div class="login"><img class="merklogo" src="${logoSrc()}" alt="Coop">${KLEMBORD}<h1>Besteladvies</h1><div class="ond">${onder}</div>${inhoud}<div class="versie">${esc((WINKEL && WINKEL.naam) || 'Coop Vogelenzang')} · versie ${VERSIE}</div></div>`;
 }
@@ -1107,10 +1174,10 @@ function showLogin(msg) {
   `<p>${ui.pinVergeten ? 'Log in met je e-mail. Daarna kies je een nieuwe pincode.' : 'Voor de eigenaar van de winkel. Daarna log je in met je pincode.'}</p><div class="form"><label for="lE">E-mailadres</label><input type="email" id="lE" placeholder="voorbeeld@voorbeeld.nl" autocomplete="username"><label for="lP">Wachtwoord</label><input type="password" id="lP" autocomplete="current-password"><button class="btn" id="lB">Inloggen</button><div class="msg" id="lM">${esc(msg || '')}</div></div>`}`);
   document.querySelectorAll('[data-mo]').forEach(b => b.onclick = () => { ui.loginModus = b.dataset.mo; showLogin(); });
   if (modus === 'code') {
-    const go = async () => { const code = $('#lC').value.trim().toUpperCase(); if (!code) return; $('#lM').textContent = 'Bezig…'; try { if (!sess || sess.kind !== 'anon') await anoniem(); const w = await rpc('koppel', { code }); if (!w) throw new Error('Deze koppelcode klopt niet of is verlopen.'); W = w; ls.set('cba-w', W); mw = null; ls.del('cba-mw'); start(); } catch (e) { $('#lM').textContent = e.message; } };
+    const go = async () => { const code = $('#lC').value.trim().toUpperCase(); if (!code) return; $('#lM').textContent = 'Bezig…'; try { if (!sess || sess.kind !== 'anon') await anoniem(); const w = await rpc('koppel', { code }); if (!w) throw new Error('Deze koppelcode klopt niet of is verlopen.'); W = w; ls.set('cba-w', W); mw = null; ls.del('cba-mw'); start(); } catch (e) { $('#lM').textContent = !navigator.onLine || /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Geen internet. Koppelen kan alleen met internet.' : e.message; } };
     $('#lK').onclick = go; $('#lC').onkeydown = e => { if (e.key === 'Enter') go(); };
   } else {
-    const go = async () => { $('#lM').textContent = 'Bezig…'; try { await authCall('password', { email: $('#lE').value.trim(), password: $('#lP').value }); mw = null; ls.del('cba-mw'); OPEN = false; VERS_IN = true; start(); } catch (e) { $('#lM').textContent = /Invalid login/i.test(e.message) ? 'E-mailadres of wachtwoord klopt niet.' : e.message; } };
+    const go = async () => { $('#lM').textContent = 'Bezig…'; try { await authCall('password', { email: $('#lE').value.trim(), password: $('#lP').value }); mw = null; ls.del('cba-mw'); OPEN = false; VERS_IN = true; start(); } catch (e) { $('#lM').textContent = /Invalid login/i.test(e.message) ? 'E-mailadres of wachtwoord klopt niet.' : !navigator.onLine || /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Geen internet. Inloggen met e-mail kan alleen met internet.' : e.message; } };
     $('#lB').onclick = go; $('#lP').onkeydown = e => { if (e.key === 'Enter') go(); };
   }
 }
@@ -1129,7 +1196,7 @@ function naarMail(msg, vergeten) { OPEN = false; sess = null; ls.del('cba-sess')
 function opruimen() { const u = $('#undoBalk'); if (u) u.remove(); document.querySelectorAll('.sheet').forEach(x => x.remove()); }
 async function inlogScherm(msg) {
   OPEN = false; mw = null; ls.del('cba-mw'); opruimen();
-  IN.pin = ''; IN.eerste = null; IN.msg = msg || '';
+  IN.pin = ''; IN.eerste = null; IN.msg = msg || ''; IN.faceAuto = false;
   if (DEMO) { IN.namen = demoNamen(); return tekenInlog(); }
   const cache = W && ls.get('cba-namen:' + W);
   if (cache && !ui.pinVergeten && !VERS_IN) { IN.namen = cache; tekenInlog(); } else loginKader('Inloggen', '<p>Even geduld…</p>');
@@ -1155,7 +1222,7 @@ async function inlogScherm(msg) {
     tekenInlog();
   } catch (e) {
     if (/niet ingelogd|refresh|Invalid Refresh|401|JWT/i.test(e.message) && navigator.onLine) return isMail() ? naarMail('Je sessie is verlopen. Log opnieuw in met je e-mail.') : ontkoppeld();
-    if (!cache) { loginKader('Geen verbinding', '<p>Je hebt internet nodig om in te loggen.</p><div class="form"><button class="btn" id="opn">Opnieuw proberen</button></div>'); $('#opn').onclick = () => inlogScherm(); }
+    if (!cache) { loginKader('Geen verbinding', '<p>Er is geen internet. De eerste keer inloggen op dit toestel, met e-mail, koppelcode of je pincode, kan alleen met internet. Daarna kun je op dit toestel ook zonder internet inloggen met je pincode.</p><div class="form"><button class="btn" id="opn">Opnieuw proberen</button></div>'); $('#opn').onclick = () => inlogScherm(); }
   }
 }
 function naamScherm(namen) {
@@ -1189,6 +1256,7 @@ function tekenInlog() {
   document.querySelectorAll('[data-cijfer]').forEach(b => b.onclick = () => { if (!g) { const m = $('#iM'); if (m) m.textContent = 'Kies eerst je naam.'; const s2 = $('.naamkeuze'); if (s2) { s2.classList.remove('fout'); void s2.offsetWidth; s2.classList.add('fout'); } return; } if (IN.pin.length >= 4) return; IN.pin += b.dataset.cijfer; dots(); if (IN.pin.length === 4) setTimeout(() => probeerPin(g), 120); });
   $('#iWis').onclick = () => { IN.pin = IN.pin.slice(0, -1); dots(); };
   const fb = $('#iFace'); if (fb) fb.onclick = () => faceLogin();
+  if (face && !IN.faceAuto && !IN.pin && !IN.msg) { IN.faceAuto = true; setTimeout(() => faceLogin(true), 250); }
   const vg = $('#iVerg'); if (vg) vg.onclick = () => DEMO ? toast('In de echte app log je dan opnieuw in met je e-mail') : naarMail('Log in met je e-mail. Daarna kies je een nieuwe pincode.', true);
 }
 function pinFout(t) { IN.pin = ''; IN.msg = t; tekenInlog(); const d = $('#iDots'); if (d) d.classList.add('fout'); }
@@ -1218,7 +1286,7 @@ async function probeerPin(g) {
   const lok = ls.get('cba-pin') || {}; lok[g.id] = await pinHash(g.id, p); ls.set('cba-pin', lok); ls.set('cba-pinfout', 0);
   g.heeft_pin = true; ingelogd(g);
 }
-async function faceLogin() {
+async function faceLogin(auto) {
   const g = (IN.namen || []).find(m => m.id === IN.keuze); if (!faceVoor(g)) return;
   const f = faceCfg(g.id);
   try {
@@ -1226,7 +1294,7 @@ async function faceLogin() {
     const r = await rpc('face_login', { w: W, mid: g.id, geheim: f.geheim });
     if (!r || !r.ok) { ls.del('cba-face:' + W); ls.del('cba-face2:' + W + ':' + g.id); return pinFout('Face ID is uitgezet. Zet het opnieuw aan onder Meer → Pincode en Face ID.'); }
     ingelogd(g);
-  } catch (e) { pinFout(e && e.name === 'NotAllowedError' ? 'Face ID geannuleerd. Gebruik je pincode.' : 'Face ID lukte niet. Gebruik je pincode.'); }
+  } catch (e) { if (auto) return; pinFout(e && e.name === 'NotAllowedError' ? 'Face ID geannuleerd. Gebruik je pincode.' : 'Face ID lukte niet. Gebruik je pincode.'); }
 }
 function ingelogd(g) {
   ls.set('cba-laatste:' + W, g.id); IN.msg = ''; IN.eerste = null; IN.pin = '';
@@ -1256,7 +1324,7 @@ document.addEventListener('dblclick', e => e.preventDefault());
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { verborgen = Date.now(); return; }
   const lang = verborgen && Date.now() - verborgen > 15000; verborgen = 0;
-  if (kiestBestand) { kiestBestand = false; return; }
+  if (kiestBestand || buitenApp > 0 || scanStop) { kiestBestand = false; return; }
   if (lang && OPEN && !OEFEN) inlogScherm();
 });
 function startDemo(r) {
@@ -1282,14 +1350,14 @@ async function start() {
 }
 function startTab() { const s = (S.pref && S.pref.start) || 'home'; return s === 'home' || (BESTEL_OD.includes(s) && mag('o_' + s)) || (s === 'overig' && mag('o_overig')) ? s : 'home'; }
 function shell() {
-  document.body.classList.remove('inlog'); $('#kop').classList.remove('hide'); $('nav.tabs').classList.remove('hide');
+  document.body.classList.remove('inlog', 'vast'); $('#kop').classList.remove('hide'); $('nav.tabs').classList.remove('hide');
   if (!$('#view')) $('#app').innerHTML = '<div id="view"></div>';
   document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => ga(b.dataset.t));
- $('#belB').onclick = belSheet; $('#terugB').onclick = () => ga(MEER_SUB.includes(ui.tab) ? (ui.tab === 'mwedit' ? 'medewerkers' : 'meer') : 'home');
+ $('#belB').onclick = belSheet; $('#terugB').onclick = () => { if (ui.tab === 'tafels' && ui.tafel) { ui.tafel = null; return render(); } ga(MEER_SUB.includes(ui.tab) ? (ui.tab === 'mwedit' ? 'medewerkers' : 'meer') : 'home'); };
   $('#wieB').onclick = () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); };
   $('.koplogo').src = logoSrc(); setSync(); oefenBalk();
 }
-const MEER_SUB = ['medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer', 'uitleg', 'hoegoed', 'leverancier'];
+const MEER_SUB = ['medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer', 'uitleg', 'hoegoed', 'leverancier', 'levering', 'acties'];
 function ga(tab) { const u = $('#undoBalk'); if (u) u.remove(); ui.tab = tab; ui.q = ''; ui.groep = ''; render(); window.scrollTo(0, 0); }
 async function logout() {
   if (!ask(sess && sess.kind === 'anon' ? 'Dit toestel ontkoppelen? Daarna is de koppelcode weer nodig.' : 'Uitloggen op dit apparaat?')) return;
@@ -1299,7 +1367,7 @@ async function logout() {
 /* ---------- weergave ---------- */
 function render(soft) {
   if (!M) return;
-  const kan = { agf: mag('o_agf'), vers: mag('o_vers'), brood: mag('o_brood'), diep: mag('o_diep'), kw: mag('o_kw'), overig: mag('o_overig'), beheer: mag('upload') || mag('instellingen'), medewerkers: mag('team'), mwedit: mag('team'), winkel: mag('team'), vandaag: mag('team'), export: mag('upload') || mag('bestellen'), hoegoed: mag('bestellen'), leverancier: mag('bestellen') || mag('afvinken') };
+  const kan = { agf: mag('o_agf'), vers: mag('o_vers'), brood: mag('o_brood'), diep: mag('o_diep'), kw: mag('o_kw'), overig: mag('o_overig'), beheer: mag('upload') || mag('instellingen'), medewerkers: mag('team'), mwedit: mag('team'), winkel: mag('team'), vandaag: mag('team'), export: mag('upload') || mag('bestellen'), hoegoed: mag('bestellen'), leverancier: mag('bestellen') || mag('afvinken'), acties: mag('bestellen') };
   if (ui.tab in kan && !kan[ui.tab]) ui.tab = 'home';
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === (ui.tab === 'home' ? 'home' : ui.tab === 'meer' || MEER_SUB.includes(ui.tab) ? 'meer' : '')));
   const v = $('#view'); if (!v) return;
@@ -1320,26 +1388,29 @@ function render(soft) {
   else if (ui.tab === 'uitleg') renderUitleg();
   else if (ui.tab === 'hoegoed') renderHoeGoed();
   else if (ui.tab === 'leverancier') renderLeverancier();
+  else if (ui.tab === 'levering') renderLevering();
+  else if (ui.tab === 'acties') renderActies();
+  else if (ui.tab === 'tafels') renderTafels();
 }
 function groet() { const h = new Date().getHours(); return h < 6 ? 'Goedenacht' : h < 12 ? 'Goedemorgen' : h < 18 ? 'Goedemiddag' : 'Goedenavond'; }
 function kop() {
   const bron = ui.tab === 'kw' ? 'kw' : 'vers'; const b = S.boeken[bron];
   const d = new Date(); const datum = `${C.DAGNAAM[C.wd(C.today())]} ${d.getDate()} ${['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'][d.getMonth()]}`;
   const boekTxt = ui.tab === 'kw' ? (b ? `Bestelboek Van Tol${b.datum ? ' · ' + C.fmtDag(b.datum) : ''}` : 'Bestelboek Van Tol') : (b ? `Bestelboek Versunie · week ${b.week || '?'}` : 'Bestelboek Versunie');
-  const t = { home: [mijnNaam(), datum + (winkels.length > 1 && WINKEL ? ' · ' + WINKEL.naam : '')], agf: ['AGF', boekTxt], vers: ['Vers', boekTxt], brood: ['Brood', boekTxt], diep: ['Diepvries', boekTxt], kw: ['KW', boekTxt], overig: ['Overig', 'Andere leveranciers en in/out. Alleen verwachte verkoop.'], assort: ['Assortiment', 'Nieuw, uit, gesaneerd en opgenomen'], beheer: ['Beheer', 'Bestanden uploaden en instellingen'], meer: ['Meer', `${mijnNaam()} · ${isBeheer() ? 'beheerder' : 'medewerker'}`], medewerkers: ['Medewerkers', 'Namen, pincodes en rechten'], mwedit: ['Rechten', ''], winkel: ['Winkel', (WINKEL && WINKEL.naam) || ''], meldingen: ['Meldingen', 'Pushmeldingen op dit toestel'], appinst: ['App-instellingen', 'Alleen voor jou'], vandaag: ['Vandaag gedaan', 'Wie heeft wat gedaan'], export: ['Exporteren', 'Naar Excel'], uitleg: ['Uitleg', 'Hoe de app werkt'], hoegoed: ['Hoe goed was het advies', 'Advies, besteld en verkocht per week'], leverancier: ['Per leverancier', 'Wat er besteld moet worden'] }[ui.tab] || ['', ''];
+  const t = { home: [mijnNaam(), datum + (winkels.length > 1 && WINKEL ? ' · ' + WINKEL.naam : '')], agf: ['AGF', boekTxt], vers: ['Vers', boekTxt], brood: ['Brood', boekTxt], diep: ['Diepvries', boekTxt], kw: ['KW', boekTxt], overig: ['Overig', 'Andere leveranciers en in/out. Alleen verwachte verkoop.'], assort: ['Assortiment', 'Nieuw, uit, gesaneerd en opgenomen'], beheer: ['Beheer', 'Bestanden uploaden en instellingen'], meer: ['Meer', `${mijnNaam()} · ${isBeheer() ? 'beheerder' : 'medewerker'}`], medewerkers: ['Medewerkers', 'Namen, pincodes en rechten'], mwedit: ['Rechten', ''], winkel: ['Winkel', (WINKEL && WINKEL.naam) || ''], meldingen: ['Meldingen', 'Pushmeldingen op dit toestel'], appinst: ['App-instellingen', 'Alleen voor jou'], vandaag: ['Vandaag gedaan', 'Wie heeft wat gedaan'], export: ['Exporteren', 'Naar Excel'], uitleg: ['Uitleg', 'Hoe de app werkt'], hoegoed: ['Hoe goed was het advies', 'Advies, besteld en verkocht per week'], leverancier: ['Per leverancier', 'Wat er besteld moet worden'], levering: ['Leverdag-check', 'Afvinken bij het uitpakken'], acties: ['Actieweek voorbereiden', 'Acties en advies'], tafels: ['Actietafels', ui.tafel && S.tafels[ui.tafel] ? 'Week ' + +tafelWeek().split('-')[1] : 'Wat moet waar'] }[ui.tab] || ['', ''];
   if (ui.tab === 'mwedit') { const m = mwLijst().find(x => x.id === ui.mwId); t[1] = m ? m.naam : ''; }
   $('#kopG').textContent = ui.tab === 'home' ? groet() : ''; $('#kopG').classList.toggle('hide', ui.tab !== 'home');
   $('#terugB').classList.toggle('hide', ui.tab === 'home' || ui.tab === 'meer');
   belTel();
-  $('#terugB').textContent = ui.tab === 'mwedit' ? '‹ Medewerkers' : MEER_SUB.includes(ui.tab) ? '‹ Meer' : '‹ Home';
+  $('#terugB').textContent = ui.tab === 'mwedit' ? '‹ Medewerkers' : ui.tab === 'tafels' && ui.tafel ? '‹ Alle tafels' : MEER_SUB.includes(ui.tab) ? '‹ Meer' : '‹ Home';
   $('#kopT').textContent = t[0]; $('#kopS').textContent = t[1];
   const wb = $('#wieB'); wb.classList.toggle('hide', !mw); if (mw) wb.textContent = `👤 ${mw.naam} ⇄`;
   $('.koplogo').src = logoSrc();
 }
 
 /* ---------- home ---------- */
-const TEGELS = ONDERDELEN.map(o => [o[0], o[1]]).concat([['assort', 'Assortiment'], ['beheer', 'Beheer']]);
-const ICOON = Object.assign(Object.fromEntries(ONDERDELEN.map(o => [o[0], o[2]])), { assort: '🔄', beheer: '⚙️' });
+const TEGELS = ONDERDELEN.map(o => [o[0], o[1]]).concat([['tafels', 'Actietafels'], ['assort', 'Assortiment'], ['beheer', 'Beheer']]);
+const ICOON = Object.assign(Object.fromEntries(ONDERDELEN.map(o => [o[0], o[2]])), { tafels: '🗂️', assort: '🔄', beheer: '⚙️' });
 function bronVan(od) { return od === 'kw' ? 'kw' : 'vers'; }
 function bestelStatus(od) {
   if (!S.boeken[bronVan(od)]) return { titel: 'Nog geen bestelboek', sub: mag('upload') ? 'Upload via Beheer' : 'Beheerder uploadt het boek' };
@@ -1361,7 +1432,7 @@ function voortgang(od, bd) {
   return { advies, open };
 }
 function homeIndeling() { const l = ls.get('cba-home'); const alle = TEGELS.map(t => t[0]); if (!l) return alle.map(k => ({ k, aan: true })); const out = l.filter(x => alle.includes(x.k)); alle.forEach(k => { if (!out.some(x => x.k === k)) out.push({ k, aan: true }); }); return out; }
-function tegelZichtbaar(k) { return k === 'assort' || (k === 'beheer' ? mag('upload') || mag('instellingen') : mag('o_' + k)); }
+function tegelZichtbaar(k) { return k === 'assort' || k === 'tafels' || (k === 'beheer' ? mag('upload') || mag('instellingen') : mag('o_' + k)); }
 function feestdagVoorstel() {
   if (!M) return '';
   for (let i = 0; i <= 21; i++) {
@@ -1380,14 +1451,16 @@ function renderHome() {
     if (BESTEL_OD.includes(k)) { const s = bestelStatus(k); sub = `<b class="${s.actief ? 'oranje' : ''}">${s.titel}</b><br>${s.sub}`; on = s.actief; }
     if (k === 'overig') { const io = Object.keys(M.keys).filter(x => x.startsWith('e:') && M.keys[x].info.kl.soort === 'inout'); const meld = io.filter(x => C.overig(M, x, S.inout[x.slice(2)]).melding).length; sub = meld ? `<b class="rood">${meld} in/out-melding${meld === 1 ? '' : 'en'}</b>` : `${Object.keys(M.keys).filter(x => x.startsWith('e:')).length} artikelen`; waarsch = meld > 0; }
     if (k === 'assort') { const t = assortTelling(); sub = t.nieuw || t.uit || t.san ? `<b class="${t.uit || t.san ? 'rood' : ''}">${t.nieuw} nieuw · ${t.uit + t.san} schap aanpassen</b>` : 'Geen wijzigingen'; waarsch = t.uit + t.san > 0; }
+    if (k === 'tafels') { const t = tafelTelling(); sub = t.totaal ? `<b class="${t.open && t.ombouw ? 'rood' : ''}">${t.klaar} van ${t.totaal} klaar</b><br>week ${t.week}` : (Object.keys(S.tafels || {}).some(id => !S.tafels[id].weg) ? `Week ${t.week} nog niet ingedeeld` : 'Nog geen tafels'); waarsch = !!(t.open && t.ombouw); }
     if (k === 'beheer') { const last = M.dagLijst[M.dagLijst.length - 1]; const oud = last ? C.diff(last, C.today()) : 99; sub = last ? `Verkoop t/m ${C.fmtDag(last)}` : 'Nog geen verkoop'; if (oud > 1) { sub = `<b class="rood">${sub}</b>`; waarsch = true; } }
     return `<button class="tegel ${on ? 'actief' : ''} ${waarsch ? 'let' : ''}" data-ga="${k}"><span class="ic">${ICOON[k]}</span><span class="tt">${titel}</span><span class="ts">${sub}</span></button>`;
   };
-  let h = feestdagVoorstel() + `<div class="tegels">${ind.filter(t => t.aan).map(t => tegel(t.k)).join('')}</div>`;
+  let h = homeZoekHtml() + overdrachtHtml() + deadlineHtml() + feestdagVoorstel() + `<div class="tegels">${ind.filter(t => t.aan).map(t => tegel(t.k)).join('')}</div>`;
   if (ui.indelen) h += `<div class="blk"><h2>Home indelen</h2><div class="list">${ind.map((t, i) => `<div class="it"><label style="flex:1"><input type="checkbox" data-hk="${t.k}" ${t.aan ? 'checked' : ''}> ${TEGELS.find(x => x[0] === t.k)[1]}</label><button class="btn sm sec" data-hu="${i}" ${i ? '' : 'disabled'}>↑</button><button class="btn sm sec" data-hd="${i}" ${i < ind.length - 1 ? '' : 'disabled'}>↓</button></div>`).join('')}</div><button class="btn" id="indK" style="width:100%;margin-top:10px">Klaar</button></div>`;
   else h += `<div style="text-align:center;margin:18px 0"><button class="btn sm sec" id="indB">✏️ Home indelen</button></div>`;
   v.innerHTML = h;
   v.querySelectorAll('[data-ga]').forEach(b => b.onclick = () => ga(b.dataset.ga));
+  homeEvents(v);
   v.querySelectorAll('[data-fd]').forEach(b => b.onclick = () => { const d = b.dataset.fd, s = b.dataset.s, bz = M.bijz[d]; const row = { dag: d, naam: bz.naam, soort: s, open: s === 'aangepast' ? (M.st.open[C.wd(d)][0] || '08:00') : null, dicht: s === 'aangepast' ? '16:00' : null }; saveAgenda(row).then(() => { if (s === 'aangepast') toast('Pas de tijden aan onder Beheer → Feestdagen', 4000); }); });
   v.querySelectorAll('[data-fdx]').forEach(b => b.onclick = () => { ls.set('cba-fd-' + W + '-' + b.dataset.fdx, 1); render(); });
   const ib = $('#indB'); if (ib) ib.onclick = () => { ui.indelen = true; render(); };
@@ -1454,11 +1527,13 @@ function renderAssort() {
     if (san.length) h += `<b style="color:var(--rood);display:block;margin-top:10px">Gesaneerd – schap opnieuw indelen</b><div class="list">${san.map(a => { const r = S.assort[a.key]; return rij(a, `<span class="small">${ini(r.door)} ${r.sinds ? C.fmtDag(r.sinds) : ''}</span>${kanSchap ? `<button class="btn sm" data-sok="${a.key}">Schap aangepast</button>` : ''}`); }).join('')}</div>`;
     h += '</div>';
   }
+  h += prijsHtml();
   if (!h) h = '<div class="empty">Geen wijzigingen in het assortiment.</div>';
   h += nieuweProducten();
   v.innerHTML = h;
   v.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { const [od, nr] = b.dataset.open.split('|'); ui.tab = od; ui.q = nr; ui.fAlles = true; render(); window.scrollTo(0, 0); });
   v.querySelectorAll('[data-ok]').forEach(b => b.onclick = () => { const [bron, nr] = b.dataset.ok.split('|'); write('schap_ok', [{ bron, nr, ok: true, door: mijnNaam() }]); log('schap', `Schap aangepast: ${(M.art[bron + ':' + nr] || {}).naam || nr}`); ongedaan('Schap aangepast', () => write('schap_ok', [{ bron, nr, ok: false }])); render(); });
+  prijsEvents(v);
   v.querySelectorAll('[data-sok]').forEach(b => b.onclick = () => { const a = M.art[b.dataset.sok]; const r = S.assort[a.key]; const terug = zetAssort(a, r.status, { schap_ok: true, opgenomen: r.opgenomen, sinds: r.sinds, door: r.door }); log('schap', `Schap aangepast: ${a.naam}`); ongedaan('Schap aangepast', terug); render(); });
 }
 function nieuweProducten() {
@@ -1483,32 +1558,36 @@ function bevestig(titel, tekst, ja, nee) {
 /* ---------- meer ---------- */
 function renderMeer() {
   const v = $('#view');
-  const knop = (id, titel, sub) => `<button class="rijknop" id="${id}"><span><b>${titel}</b>${sub ? `<br><span class="small">${sub}</span>` : ''}</span><span class="pijl">›</span></button>`;
-  v.innerHTML = `<div class="blk lijstblok">
-  ${knop('mApp', 'App-instellingen', 'Licht of donker, tekstgrootte, eenvoudige modus')}
-  ${knop('mMeld', 'Meldingen', 'Pushmeldingen aan of uit zetten')}
-  ${mw ? knop('mPin', kanFace() ? 'Pincode en Face ID' : 'Pincode wijzigen', kanFace() ? (faceCfg(mw.id) ? 'Face ID staat aan op dit toestel' : 'Face ID staat uit') : '') + knop('mWis', 'Wisselen of vergrendelen', `Nu: ${esc(mijnNaam())}`) : ''}
-  </div><div class="blk lijstblok">
-  ${mag('bestellen') || mag('afvinken') ? knop('mLev', 'Bestellijst per leverancier', 'Om over te typen in de terminal of door te bellen') : ''}
-  ${mag('bestellen') ? knop('mHg', 'Hoe goed was het advies', 'Advies, besteld en verkocht per week') : ''}
-  ${mag('team') ? knop('mVan', 'Vandaag gedaan', 'Wie heeft wat gedaan') : ''}
-  ${mag('upload') || mag('bestellen') ? knop('mExp', 'Exporteren', 'Bestellijst, verkoop of acties naar Excel') : ''}
-  ${mag('team') ? knop('mMw', 'Medewerkers', 'Namen, pincodes en rechten') + knop('mWi', 'Winkel', 'Koppelcode, winkelgegevens' + (eigenaar ? ' en winkels' : '')) : ''}
-  ${mag('upload') || mag('instellingen') ? knop('mBe', 'Beheer', 'Uploads en instellingen') : ''}
-  ${winkels.length > 1 ? knop('mWw', 'Winkel wisselen', esc(WINKEL ? WINKEL.naam : '')) : ''}
-  </div><div class="blk lijstblok">
-  ${knop('mOef', OEFEN ? 'Stoppen met oefenen' : 'Oefenen', OEFEN ? '' : 'Alles uitproberen zonder dat er iets echt verandert')}
-  ${knop('mUitl', 'Uitleg', 'Hoe alles in de app werkt')}
-  ${knop('mTour', 'Rondleiding', 'De uitleg van het begin nog eens zien')}
-  ${knop('mUpd', 'Controleren op updates', `Je hebt versie ${VERSIE}`)}
-  ${knop('mSync', 'Gegevens opnieuw laden', '')}
-  ${isMail() && !eigenaar && !DEMO ? '' : knop('mUit', DEMO ? 'Terug naar startscherm' : sess && sess.kind === 'anon' ? 'Toestel ontkoppelen' : 'Uitloggen', DEMO ? '' : sess && sess.kind === 'anon' ? 'Daarna is de koppelcode weer nodig' : esc(sess && sess.email))}
-  </div><p class="small" style="text-align:center">Coop Besteladvies · versie ${VERSIE}</p>`;
+  const knop = (id, ic, titel, sub) => `<button class="rijknop" id="${id}"><span class="meeric">${ic}</span><span style="flex:1"><b>${titel}</b>${sub ? `<br><span class="small">${sub}</span>` : ''}</span><span class="pijl">›</span></button>`;
+  const groep = (titel, inhoud) => inhoud.trim() ? `<h3 class="meerkop">${titel}</h3><div class="blk lijstblok">${inhoud}</div>` : '';
+  v.innerHTML = groep('Mijn instellingen', `
+  ${knop('mApp', '⚙️', 'App-instellingen', 'Licht of donker, tekstgrootte, eenvoudige modus')}
+  ${knop('mMeld', '🔔', 'Meldingen', 'Pushmeldingen aan of uit zetten')}
+  ${mw ? knop('mPin', '🔑', kanFace() ? 'Pincode en Face ID' : 'Pincode wijzigen', kanFace() ? (faceCfg(mw.id) ? 'Face ID staat aan op dit toestel' : 'Face ID staat uit') : '') + knop('mWis', '👤', 'Wisselen of vergrendelen', `Nu: ${esc(mijnNaam())}`) : ''}`)
+  + groep('Bestellen', `
+  ${mag('bestellen') || mag('afvinken') ? knop('mLev', '🚚', 'Bestellijst per leverancier', 'Om over te typen in de terminal of door te bellen') : ''}
+  ${knop('mLc', '📦', 'Leverdag-check', 'Afvinken bij het uitpakken, ontbrekende artikelen doorgeven')}
+  ${mag('bestellen') ? knop('mAct', '🏷️', 'Actieweek voorbereiden', 'Acties van volgende week met advies') : ''}
+  ${mag('bestellen') ? knop('mHg', '🎯', 'Hoe goed was het advies', 'Advies, besteld, verkocht en derving per week') : ''}
+  ${mag('upload') || mag('bestellen') ? knop('mExp', '📤', 'Exporteren', 'Bestellijst, verkoop of acties naar Excel') : ''}`)
+  + groep('Beheer', `
+  ${mag('team') ? knop('mVan', '✅', 'Vandaag gedaan', 'Wie heeft wat gedaan') : ''}
+  ${mag('team') ? knop('mMw', '👥', 'Medewerkers', 'Namen, pincodes en rechten') + knop('mWi', '🏪', 'Winkel', 'Koppelcode, winkelgegevens' + (eigenaar ? ' en winkels' : '')) : ''}
+  ${mag('upload') || mag('instellingen') ? knop('mBe', '🛠️', 'Beheer', 'Uploads en instellingen') : ''}
+  ${winkels.length > 1 ? knop('mWw', '🔀', 'Winkel wisselen', esc(WINKEL ? WINKEL.naam : '')) : ''}`)
+  + groep('Hulp', `
+  ${knop('mOef', '🎓', OEFEN ? 'Stoppen met oefenen' : 'Oefenen', OEFEN ? '' : 'Alles uitproberen zonder dat er iets echt verandert')}
+  ${knop('mUitl', '📖', 'Uitleg', 'Hoe alles in de app werkt')}
+  ${knop('mTour', '🧭', 'Rondleiding', 'De uitleg van het begin nog eens zien')}
+  ${knop('mUpd', '🔄', 'Controleren op updates', `Je hebt versie ${VERSIE}`)}
+  ${knop('mSync', '☁️', 'Gegevens opnieuw laden', '')}
+  ${isMail() && !eigenaar && !DEMO ? '' : knop('mUit', '🚪', DEMO ? 'Terug naar startscherm' : sess && sess.kind === 'anon' ? 'Toestel ontkoppelen' : 'Uitloggen', DEMO ? '' : sess && sess.kind === 'anon' ? 'Daarna is de koppelcode weer nodig' : esc(sess && sess.email))}`)
+  + `<p class="small" style="text-align:center">Coop Besteladvies · versie ${VERSIE}</p>`;
   const on = (id, f) => { const b = $('#' + id); if (b) b.onclick = f; };
   on('mApp', () => ga('appinst')); on('mMeld', () => ga('meldingen')); on('mVan', () => ga('vandaag')); on('mExp', () => ga('export')); on('mMw', () => ga('medewerkers')); on('mWi', () => ga('winkel')); on('mBe', () => ga('beheer'));
   on('mWw', () => { if (OEFEN) return toast('Stop eerst met oefenen'); kiesWinkel(); });
   on('mPin', pinWijzigen); on('mWis', () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); });
-  on('mOef', () => OEFEN ? stopOefenen() : startOefenen()); on('mUitl', () => ga('uitleg')); on('mHg', () => ga('hoegoed')); on('mLev', () => ga('leverancier'));
+  on('mOef', () => OEFEN ? stopOefenen() : startOefenen()); on('mUitl', () => ga('uitleg')); on('mHg', () => ga('hoegoed')); on('mLev', () => ga('leverancier')); on('mLc', () => ga('levering')); on('mAct', () => ga('acties'));
   on('mUpd', () => zoekUpdate(false)); on('mTour', () => tour()); on('mSync', () => { if (DEMO || OEFEN) toast(OEFEN ? 'Niet tijdens oefenen' : 'Testversie: geen server'); else sync(true); });
   on('mUit', () => { if (DEMO) showLogin(); else logout(); });
 }
@@ -1746,7 +1825,7 @@ async function werkBij() {
 if (!DEMO) { setInterval(() => { if (!document.hidden) zoekUpdate(true); }, 30 * 60000); setTimeout(() => zoekUpdate(true), 8000); }
 
 /* ---------- pushmeldingen ---------- */
-const SOORTEN = BESTEL_OD.map(o => ['bestel_' + o, 'Besteldag ' + odNaam(o), `Op de besteldag een herinnering om ${odNaam(o)} te bestellen`, 'o_' + o]).concat([['boek', 'Nieuw bestelboek', 'Wat er nieuw is en wat uit het assortiment gaat'], ['export', 'Dag-export ontbreekt', 'Als de verkoop van gisteren nog niet is geüpload', 'upload'], ['inout', 'In/out bijna op', 'Als een in/out-artikel te vroeg op dreigt te raken', 'inout']]);
+const SOORTEN = BESTEL_OD.map(o => ['bestel_' + o, 'Besteldag ' + odNaam(o), `Op de besteldag een herinnering om ${odNaam(o)} te bestellen`, 'o_' + o]).concat([['boek', 'Nieuw bestelboek', 'Wat er nieuw is en wat uit het assortiment gaat'], ['export', 'Dag-export ontbreekt', 'Als de verkoop van gisteren nog niet is geüpload', 'upload'], ['inout', 'In/out bijna op', 'Als een in/out-artikel te vroeg op dreigt te raken', 'inout'], ['deadline', 'Besteldeadline', 'Een half uur voor de deadline als er nog iets open staat', 'afvinken'], ['week', 'Weekoverzicht', 'Elke maandag een samenvatting van vorige week']]);
 function pushStatus() {
   if (DEMO) return 'demo';
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'niet';
@@ -1827,6 +1906,7 @@ function renderLijst(od, soft) {
   const bdSleutel = cur ? `b:${od}:${cur.besteldag}` : '';
   let html = `<div class="bar"><div class="chips">${lijst.map(l => `<button class="chip ${l === cur ? 'on' : ''}" data-bd="${l.besteldag}"><b>Bestellen ${C.fmtDag(l.besteldag)}</b><span>levering ${C.fmtDag(l.L)} · t/m ${C.DAGEN[C.wd(C.add(l.L2, -1))]}</span></button>`).join('')}</div>
   ${cur ? (() => { const st = voortgang(od, cur); return `<div class="voortgang"><span>${st.advies} met advies</span><b>${st.open ? `nog ${st.open} te gaan` : '✓ alles besteld'}</b></div>`; })() : ''}
+  ${cur && mag('bestellen') ? '<button class="btn sm sec" id="allesAdv" style="width:100%;margin-top:6px">✨ Alles volgens advies invullen</button>' : ''}
   <div id="weer"></div>
   ${cur ? notitieHtml(bdSleutel) + `<button class="link" id="bdNot">📝 ${S.notities[bdSleutel] ? 'Notitie bij deze besteldag wijzigen' : 'Notitie bij deze besteldag'}</button>` : ''}
   <div class="row"><input type="search" id="q" placeholder="Zoek naam of nummer" value="${esc(ui.q)}"><select id="grp"><option value="">Alle groepen</option>${groepen.map(g => `<option ${g === ui.groep ? 'selected' : ''}>${esc(g)}</option>`).join('')}</select></div>
@@ -1858,14 +1938,15 @@ function renderLijst(od, soft) {
   const tel = {}; arts.forEach(a => { const g = groepVan(a); tel[g] = (tel[g] || 0) + 1; });
   const chunk = () => {
     const end = Math.min(arts.length, pos + 40); let h = '';
-    for (; pos < end; pos++) { const a = arts[pos]; const g = groepVan(a); if (g !== lastG) { h += `<div class="grp"><span>${esc(g || 'Overig')}</span><small>${tel[g]} artikel${tel[g] === 1 ? '' : 'en'}</small></div>`; lastG = g; } const laatste = pos + 1 >= arts.length || groepVan(arts[pos + 1]) !== g; h += kaart(a, cur, laatste); }
+    for (; pos < end; pos++) { const a = arts[pos]; const g = groepVan(a); if (g !== lastG) { h += `<div class="grp"><span>${esc(g || 'Overig')}</span><small>${tel[g]} artikel${tel[g] === 1 ? '' : 'en'}${cur && mag('afvinken') ? ` · <button class="grpbtn" data-gb="${esc(g)}">✓ Groep besteld</button>` : ''}</small></div>`; lastG = g; } const laatste = pos + 1 >= arts.length || groepVan(arts[pos + 1]) !== g; h += kaart(a, cur, laatste); }
     lst.insertAdjacentHTML('beforeend', h);
     if (pos < arts.length) { const s = document.createElement('div'); s.className = 'more'; lst.appendChild(s); lazy && lazy.disconnect(); lazy = new IntersectionObserver(en => { if (en[0].isIntersecting) { lazy.disconnect(); s.remove(); chunk(); } }, { rootMargin: '800px' }); lazy.observe(s); }
   };
   if (lazy) lazy.disconnect();
   chunk();
   if (soft) { while (pos < arts.length && document.body.scrollHeight < y + innerHeight + 400) chunk(); window.scrollTo(0, y); }
-  lst.onclick = onKaartKlik; lst.onchange = onKaartWijzig;
+  lst.onclick = e => { const gb = e.target.closest('[data-gb]'); if (gb) return groepBesteld(od, cur, gb.dataset.gb); onKaartKlik(e); }; lst.onchange = onKaartWijzig;
+  const aa = $('#allesAdv'); if (aa) aa.onclick = () => allesVolgensAdvies(od, cur);
   if (cur) toonWeer(od, cur);
 }
 function eenheid(a) { const k = M.keys[a.key]; return k && k.kg ? 'kg' : 'st'; }
@@ -1896,6 +1977,7 @@ function kaart(a, bd, laatste) {
   const dagenTxt = ad.days.length ? ad.days.map(d => C.DAGEN[C.wd(d)]).join(', ') : '';
   let why = `Verwacht ${dagenTxt}: <b>${C.fmt(ad.need)} ${u}</b>`;
   if (ad.min) why += ` · min. schap ${C.fmt(ad.min)}`;
+  if (ad.derv) why += ` · derving 4 wk ${C.fmt(ad.derv)} (advies −${Math.round(ad.dervKorting * 100)}%)`;
   if (ad.stock !== null && ad.stock !== undefined) why += ` · voorraad bij levering ±${C.fmt(Math.max(0, ad.stock))}`;
   else if (vr && vr.dag) why += ` · laatst geteld ${C.fmtDag(vr.dag)}: ${C.fmt(vr.aantal)}${vr.door ? ' (' + esc(ini(vr.door)) + ')' : ''}`;
   const kanSan = mag('saneren');
@@ -1915,13 +1997,14 @@ function kaart(a, bd, laatste) {
   ${notitieHtml('a:' + a.key)}
   ${k ? tbl : '<div class="hint">Nog geen verkoop van dit artikel.</div>'}
   ${onder}
-  <div class="kaartvoet"><button class="link" data-not="1">📝 ${S.notities['a:' + a.key] ? 'Notitie' : 'Notitie'}</button>${assKnop}</div></div>`;
+  <div class="kaartvoet"><button class="link" data-not="1">📝 Notitie</button>${mag('tellen') && !a.uit ? '<button class="link" data-derv="1">🗑️ Derving</button>' : ''}${assKnop}</div></div>`;
 }
 async function onKaartKlik(e) {
   const card = e.target.closest('.card'); if (!card) return; const key = card.dataset.k; const a = M.art[key]; const { cur } = besteldag(onderdeelVan(a));
   if (e.target.dataset.not !== undefined) return notitieBewerk('a:' + key, a.naam);
   const eg = e.target.closest('[data-eig]'); if (eg) return eigenBewerk(S.eigen[eg.dataset.eig], a.od);
   if (e.target.dataset.min !== undefined) return minBewerk(a);
+  if (e.target.dataset.derv !== undefined) return dervingInvoer(a);
   if (e.target.dataset.eigover) return eigenOvernemen(a, M.art[e.target.dataset.eigover]);
   if (e.target.dataset.ass) {
     const w = e.target.dataset.ass;
@@ -2051,6 +2134,7 @@ function renderBeheer() {
   <div class="f"><label>Actievoorraad vooraf (levering vóór de actiemaandag dekt ook maandag)</label><input type="checkbox" id="iVo" ${st.vooraf ? 'checked' : ''} style="width:auto"></div>
   <p class="small">Geleerd uit je eigen acties: folder ${M.slope.folder.length >= 5 ? `×${C.fmt(1 + M.slopeF * 0.5)} bij 50% (${M.slope.folder.length} acties)` : 'nog te weinig acties, standaard gebruikt'} · instore ${M.slope.instore.length >= 5 ? `×${C.fmt(1 + M.slopeI * 0.5)} (${M.slope.instore.length} acties)` : 'nog te weinig acties'}.</p>
   ${BESTEL_OD.map(o => `<h3>Bestelschema ${odNaam(o)}</h3>${schemaVan(o).map((r, i) => schemaRij(o, r, i)).join('')}<button class="btn sm sec" data-schadd="${o}">+ besteldag</button>`).join('')}
+  <h3>Besteldeadline</h3><p class="small">Tot hoe laat je bij de leverancier kunt bestellen. Op Home zie je hoe lang je nog hebt; een half uur ervoor komt er een melding als er nog iets open staat. Leeg = geen deadline.</p><div class="f"><label style="width:90px">Versunie</label><input type="time" id="dlV" value="${((S.inst || {}).deadline || {}).versunie || ''}" style="width:110px"></div><div class="f"><label style="width:90px">Van Tol</label><input type="time" id="dlT" value="${((S.inst || {}).deadline || {}).vantol || ''}" style="width:110px"></div>
   <h3>Openingstijden</h3>${C.DAGNAAM.map((d, i) => `<div class="f"><label style="width:90px">${d}</label><input type="time" data-op="${i}" data-f="0" value="${st.open[i][0]}" style="width:110px"><input type="time" data-op="${i}" data-f="1" value="${st.open[i][1]}" style="width:110px"></div>`).join('')}<p class="small">Laat beide tijden leeg als de winkel die dag dicht is.</p>
   <button class="btn" id="iSave">Instellingen opslaan</button></div></div>
   <div class="blk"><h2>Feestdagen en bijzondere dagen</h2><p class="small">Komend jaar. Het effect op de verkoop wordt elk jaar onthouden en de volgende keer gebruikt.</p><div class="list">
@@ -2074,7 +2158,7 @@ function renderBeheer() {
   v.querySelectorAll('[data-odg]').forEach(s => s.onchange = () => { work.onderdelen = Object.assign({}, work.onderdelen || {}, { [s.dataset.odg]: s.value }); odCache = null; saveInst(work); });
   const iS = $('#iSave'); if (!iS) return;
   v.querySelectorAll('[data-op]').forEach(i => i.onchange = () => { work.open[+i.dataset.op][+i.dataset.f] = i.value; });
-  $('#iSave').onclick = () => { work.weken = Math.max(3, Math.min(26, +$('#iW').value || 8)); work.buffer = { vers: +$('#iBV').value || 0, kw: +$('#iBK').value || 0 }; work.actieFactor = { folder: C.num($('#iAF').value) || 3, instore: C.num($('#iAI').value) || 1.5 }; work.vooraf = $('#iVo').checked; saveInst(work); };
+  $('#iSave').onclick = () => { work.weken = Math.max(3, Math.min(26, +$('#iW').value || 8)); work.buffer = { vers: +$('#iBV').value || 0, kw: +$('#iBK').value || 0 }; work.actieFactor = { folder: C.num($('#iAF').value) || 3, instore: C.num($('#iAI').value) || 1.5 }; work.vooraf = $('#iVo').checked; work.deadline = { versunie: $('#dlV').value || '', vantol: $('#dlT').value || '' }; saveInst(work); };
   v.querySelectorAll('[data-ag]').forEach(i => i.onchange = () => { const d = i.dataset.ag; const b = M.bijz[d]; const row = Object.assign({ dag: d, naam: b.naam, soort: b.soort || 'normaal', open: b.open || null, dicht: b.dicht || null }, S.agenda.find(x => x.dag === d) || {}); row[i.dataset.f] = i.value || null; if (row.soort === 'aangepast' && !row.open) { row.open = M.st.open[C.wd(d)][0] || '08:00'; row.dicht = '16:00'; } saveAgenda(row); });
   $('#agAdd').onclick = () => { const d = $('#agD').value, n = $('#agN').value.trim(); if (!d || !n) return toast('Vul datum en naam in'); saveAgenda({ dag: d, naam: n, soort: 'normaal', open: null, dicht: null }); };
   v.querySelectorAll('[data-heok]').forEach(b => b.onclick = () => { const key = b.dataset.heok; const row = b.closest('.it'); const he = C.num(row.querySelector('[data-f="he"]').value) || 1; const perHE = row.querySelector('[data-f="perHE"]').checked; work.he[key] = { he, perHE, check: false }; saveInst(work); });
@@ -2121,11 +2205,13 @@ async function uploads(files) {
           const oud = S.boeken[soort];
           if (oud && oud.datum && b.datum && b.datum < oud.datum && !ask(`Dit bestelboek (${b.datum}) is ouder dan het huidige (${oud.datum}). Toch gebruiken?`)) { L('Overgeslagen: ouder bestelboek', 'err'); continue; }
           const cmp = oud && (!oud.datum || !b.datum || b.datum !== oud.datum) ? C.vergelijk(oud, b, S.schapOk) : { nieuw: oud ? (oud.nieuw || []) : [], uit: oud ? (oud.uit || []) : [] };
-          const row = { bron: soort, datum: b.datum, week: b.week || C.isoWeek(b.datum).w, artikelen: b.artikelen, nieuw: cmp.nieuw, uit: cmp.uit, bestand: f.name, geupload: new Date().toISOString() };
+          const nieuwBoek = oud && (!oud.datum || !b.datum || b.datum !== oud.datum);
+          const prijs = nieuwBoek ? (() => { const o = new Map(oud.artikelen.map(x => [x.nr, x])); return b.artikelen.filter(x => o.has(x.nr) && +o.get(x.nr).cons > 0 && +x.cons > 0 && Math.abs(+o.get(x.nr).cons - +x.cons) > 0.004).map(x => ({ nr: x.nr, oud: +o.get(x.nr).cons, nieuw: +x.cons })); })() : (oud && oud.prijs) || [];
+          const row = { bron: soort, datum: b.datum, week: b.week || C.isoWeek(b.datum).w, artikelen: b.artikelen, nieuw: cmp.nieuw, uit: cmp.uit, prijs, bestand: f.name, geupload: new Date().toISOString() };
           if (!DEMO) await upW('boeken', [row]);
           S.boeken[soort] = row;
           if (cmp.nieuw.length || cmp.uit.length) pushBoek(soort, cmp.nieuw.length, cmp.uit.length);
-          L(`✓ Bestelboek ${soort === 'vers' ? 'Vers' : 'KW'}: ${b.artikelen.length} artikelen · ${cmp.nieuw.length} nieuw · ${cmp.uit.length} uit assortiment`, 'ok'); n++;
+          L(`✓ Bestelboek ${soort === 'vers' ? 'Vers' : 'KW'}: ${b.artikelen.length} artikelen · ${cmp.nieuw.length} nieuw · ${cmp.uit.length} uit assortiment${prijs.length ? ` · ${prijs.length} prijswijzigingen` : ''}`, 'ok'); n++;
         } else if (soort === 'actie') {
           const a = C.parseActie(pages); if (!a.week || !a.items.length) throw new Error('Geen acties gevonden');
           let y = +a.van.slice(0, 4); if (a.week < 10 && a.van.slice(5, 7) === '12') y++;
@@ -2260,6 +2346,10 @@ function belItems() {
     if (!dicht && !S.dagMeta[gister]) out.push({ ic: '📊', t: 'Dag-export ontbreekt', sub: `De verkoop van ${C.fmtDag(gister)} is nog niet geüpload`, ga: 'beheer' });
   }
   if (mag('o_overig')) { let n = 0; for (const ean in S.inout) { const io = S.inout[ean]; if (!(io.ingekocht > 0)) continue; const r = C.overig(M, 'e:' + ean, io); if (r.melding && r.melding.t === 'op') n++; } if (n) out.push({ ic: '📦', t: `${n} in/out-${n === 1 ? 'artikel' : 'artikelen'} bijna op`, sub: 'Telefonisch bijbestellen?', ga: 'overig' }); }
+  const ovd = Object.values(S.overdracht || {}).filter(r => !r.klaar).length; if (ovd) out.unshift({ ic: '📋', t: `${ovd} ${ovd === 1 ? 'punt' : 'punten'} in de overdracht`, sub: 'Staat op Home', ga: 'home' });
+  const pr = prijsLijst().length; if (pr) out.push({ ic: '🏷️', t: `${pr} schapkaartje${pr === 1 ? '' : 's'} vervangen`, sub: 'Prijs gewijzigd in het bestelboek', ga: 'assort' });
+  const lv = leverRegels(C.today()); const lvOpen = lv.filter(x => !x.chk).length; if (lvOpen) out.push({ ic: '📦', t: 'Levering van vandaag controleren', sub: `Nog ${lvOpen} van ${lv.length} af te vinken`, ga: 'levering' });
+  const tt = tafelTelling(); if (tt.ombouw && tt.open) out.push({ ic: '🗂️', t: 'Actietafels ombouwen', sub: `${tt.klaar} van ${tt.totaal} klaar`, ga: 'tafels' });
   return out;
 }
 function belTel() { const el = $('#belN'); if (!el) return; let n = 0; try { n = belItems().length; } catch (e) { } el.textContent = n > 9 ? '9+' : n; el.classList.toggle('hide', !n); }
@@ -2269,7 +2359,7 @@ function belSheet() {
 }
 /* ---------- uitleg ---------- */
 function renderUitleg() {
-  const v = $('#view'); const volg = ['home', 'vers', 'overig', 'assort', 'beheer', 'meer', 'medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'eigen', 'scannen', 'tellen', 'hoegoed', 'leverancier', 'printen'];
+  const v = $('#view'); const volg = ['home', 'overdracht', 'vers', 'overig', 'tafels', 'assort', 'acties', 'levering', 'beheer', 'meer', 'medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'eigen', 'scannen', 'tellen', 'hoegoed', 'leverancier', 'printen'];
   v.innerHTML = `<div class="blk lijstblok">${volg.filter(k => HULP[k]).map(k => `<details class="uitleg"><summary><b>${HULP[k][0]}</b></summary><div class="hulptekst">${HULP[k][1]}</div></details>`).join('')}</div>`;
 }
 /* ---------- barcode scannen ---------- */
@@ -2340,9 +2430,10 @@ async function renderHoeGoed() {
     const lv = C.levering(M, od, r.besteldag); if (!lv || lv.L2 > vandaag) continue;
     const s = M.keys[key]; let verk = 0; for (let d = lv.L; d < lv.L2; d = C.add(d, 1)) { const i = C.idx(M, d); if (s && i >= 0 && i < M.N) verk += s.v[i]; }
     const he = a.perHE ? a.he : 1; const w = C.isoWeek(r.besteldag).w;
-    const k2 = w + '|' + od; const t = wk[k2] || (wk[k2] = { w, od, adv: 0, best: 0, verk: 0, n: 0 }); t.adv += (+r.advies || 0) * he; t.best += besteld * he; t.verk += verk; t.n++;
+    const k2 = w + '|' + od; const t = wk[k2] || (wk[k2] = { w, od, adv: 0, best: 0, verk: 0, n: 0, derv: 0 }); t.adv += (+r.advies || 0) * he; t.best += besteld * he; t.verk += verk; t.n++;
     const ta = art[key] || (art[key] = { a, best: 0, verk: 0 }); ta.best += besteld * he; ta.verk += verk;
   }
+  for (const r of Object.values(S.derving || {})) { const a = M.art[r.bron + ':' + r.nr]; if (!a || r.dag < van) continue; const od = onderdeelVan(a); const w = C.isoWeek(r.dag).w; const t = wk[w + '|' + od] || (wk[w + '|' + od] = { w, od, adv: 0, best: 0, verk: 0, n: 0, derv: 0 }); t.derv += +r.aantal || 0; }
   const pct = (b, v2) => v2 > 0 ? Math.round((b - v2) / v2 * 100) : null;
   const cel = p => p === null ? '–' : `<span class="${Math.abs(p) > 25 ? 'rood' : Math.abs(p) <= 10 ? 'groen' : ''}">${p > 0 ? '+' : ''}${p}%</span>`;
   const weken = [...new Set(Object.values(wk).map(x => x.w))].sort((a, b) => b - a);
@@ -2350,7 +2441,7 @@ async function renderHoeGoed() {
   if (!weken.length) h += '<div class="empty">Nog te weinig gegevens. Na een paar weken bestellen zie je hier hoe goed het advies was.</div>';
   for (const w of weken) {
     const r = Object.values(wk).filter(x => x.w === w).sort((a, b) => BESTEL_OD.indexOf(a.od) - BESTEL_OD.indexOf(b.od));
-    h += `<div class="blk"><h2>Week ${w}</h2><table class="hg"><tr><th>Onderdeel</th><th>Advies</th><th>Besteld</th><th>Verkocht</th><th>Verschil</th></tr>${r.map(x => `<tr><td>${odNaam(x.od)}</td><td>${C.fmt(x.adv, 0)}</td><td>${C.fmt(x.best, 0)}</td><td>${C.fmt(x.verk, 0)}</td><td>${cel(pct(x.best, x.verk))}</td></tr>`).join('')}</table></div>`;
+    h += `<div class="blk"><h2>Week ${w}</h2><table class="hg"><tr><th>Onderdeel</th><th>Advies</th><th>Besteld</th><th>Verkocht</th><th>Derving</th><th>Verschil</th></tr>${r.map(x => `<tr><td>${odNaam(x.od)}</td><td>${C.fmt(x.adv, 0)}</td><td>${C.fmt(x.best, 0)}</td><td>${C.fmt(x.verk, 0)}</td><td>${x.derv ? C.fmt(x.derv, 0) : ''}</td><td>${x.best ? cel(pct(x.best, x.verk)) : ''}</td></tr>`).join('')}</table></div>`;
   }
   const top = Object.values(art).filter(x => x.verk > 0 || x.best > 0).map(x => Object.assign(x, { d: x.best - x.verk })).sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 10);
   if (top.length) h += `<div class="blk"><h2>Grootste verschillen</h2><p class="small">Over de afgelopen 8 weken. Plus = meer besteld dan verkocht.</p><table class="hg"><tr><th>Artikel</th><th>Besteld</th><th>Verkocht</th><th>Verschil</th></tr>${top.map(x => `<tr><td>${esc(x.a.naam)}</td><td>${C.fmt(x.best, 0)}</td><td>${C.fmt(x.verk, 0)}</td><td class="${x.d > 0 ? 'rood' : ''}">${x.d > 0 ? '+' : ''}${C.fmt(x.d, 0)}</td></tr>`).join('')}</table></div>`;
@@ -2405,6 +2496,285 @@ Object.assign(HULP, {
   hoegoed: ['Hoe goed was het advies', 'Per week zie je per onderdeel wat de app adviseerde, wat er besteld is en wat er tot de volgende levering echt verkocht is. Daaronder de artikelen met het grootste verschil. Zo zie je waar je structureel te veel of te weinig bestelt.'],
   leverancier: ['Bestellijst per leverancier', 'Kies de besteldag. Je ziet per leverancier wat er besteld moet worden: wat je hebt ingevuld, anders het advies. Met Delen stuur of kopieer je de lijst, met Printen print je hem met barcodes.'],
   printen: ['Printen', 'Tik in de lijst op Printen. Kies alles, alleen met advies of alleen wat ingevuld is, en of elke groep op een nieuwe pagina moet. De barcodes zijn dezelfde als in het bestelboek, zodat je ze direct kunt scannen. In de kolom Besteld vul je met de hand in.']
+});
+
+/* ---------- 1.9 ---------- */
+const weekSleutel = d => { const w = C.isoWeek(d); return `${w.y}-${String(w.w).padStart(2, '0')}`; };
+const weekMaandag = k => { const [y, w] = k.split('-').map(Number); return C.mondayOf(y, w); };
+const nuHHMM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const minuten = t => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + m; };
+let buitenApp = 0;
+try { if (navigator.share) { const o = navigator.share.bind(navigator); navigator.share = async d => { buitenApp++; try { return await o(d); } finally { setTimeout(() => { buitenApp = Math.max(0, buitenApp - 1); }, 2000); } }; } } catch (e) { }
+try { const pr = window.print.bind(window); window.print = () => { buitenApp++; try { pr(); } finally { setTimeout(() => { buitenApp = Math.max(0, buitenApp - 1); }, 2000); } }; } catch (e) { }
+document.addEventListener('touchmove', e => { if (document.body.classList.contains('vast') && !(e.target.closest && e.target.closest('select'))) e.preventDefault(); }, { passive: false });
+
+/* ---------- home: zoeken, overdracht, deadline ---------- */
+function homeZoekHtml() { return `<div class="bar homezoek"><div class="row"><input type="search" id="hq" placeholder="🔍 Zoek in alle onderdelen" value="${esc(ui.hq || '')}"><button class="btn sm sec" id="hScan" aria-label="Scannen">📷</button></div><div id="hRes"></div></div>`; }
+function zoekAlles(q) {
+  q = q.toLowerCase().trim(); if (q.length < 2) return [];
+  const out = [];
+  for (const a of Object.values(M.art)) {
+    if (a.uit) continue; const od = onderdeelVan(a); if (!mag('o_' + od)) continue;
+    const nr = a.eigen ? a.artNr || '' : a.nr;
+    if (a.naam.toLowerCase().includes(q) || nr.includes(q) || (a.bst || '') === q || (a.eigen && String(a.ean || '').includes(q))) out.push(a);
+    if (out.length >= 25) break;
+  }
+  if (/^\d{8,14}$/.test(q)) { const a = vindCode(q); if (a && !out.includes(a)) out.unshift(a); }
+  return out;
+}
+function homeZoekRes() {
+  const el = $('#hRes'); if (!el) return; const l = zoekAlles(ui.hq || '');
+  el.innerHTML = !ui.hq || ui.hq.length < 2 ? '' : l.length ? `<div class="list zoekres">${l.map(a => `<button class="it" data-hz="${a.key}"><span style="flex:1;text-align:left"><b>${esc(a.naam)}</b><br><span class="small">${esc(a.eigen ? a.artNr || 'eigen artikel' : a.nr)} · ${odNaam(onderdeelVan(a))} · ${esc(groepVan(a))}</span></span><span class="pijl">›</span></button>`).join('')}</div>` : '<div class="small" style="padding:8px 4px">Niets gevonden.</div>';
+  el.querySelectorAll('[data-hz]').forEach(b => b.onclick = () => { ui.hq = ''; naarArtikel(M.art[b.dataset.hz]); });
+}
+function overdrachtHtml() {
+  const l = Object.values(S.overdracht || {}).filter(r => !r.klaar).sort((a, b) => (a.ts || '') < (b.ts || '') ? -1 : 1);
+  return `<div class="blk overdracht"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">📋 Overdracht</h2><button class="btn sm sec" id="ovAdd">+ Toevoegen</button></div>${l.length ? `<div class="list">${l.map(r => `<div class="it"><span style="flex:1">${esc(r.tekst)}<br><span class="small">${esc(r.wie || '')} · ${C.fmtDag((r.ts || C.today()).slice(0, 10))} ${hhmm(r.ts)}</span></span><button class="btn sm" data-ovok="${esc(r.id)}">✓ Gedaan</button></div>`).join('')}</div>` : '<p class="small" style="margin:6px 0 0">Geen openstaande punten voor de volgende dienst.</p>'}</div>`;
+}
+function deadlineHtml() {
+  const dl = (S.inst && S.inst.deadline) || {}; const vandaag = C.today(); const nu = minuten(nuHHMM()); let h = '';
+  for (const lev of ['versunie', 'vantol']) {
+    if (!dl[lev]) continue; const ods = (lev === 'vantol' ? ['kw'] : ['agf', 'vers', 'brood', 'diep']).filter(o => mag('o_' + o));
+    let open = 0, actief = false;
+    for (const od of ods) { const cur = C.besteldagen(M, od, 1)[0]; if (cur && cur.besteldag === vandaag) { actief = true; open += voortgang(od, cur).open; } }
+    if (!actief) continue; const rest = minuten(dl[lev]) - nu;
+    const cls = !open ? 'groen' : rest < 0 ? 'rood' : rest <= 30 ? 'rood' : 'oranje';
+    const txt = !open ? `✓ ${LEV_NAAM[lev]}: alles besteld` : rest < 0 ? `⏰ ${LEV_NAAM[lev]}: deadline ${dl[lev]} voorbij – nog ${open} open` : `⏰ ${LEV_NAAM[lev]}: nog ${rest >= 60 ? Math.floor(rest / 60) + ' u ' : ''}${rest % 60} min tot ${dl[lev]} · ${open} open`;
+    h += `<div class="deadline ${cls}">${txt}</div>`;
+  }
+  return h ? `<div class="deadlines">${h}</div>` : '';
+}
+function homeEvents(v) {
+  const q = $('#hq'); if (q) { q.oninput = () => { ui.hq = q.value; homeZoekRes(); }; homeZoekRes(); }
+  const hs = $('#hScan'); if (hs) hs.onclick = () => scanStart(null);
+  const oa = $('#ovAdd'); if (oa) oa.onclick = () => {
+    const ov = sheet(`<h2 style="margin:0">Overdracht</h2><p class="small">Voor de volgende dienst. Het blijft op Home staan tot iemand het afvinkt.</p><div class="form"><textarea id="ovT" rows="3" placeholder="Bijv. KW nog niet besteld, leverancier belt terug" style="width:100%;border:1px solid var(--lijn);border-radius:12px;padding:10px;font:inherit;background:var(--kaart);color:var(--tekst)"></textarea><div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="ovS" style="flex:1">Opslaan</button></div></div>`);
+    $('#ovS').onclick = () => { const t = $('#ovT').value.trim(); if (!t) return; const id = 'O' + Date.now().toString(36); write('overdracht', [{ id, tekst: t, wie: mijnNaam(), ts: new Date().toISOString(), klaar: false }]); log('overdracht', `Overdracht: ${t}`); ov.remove(); render(); };
+  };
+  v.querySelectorAll('[data-ovok]').forEach(b => b.onclick = () => { const r = S.overdracht[b.dataset.ovok]; if (!r) return; write('overdracht', [{ id: r.id, tekst: r.tekst, wie: r.wie, ts: r.ts, klaar: true, klaar_door: mijnNaam(), klaar_om: new Date().toISOString() }]); log('overdracht', `Overdracht gedaan: ${r.tekst}`); ongedaan('Overdracht afgevinkt', () => write('overdracht', [{ id: r.id, tekst: r.tekst, wie: r.wie, ts: r.ts, klaar: false, klaar_door: null, klaar_om: null }])); render(); });
+}
+setInterval(() => { if (OPEN && ui.tab === 'home' && !document.hidden && !$('.sheet') && document.activeElement && document.activeElement.id !== 'hq' && $('.deadlines')) render(); }, 60000);
+
+/* ---------- alles volgens advies, groep besteld ---------- */
+async function allesVolgensAdvies(od, cur) {
+  const rows = [];
+  for (const a of lijstArtikelen(od)) {
+    if (a.uit || assStatus(a) !== 'in') continue; const be = S.bestel[a.key + '|' + cur.besteldag];
+    if (be && be.aantal !== null && be.aantal !== undefined) continue;
+    const ad = C.advies(M, a.key, cur, S.voorraad[a.key], bestellingenVan(a.key)); if (!ad.adv) continue;
+    rows.push({ bron: a.bron, nr: a.nr, besteldag: cur.besteldag, lever: cur.L, aantal: ad.adv, door: mijnNaam(), advies: ad.adv });
+  }
+  if (!rows.length) return toast('Er is niets meer in te vullen');
+  if (!await bevestig('Klopt dit?', `Bij <b>${rows.length} artikelen</b> zonder eigen bestelling wordt het advies ingevuld als bestelling voor ${C.fmtDag(cur.besteldag)}. Wat je al hebt ingevuld blijft staan.`, 'Invullen', 'Annuleren')) return;
+  write('bestellingen', rows); log('bestelling', `${odNaam(od)}: ${rows.length} artikelen volgens advies ingevuld`);
+  ongedaan(`${rows.length} ingevuld`, () => write('bestellingen', rows.map(r => Object.assign({}, r, { aantal: null })))); render(true);
+}
+async function groepBesteld(od, cur, g) {
+  const rows = [];
+  for (const a of lijstArtikelen(od)) {
+    if (groepVan(a) !== g || a.uit || assStatus(a) !== 'in') continue; const be = S.bestel[a.key + '|' + cur.besteldag];
+    if (be && be.besteld) continue; const ad = C.advies(M, a.key, cur, S.voorraad[a.key], bestellingenVan(a.key));
+    const n = be && be.aantal !== null && be.aantal !== undefined ? be.aantal : ad.adv; if (!(n > 0)) continue;
+    rows.push({ bron: a.bron, nr: a.nr, besteldag: cur.besteldag, lever: cur.L, besteld: true, besteld_door: mijnNaam(), besteld_om: new Date().toISOString(), advies: ad.adv });
+  }
+  if (!rows.length) return toast('In deze groep staat niets meer open');
+  if (!await bevestig('Groep besteld?', `<b>${esc(g)}</b>: ${rows.length} artikelen worden afgevinkt als besteld.`, 'Afvinken', 'Annuleren')) return;
+  write('bestellingen', rows); log('besteld', `Groep besteld: ${g} (${rows.length})`);
+  ongedaan('Groep afgevinkt', () => write('bestellingen', rows.map(r => Object.assign({}, r, { besteld: false, besteld_door: null, besteld_om: null })))); render(true);
+}
+
+/* ---------- derving ---------- */
+function dervingInvoer(a) {
+  let soort = 'weg'; const u = eenheid(a);
+  const recent = Object.values(S.derving).filter(r => r.bron === a.bron && r.nr === a.nr).sort((x, y) => x.dag < y.dag ? 1 : -1).slice(0, 5);
+  const ov = sheet(`<h2 style="margin:0">Derving</h2><p class="small">${esc(a.naam)}</p><div class="form"><div class="chips2" id="dvS"><button class="aan" data-k="weg">🗑️ Weggegooid</button><button data-k="af">🏷️ Afgeprijsd</button></div><label>Aantal (${u})</label><input type="number" id="dvA" inputmode="decimal" placeholder="Bijv. 3"><div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="dvO" style="flex:1">Opslaan</button></div>${recent.length ? `<p class="small">Laatst: ${recent.map(r => `${C.fmtDag(r.dag)} ${C.fmt(+r.aantal)} ${r.soort === 'af' ? 'afgeprijsd' : 'weg'}`).join(' · ')}</p>` : ''}</div>`);
+  $('#dvS').onclick = e => { const b = e.target.closest('[data-k]'); if (!b) return; soort = b.dataset.k; $('#dvS').querySelectorAll('[data-k]').forEach(x => x.classList.toggle('aan', x === b)); };
+  $('#dvO').onclick = () => { const n = C.num($('#dvA').value); if (!(n > 0)) return toast('Vul een aantal in'); const id = 'D' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); write('derving', [{ id, dag: C.today(), bron: a.bron, nr: a.nr, aantal: n, soort, door: mijnNaam() }]); log('derving', `${soort === 'af' ? 'Afgeprijsd' : 'Derving'} ${a.naam}: ${n}`); ov.remove(); rebuild(); render(true); toast('Opgeslagen'); };
+}
+
+/* ---------- prijswijzigingen ---------- */
+function prijsLijst() {
+  const out = [];
+  for (const bron of ['vers', 'kw']) { const b = S.boeken[bron]; if (!b || !b.prijs) continue; for (const p of b.prijs) { const a = M.art[bron + ':' + p.nr]; if (!a || a.uit || assStatus(a) !== 'in') continue; if (Math.abs((S.prijsOk[a.key] || 0) - p.nieuw) < 0.004) continue; if (!mag('o_' + onderdeelVan(a))) continue; out.push({ a, oud: p.oud, nieuw: p.nieuw }); } }
+  return out;
+}
+function prijsHtml() {
+  const l = prijsLijst(); if (!l.length) return '';
+  return `<div class="grp"><span>🏷️ Prijs gewijzigd</span><small>${l.length} schapkaartje${l.length === 1 ? '' : 's'} vervangen</small></div><div class="card laatste"><div class="list">${l.map(x => `<div class="it"><span style="flex:1">${esc(x.a.naam)} <span class="small">${x.a.nr} · ${odNaam(onderdeelVan(x.a))}</span><br><span class="small">${C.eur(x.oud)} → <b class="${x.nieuw > x.oud ? 'rood' : ''}">${C.eur(x.nieuw)}</b></span></span>${mag('schap') ? `<button class="btn sm" data-pok="${x.a.key}|${x.nieuw}">Kaartje vervangen</button>` : ''}</div>`).join('')}</div></div>`;
+}
+function prijsEvents(v) { v.querySelectorAll('[data-pok]').forEach(b => b.onclick = () => { const [key, p] = b.dataset.pok.split('|'); const a = M.art[key]; const oud = S.prijsOk[key]; write('prijs_ok', [{ bron: a.bron, nr: a.nr, prijs: +p, door: mijnNaam() }]); log('schap', `Schapkaartje vervangen: ${a.naam}`); ongedaan('Kaartje vervangen', () => write('prijs_ok', [{ bron: a.bron, nr: a.nr, prijs: oud || 0, door: mijnNaam() }])); render(); }); }
+
+/* ---------- leverdag-check ---------- */
+function leverRegels(dag) {
+  const out = [];
+  for (const k in S.bestel) {
+    const b = S.bestel[k]; if (b.lever !== dag) continue; const key = k.split('|')[0]; const a = M.art[key]; if (!a) continue;
+    if (!mag('o_' + onderdeelVan(a))) continue;
+    const n = b.aantal !== null && b.aantal !== undefined ? +b.aantal : b.besteld ? +b.advies || 0 : 0; if (!(n > 0)) continue;
+    out.push({ a, n, chk: S.lever[key + '|' + dag] || null });
+  }
+  return out.sort((x, y) => (levVan(x.a) + groepVan(x.a) + x.a.naam).localeCompare(levVan(y.a) + groepVan(y.a) + y.a.naam));
+}
+function leverDagen() { const s = new Set(); for (const k in S.bestel) { const b = S.bestel[k]; if (b.lever && b.lever >= C.add(C.today(), -3) && b.lever <= C.add(C.today(), 4)) s.add(b.lever); } return [...s].sort(); }
+function renderLevering() {
+  const v = $('#view'); const dagen = leverDagen();
+  if (!ui.levCheck || !dagen.includes(ui.levCheck)) ui.levCheck = dagen.includes(C.today()) ? C.today() : dagen.filter(d => d <= C.today()).pop() || dagen[0];
+  const dag = ui.levCheck; const l = dag ? leverRegels(dag) : [];
+  const ok = l.filter(x => x.chk && x.chk.ok).length, mist = l.filter(x => x.chk && x.chk.ok === false);
+  let h = `<div class="bar"><div class="chips">${dagen.map(d => `<button class="chip ${d === dag ? 'on' : ''}" data-lc="${d}"><b>Levering ${C.fmtDag(d)}</b></button>`).join('')}</div>${l.length ? `<div class="voortgang"><span>${ok} binnen · ${mist.length} mist</span><b>${l.length - ok - mist.length ? `nog ${l.length - ok - mist.length} te controleren` : '✓ alles gecontroleerd'}</b></div>` : ''}</div>`;
+  if (!dag) h += '<div class="empty">Geen leveringen rond vandaag.</div>';
+  let lev = null;
+  for (const x of l) {
+    const lv = levVan(x.a); if (lv !== lev) { h += `${lev ? '</div></div>' : ''}<div class="blk"><h2>${LEV_NAAM[lv]}</h2><div class="list">`; lev = lv; }
+    const st = x.chk ? (x.chk.ok ? '<b class="groen">✓ binnen</b>' : `<b class="rood">mist ${C.fmt(+x.chk.mist || x.n)}</b>`) : '';
+    h += `<div class="it"><span style="flex:1"><b>${esc(x.a.naam)}</b><br><span class="small">${esc(x.a.eigen ? x.a.artNr || '' : x.a.nr)} · besteld ${C.fmt(x.n)}${x.a.perHE ? ' HE' : ''}</span> ${st}</span><button class="btn sm" data-lok="${x.a.key}">✓</button><button class="btn sm sec" data-lmis="${x.a.key}">Mist</button></div>`;
+  }
+  if (lev) h += '</div></div>';
+  if (mist.length) h += `<div class="blk"><button class="btn" id="lcDeel" style="width:100%">Ontbrekende artikelen delen</button><p class="small">Handig voor het correctieformulier.</p></div>`;
+  v.innerHTML = h;
+  v.querySelectorAll('[data-lc]').forEach(b => b.onclick = () => { ui.levCheck = b.dataset.lc; render(); });
+  const zet = (key, ok, mistN) => { const a = M.art[key]; write('levercheck', [{ bron: a.bron, nr: a.nr, lever: dag, ok, mist: ok ? null : mistN, door: mijnNaam(), om: new Date().toISOString() }]); render(true); };
+  v.querySelectorAll('[data-lok]').forEach(b => b.onclick = () => zet(b.dataset.lok, true));
+  v.querySelectorAll('[data-lmis]').forEach(b => b.onclick = () => { const x = l.find(y => y.a.key === b.dataset.lmis); const ov = sheet(`<h2 style="margin:0">Wat mist er?</h2><p class="small">${esc(x.a.naam)} · besteld ${C.fmt(x.n)}${x.a.perHE ? ' HE' : ''}</p><div class="form"><label>Aantal dat mist${x.a.perHE ? ' (HE)' : ''}</label><input type="number" id="lmA" inputmode="decimal" value="${x.n}"><div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="lmO" style="flex:1">Opslaan</button></div></div>`); $('#lmO').onclick = () => { zet(x.a.key, false, C.num($('#lmA').value) || x.n); log('levering', `Mist bij levering: ${x.a.naam}`); ov.remove(); }; });
+  const ld = $('#lcDeel'); if (ld) ld.onclick = async () => { const t = `Ontbreekt bij levering ${C.fmtDag(dag)} – ${(WINKEL && WINKEL.naam) || ''}\n\n` + mist.map(x => `${x.a.eigen ? x.a.artNr || '' : x.a.nr}\t${x.a.naam}\tmist ${C.fmt(+x.chk.mist || x.n)}${x.a.perHE ? ' HE' : ''} (${LEV_NAAM[levVan(x.a)]})`).join('\n'); window.__laatsteDeel = t; try { if (navigator.share) await navigator.share({ text: t }); else { await navigator.clipboard.writeText(t); toast('Gekopieerd'); } } catch (e) { } };
+}
+
+/* ---------- actieweek voorbereiden ---------- */
+function renderActies() {
+  const v = $('#view'); const vandaag = C.today();
+  const per = M.acties.filter(p => p.zon >= vandaag).sort((a, b) => a.mon < b.mon ? -1 : 1).slice(0, 2);
+  let h = '';
+  if (!per.length) h = '<div class="empty">Nog geen komende actieweek. Upload de actie-pdf via Beheer.</div>';
+  for (const p of per) {
+    h += `<div class="grp"><span>Actieweek ${p.week}</span><small>${C.fmtDag(p.mon)} t/m ${C.fmtDag(p.zon)}</small></div>`;
+    for (const od of BESTEL_OD) {
+      if (!mag('o_' + od)) continue;
+      const keys = Object.keys(M.actieArt).filter(k => M.art[k] && onderdeelVan(M.art[k]) === od && M.actieArt[k].some(x => x.id === p.id));
+      if (!keys.length) continue;
+      const bds = C.besteldagen(M, od, 6);
+      h += `<div class="card laatste"><b>${odNaam(od)} · ${keys.length} acties</b><div class="list">${keys.map(k => { const a = M.art[k]; const ap = M.actieArt[k].find(x => x.id === p.id); const lv = bds.find(l => C.dekking(M, k, l).includes(p.mon) || (l.L <= p.mon && p.mon < l.L2)); const ad = lv ? C.advies(M, k, lv, S.voorraad[k], bestellingenVan(k)) : null; return `<button class="it" data-ak="${k}"><span style="flex:1;text-align:left"><b>${esc(a.naam)}</b><br><span class="small">${a.nr} · ${ap.folder ? 'Folder' : 'Instore'}${ap.disc ? ' · −' + Math.round(ap.disc * 100) + '%' : ''}${ap.dag !== null && ap.dag !== undefined ? ' · alleen ' + C.DAGNAAM[ap.dag] : ''}</span></span><span style="text-align:right"><b>${ad ? ad.adv + (a.perHE ? ' HE' : '') : '–'}</b><br><span class="small">${lv ? 'bestellen ' + C.fmtDag(lv.besteldag) : ''}</span></span></button>`; }).join('')}</div></div>`;
+    }
+  }
+  v.innerHTML = `<div class="blk"><p class="small">Alle folder- en instore-acties van de komende actieweek per onderdeel, met het advies voor de besteldag die de actie dekt. Tik op een artikel om ernaartoe te gaan.</p></div>` + h;
+  v.querySelectorAll('[data-ak]').forEach(b => b.onclick = () => naarArtikel(M.art[b.dataset.ak]));
+}
+
+/* ---------- actietafels ---------- */
+const TKLEUR = ['#f17d04', '#2e6fb7', '#2e9d4f', '#c0392b', '#8e44ad', '#d4a017', '#16a085', '#e84393', '#6d4c41', '#546e7a'];
+function tafelWeek() { if (!ui.tafelWeek) ui.tafelWeek = weekSleutel(C.today()); return ui.tafelWeek; }
+function tafelLijst() { return Object.values(S.tafels || {}).filter(t => !t.weg).sort((a, b) => (a.volg || 0) - (b.volg || 0) || (a.naam || '').localeCompare(b.naam || '')); }
+function indelingVan(week, id) { return S.indeling[week + '|' + id] || { items: [] }; }
+function tafelTelling(week) {
+  week = week || weekSleutel(C.today()); let totaal = 0, klaar = 0;
+  for (const t of tafelLijst()) for (const it of indelingVan(week, t.id).items || []) { totaal++; if (it.klaar) klaar++; }
+  return { week: week.split('-')[1].replace(/^0/, ''), totaal, klaar, open: totaal - klaar, ombouw: C.wd(C.today()) === 0 };
+}
+function tafelTekening(t, ind, klein) {
+  const R = Math.max(1, +t.rijen || 2), K = Math.max(1, +t.kol || 3); const N = R * K; const bezet = new Array(N).fill(-1);
+  (ind.items || []).forEach((it, i) => (it.cellen || []).forEach(c => { if (c < N) bezet[c] = i; }));
+  let h = `<div class="tafel ${klein ? 'klein' : ''}" style="grid-template-columns:repeat(${K},1fr);grid-template-rows:repeat(${R},${klein ? '22px' : 'minmax(64px,auto)'})">`;
+  const gedaan = new Set();
+  (ind.items || []).forEach((it, i) => {
+    const cel = (it.cellen || []).filter(c => c < N); if (!cel.length) return;
+    const rs = cel.map(c => Math.floor(c / K)), ks = cel.map(c => c % K); const r1 = Math.min(...rs), r2 = Math.max(...rs), k1 = Math.min(...ks), k2 = Math.max(...ks);
+    const kleur = TKLEUR[(it.kleur ?? i) % TKLEUR.length];
+    const label = klein ? '' : `<b>${esc(it.naam)}</b>${it.aantal ? `<span>${C.fmt(+it.aantal)}×</span>` : ''}${it.klaar ? '<i>✓</i>' : ''}`;
+    if ((r2 - r1 + 1) * (k2 - k1 + 1) === cel.length) { h += `<div class="vak bezet ${it.klaar ? 'klaar' : ''}" data-ti="${i}" style="grid-area:${r1 + 1}/${k1 + 1}/${r2 + 2}/${k2 + 2};background:${kleur}">${label}</div>`; cel.forEach(c => gedaan.add(c)); }
+    else { const eerste = Math.min(...cel); cel.forEach(c => { gedaan.add(c); h += `<div class="vak bezet ${it.klaar ? 'klaar' : ''}" data-ti="${i}" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1};background:${kleur}">${c === eerste ? label : ''}</div>`; }); }
+  });
+  for (let c = 0; c < N; c++) if (!gedaan.has(c)) h += `<div class="vak leeg" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1}"></div>`;
+  return h + '</div>';
+}
+function tafelWeken() { const s = new Set([weekSleutel(C.add(C.today(), -7)), weekSleutel(C.today()), weekSleutel(C.add(C.today(), 7))]); for (const a of S.acties || []) if (a.id >= weekSleutel(C.today())) s.add(a.id); return [...s].sort(); }
+function slaIndelingOp(week, id, data) { write('tafel_indeling', [{ week, tafel_id: id, data }]); }
+function renderTafels() {
+  const v = $('#view'); const week = tafelWeek(); const kanIn = mag('tafels'); const kanAf = mag('schap') || kanIn;
+  const t = ui.tafel && S.tafels[ui.tafel] && !S.tafels[ui.tafel].weg ? S.tafels[ui.tafel] : null;
+  const wk = tafelWeken(); const ap = (S.acties || []).find(a => a.id === week);
+  let h = `<div class="bar"><div class="chips">${wk.map(w => `<button class="chip ${w === week ? 'on' : ''}" data-tw="${w}"><b>Week ${+w.split('-')[1]}</b><span>${C.fmtDag(weekMaandag(w))}${(S.acties || []).some(a => a.id === w) ? ' · acties' : ''}</span></button>`).join('')}</div></div>`;
+  if (!t) {
+    const l = tafelLijst();
+    if (!l.length) h += `<div class="empty">Nog geen actietafels.${kanIn ? '<br>Maak eerst je tafels aan.' : '<br>De beheerder maakt de tafels aan.'}</div>`;
+    h += `<div class="tafelgrid">${l.map(x => { const ind = indelingVan(week, x.id); const n = (ind.items || []).length, k = (ind.items || []).filter(i => i.klaar).length; return `<button class="tafelkaart" data-tt="${x.id}">${x.foto ? `<img src="${x.foto}" alt="">` : ''}<b>${esc(x.naam)}</b>${tafelTekening(x, ind, true)}<span class="small">${n ? `${k} van ${n} klaar` : 'Nog niet ingedeeld'}</span></button>`; }).join('')}</div>`;
+    if (kanIn) h += `<div class="blk"><button class="btn sec" id="tbAdd" style="width:100%">+ Tafel toevoegen</button>${ap ? '' : `<p class="small">Voor week ${+week.split('-')[1]} is nog geen actie-pdf geüpload. Je kunt wel al indelen.</p>`}</div>`;
+  } else {
+    const ind = indelingVan(week, t.id); const items = ind.items || [];
+    const vorig = weekSleutel(C.add(weekMaandag(week), -7)); const vi = indelingVan(vorig, t.id);
+    h += `<div class="blk"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">${esc(t.naam)}</h2>${kanIn ? '<button class="btn sm sec" id="tbEdit">Tafel ✎</button>' : ''}</div>${t.foto ? `<img class="tafelfoto" src="${t.foto}" alt="">` : ''}
+    <p class="small">${kanIn ? 'Tik op een blok om het aan te passen, of voeg een artikel toe.' : 'Tik op een blok of in de lijst als het op de tafel staat.'}</p>${tafelTekening(t, ind)}
+    <div class="row" style="margin-top:10px;flex-wrap:wrap">${kanIn ? '<button class="btn sm" id="tiAdd">+ Artikel op tafel</button>' : ''}${kanIn && !items.length && (vi.items || []).length ? `<button class="btn sm sec" id="tiCopy">Indeling week ${+vorig.split('-')[1]} overnemen</button>` : ''}${items.length ? '<button class="btn sm sec" id="tiPrint">Printen</button>' : ''}</div></div>
+    <div class="blk"><h2>Wat moet erop</h2>${items.length ? `<div class="list">${items.map((it, i) => `<div class="it"><span class="kleurstip" style="background:${TKLEUR[(it.kleur ?? i) % TKLEUR.length]}"></span><span style="flex:1"><b>${esc(it.naam)}</b><br><span class="small">${esc(it.nr || '')} · ${plekTekst(t, it.cellen)}${it.aantal ? ' · ' + C.fmt(+it.aantal) + ' stuks' : ''}${it.opm ? ' · ' + esc(it.opm) : ''}${it.klaar ? ` · ✓ ${esc(ini(it.door))} ${hhmm(it.om)}` : ''}</span></span>${kanAf ? `<button class="btn sm ${it.klaar ? 'sec' : ''}" data-tk="${i}">${it.klaar ? 'Terug' : 'Staat erop'}</button>` : ''}</div>`).join('')}</div>` : '<p class="small">Nog niets ingedeeld voor deze week.</p>'}</div>`;
+  }
+  v.innerHTML = h;
+  v.querySelectorAll('[data-tw]').forEach(b => b.onclick = () => { ui.tafelWeek = b.dataset.tw; render(); });
+  v.querySelectorAll('[data-tt]').forEach(b => b.onclick = () => { ui.tafel = b.dataset.tt; render(); window.scrollTo(0, 0); });
+  const ta = $('#tbAdd'); if (ta) ta.onclick = () => tafelBewerk(null);
+  if (!t) return;
+  const te = $('#tbEdit'); if (te) te.onclick = () => tafelBewerk(t);
+  const add = $('#tiAdd'); if (add) add.onclick = () => tafelItemBewerk(t, week, null);
+  const cp = $('#tiCopy'); if (cp) cp.onclick = () => { const vi = indelingVan(weekSleutel(C.add(weekMaandag(week), -7)), t.id); slaIndelingOp(week, t.id, { items: (vi.items || []).map(it => Object.assign({}, it, { klaar: false, door: null, om: null })) }); log('tafels', `Indeling ${t.naam} overgenomen`); render(); };
+  const pr = $('#tiPrint'); if (pr) pr.onclick = () => tafelPrint(t, week);
+  const wissel = i => { if (!kanAf) return; const ind = JSON.parse(JSON.stringify(indelingVan(week, t.id))); const it = ind.items[i]; it.klaar = !it.klaar; it.door = it.klaar ? mijnNaam() : null; it.om = it.klaar ? new Date().toISOString() : null; slaIndelingOp(week, t.id, ind); if (it.klaar) log('tafels', `${t.naam}: ${it.naam} staat erop`); render(true); };
+  v.querySelectorAll('[data-tk]').forEach(b => b.onclick = () => wissel(+b.dataset.tk));
+  v.querySelectorAll('.tafel [data-ti]').forEach(b => b.onclick = () => kanIn ? tafelItemBewerk(t, week, +b.dataset.ti) : wissel(+b.dataset.ti));
+}
+function plekTekst(t, cellen) {
+  const R = +t.rijen || 2, K = +t.kol || 3; if (!cellen || !cellen.length) return '';
+  const rs = [...new Set(cellen.map(c => Math.floor(c / K)))], ks = [...new Set(cellen.map(c => c % K))];
+  const rij = r => R === 1 ? '' : r === 0 ? 'boven' : r === R - 1 ? 'onder' : R === 3 ? 'midden' : 'rij ' + (r + 1);
+  const kol = k => K === 1 ? '' : k === 0 ? 'links' : k === K - 1 ? 'rechts' : K === 3 ? 'midden' : 'vak ' + (k + 1);
+  if (cellen.length === R * K) return 'hele tafel';
+  if (rs.length === 1 && ks.length === K) return 'strook ' + (rij(rs[0]) || 'hele breedte');
+  if (ks.length === 1 && rs.length === R) return 'strook ' + (kol(ks[0]) || 'hele hoogte');
+  if (cellen.length === 1) return [kol(ks[0]), rij(rs[0])].filter(Boolean).join(' ') || 'vak';
+  return `${cellen.length} vakken`;
+}
+function tafelBewerk(t) {
+  const nieuw = !t; const d = Object.assign({ naam: '', rijen: 2, kol: 3, foto: '', volg: tafelLijst().length }, t || {});
+  const ov = sheet(`<h2 style="margin:0">${nieuw ? 'Tafel toevoegen' : 'Tafel aanpassen'}</h2><div class="form"><label>Naam</label><input type="text" id="tbN" value="${esc(d.naam)}" placeholder="Bijv. Tafel 1 bij de ingang">
+  <div class="row"><div style="flex:1"><label>Rijen (vakken van voor naar achter)</label><input type="number" id="tbR" min="1" max="8" value="${d.rijen}"></div><div style="flex:1"><label>Kolommen (van links naar rechts)</label><input type="number" id="tbK" min="1" max="10" value="${d.kol}"></div></div>
+  <label>Foto (optioneel)</label><div style="display:flex;gap:12px;align-items:center"><div class="fotovak" id="tbFv">${d.foto ? `<img src="${d.foto}" alt="">` : 'Geen foto'}</div><label class="btn sm sec" style="margin:0">Foto kiezen<input type="file" accept="image/*" id="tbF" class="hide"></label></div>
+  <div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="tbO" style="flex:1">Opslaan</button></div>${nieuw ? '' : '<button class="btn sec" id="tbW" style="margin-top:6px;color:#d32f2f;border-color:#d32f2f">Tafel verwijderen</button>'}</div>`);
+  $('#tbF').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { d.foto = await fotoVerklein(f); $('#tbFv').innerHTML = `<img src="${d.foto}" alt="">`; } catch (x) { toast('Foto lukt niet'); } };
+  $('#tbO').onclick = () => { d.naam = $('#tbN').value.trim(); if (!d.naam) return toast('Vul een naam in'); d.rijen = Math.max(1, Math.min(8, +$('#tbR').value || 2)); d.kol = Math.max(1, Math.min(10, +$('#tbK').value || 3)); const id = d.id || 'T' + Date.now().toString(36); const data = Object.assign({}, d); delete data.id; write('tafels', [{ id, data }]); ov.remove(); render(); };
+  const w = $('#tbW'); if (w) w.onclick = async () => { if (!await bevestig('Tafel verwijderen?', `<b>${esc(d.naam)}</b> en de indeling verdwijnen.`, 'Verwijderen')) return; const data = Object.assign({}, d, { weg: true }); delete data.id; write('tafels', [{ id: d.id, data }]); ui.tafel = null; ov.remove(); render(); };
+}
+function tafelItemBewerk(t, week, idx) {
+  const ind = JSON.parse(JSON.stringify(indelingVan(week, t.id))); ind.items = ind.items || [];
+  const nieuw = idx === null; const it = nieuw ? { key: '', naam: '', nr: '', cellen: [], aantal: '', opm: '', kleur: (ind.items.length) % TKLEUR.length, klaar: false } : ind.items[idx];
+  const R = +t.rijen || 2, K = +t.kol || 3; const sel = new Set(it.cellen || []);
+  const bezet = {}; ind.items.forEach((x, i) => { if (i !== idx) (x.cellen || []).forEach(c => bezet[c] = x); });
+  const actieKeys = Object.keys(M.actieArt).filter(k => M.art[k] && M.actieArt[k].some(p => p.id === week));
+  const ov = sheet(`<h2 style="margin:0">${nieuw ? 'Artikel op tafel' : 'Aanpassen'} · ${esc(t.naam)}</h2><div class="form">
+  <label>Artikel</label><div id="tiGekozen" class="small" style="font-size:15px">${it.naam ? `<b>${esc(it.naam)}</b> ${esc(it.nr || '')}` : 'Nog geen artikel gekozen'}</div>
+  <div class="row"><input type="search" id="tiQ" placeholder="Zoek naam of nummer" style="flex:1"><button class="btn sm sec" id="tiScan">📷</button></div><div id="tiRes" class="list zoekres"></div>
+  <label>Vakken – tik aan waar het komt</label><div class="tafel kies" style="grid-template-columns:repeat(${K},1fr);grid-template-rows:repeat(${R},44px)">${Array.from({ length: R * K }, (_, c) => `<button type="button" class="vak ${sel.has(c) ? 'aan' : ''} ${bezet[c] ? 'bezet' : 'leeg'}" data-c="${c}" ${bezet[c] ? 'disabled' : ''}>${bezet[c] ? esc(ini(bezet[c].naam)) : ''}</button>`).join('')}</div>
+  <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:6px">${R > 1 ? Array.from({ length: R }, (_, r) => `<button type="button" class="btn sm sec" data-rij="${r}">Rij ${r === 0 ? 'boven' : r === R - 1 ? 'onder' : r + 1}</button>`).join('') : ''}${K > 1 ? Array.from({ length: K }, (_, k) => `<button type="button" class="btn sm sec" data-kol="${k}">${k === 0 ? 'Links' : k === K - 1 ? 'Rechts' : 'Kolom ' + (k + 1)}</button>`).join('') : ''}</div>
+  <div class="row"><div style="flex:1"><label>Aantal stuks</label><input type="number" id="tiA" inputmode="numeric" value="${esc(it.aantal)}" placeholder="Bijv. 24"></div><div style="flex:2"><label>Opmerking</label><input type="text" id="tiO" value="${esc(it.opm || '')}" placeholder="Bijv. met prijsbord A4"></div></div>
+  <div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="tiS" style="flex:1">Opslaan</button></div>${nieuw ? '' : '<button class="btn sec" id="tiW" style="margin-top:6px;color:#d32f2f;border-color:#d32f2f">Van de tafel halen</button>'}</div>`);
+  const kies = a => { it.key = a.key; it.naam = a.naam; it.nr = a.eigen ? a.artNr || '' : a.nr; $('#tiGekozen').innerHTML = `<b>${esc(it.naam)}</b> ${esc(it.nr)}`; $('#tiRes').innerHTML = ''; $('#tiQ').value = ''; };
+  const toon = q => { const l = q && q.length >= 2 ? zoekAlles(q) : actieKeys.map(k => M.art[k]); $('#tiRes').innerHTML = (q ? '' : actieKeys.length ? '<div class="small" style="padding:4px 2px">Acties van deze week:</div>' : '') + l.slice(0, 30).map(a => `<button type="button" class="it" data-tk2="${a.key}"><span style="flex:1;text-align:left">${esc(a.naam)} <span class="small">${esc(a.eigen ? a.artNr || '' : a.nr)}</span></span></button>`).join(''); $('#tiRes').querySelectorAll('[data-tk2]').forEach(b => b.onclick = () => kies(M.art[b.dataset.tk2])); };
+  if (nieuw) toon('');
+  $('#tiQ').oninput = e => toon(e.target.value.trim());
+  $('#tiScan').onclick = () => scanStart(null, a => kies(a));
+  const teken = () => ov.querySelectorAll('[data-c]').forEach(b => b.classList.toggle('aan', sel.has(+b.dataset.c)));
+  ov.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const c = +b.dataset.c; sel.has(c) ? sel.delete(c) : sel.add(c); teken(); });
+  ov.querySelectorAll('[data-rij]').forEach(b => b.onclick = () => { const r = +b.dataset.rij; const cs = Array.from({ length: K }, (_, k) => r * K + k).filter(c => !bezet[c]); const alle = cs.every(c => sel.has(c)); cs.forEach(c => alle ? sel.delete(c) : sel.add(c)); teken(); });
+  ov.querySelectorAll('[data-kol]').forEach(b => b.onclick = () => { const k = +b.dataset.kol; const cs = Array.from({ length: R }, (_, r) => r * K + k).filter(c => !bezet[c]); const alle = cs.every(c => sel.has(c)); cs.forEach(c => alle ? sel.delete(c) : sel.add(c)); teken(); });
+  $('#tiS').onclick = () => { if (!it.naam) return toast('Kies eerst een artikel'); if (!sel.size) return toast('Tik minstens één vak aan'); it.cellen = [...sel].sort((a, b) => a - b); it.aantal = C.num($('#tiA').value) || ''; it.opm = $('#tiO').value.trim(); if (nieuw) ind.items.push(it); slaIndelingOp(week, t.id, ind); log('tafels', `${t.naam}: ${it.naam} ${nieuw ? 'ingedeeld' : 'aangepast'}`); ov.remove(); render(true); };
+  const w = $('#tiW'); if (w) w.onclick = () => { ind.items.splice(idx, 1); slaIndelingOp(week, t.id, ind); ov.remove(); render(true); };
+}
+function tafelPrint(t, week) {
+  const ind = indelingVan(week, t.id);
+  $('#printArea').innerHTML = `<div class="tafelprint"><h1>${esc(t.naam)} · actieweek ${+week.split('-')[1]} · ${esc((WINKEL && WINKEL.naam) || '')}</h1>${tafelTekening(t, ind)}<table><thead><tr><th>Kleur</th><th>Artikel</th><th>Barcode</th><th>Plek</th><th>Aantal</th><th>Opmerking</th><th>Staat erop</th></tr></thead><tbody>${(ind.items || []).map((it, i) => `<tr><td><span class="kleurstip" style="background:${TKLEUR[(it.kleur ?? i) % TKLEUR.length]}"></span></td><td class="n"><b>${esc(it.nr || '')}</b> ${esc(it.naam)}</td><td>${/^\d{4,}$/.test(it.nr || '') ? C.msi(it.nr, 40, true) : ''}</td><td>${plekTekst(t, it.cellen)}</td><td>${it.aantal ? C.fmt(+it.aantal) : ''}</td><td>${esc(it.opm || '')}</td><td class="bst"></td></tr>`).join('')}</tbody></table></div>`;
+  window.__laatstePrint = { tafel: t.naam, n: (ind.items || []).length };
+  setTimeout(() => window.print(), 100);
+}
+Object.assign(HULP, {
+  tafels: ['Actietafels', 'Kies bovenaan de actieweek en tik op een tafel. Je ziet een tekening van de tafel: elk gekleurd blok is een artikel. Tik op "Staat erop" als het artikel op de tafel staat. Wie mag indelen, voegt artikelen toe met "+ Artikel op tafel", tikt de vakken aan (één vak, een rij of een kolom) en vult het aantal in. Met "Indeling overnemen" neem je de vorige week over.'],
+  levering: ['Leverdag-check', 'Kies de leverdag. Vink bij het uitpakken per artikel ✓ aan als het binnen is, of tik op Mist en vul in hoeveel er ontbreekt. Met "Ontbrekende artikelen delen" stuur je de lijst door, handig voor het correctieformulier.'],
+  acties: ['Actieweek voorbereiden', 'Alle acties van de komende actieweek per onderdeel, met het advies voor de besteldag die de actie dekt.'],
+  overdracht: ['Overdracht', 'Op Home schrijf je een korte notitie voor de volgende dienst. Die blijft staan tot iemand op "Gedaan" tikt.']
 });
 
 /* ---------- start ---------- */

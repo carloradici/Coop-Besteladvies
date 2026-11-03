@@ -1,7 +1,7 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
 // Wordt door de korte stuur-push in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
 // Soorten: test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
-export const FUNCTIE_VERSIE = '1.8';
+export const FUNCTIE_VERSIE = '1.9';
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };
 const ONDERDELEN = [['agf', 'AGF'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries'], ['kw', 'KW']];
 const STD_OPEN = [['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['', '']];
@@ -10,6 +10,8 @@ const pad = n => String(n).padStart(2, '0');
 const ymd = d => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 const add = (s, n) => { const d = new Date(s + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return ymd(d); };
 const wd = s => (new Date(s + 'T12:00:00Z').getUTCDay() + 6) % 7;
+const isoWeek = s => { const d = new Date(s + 'T12:00:00Z'); const t = new Date(d); t.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7)); const j4 = new Date(Date.UTC(t.getUTCFullYear(), 0, 4, 12)); return 1 + Math.round(((t - j4) / 864e5 - 3 + ((j4.getUTCDay() + 6) % 7)) / 7); };
+const minuten = t => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + m; };
 const fmtDag = s => { const d = new Date(s + 'T12:00:00Z'); return `${DAGEN[wd(s)]} ${d.getUTCDate()}-${d.getUTCMonth() + 1}`; };
 
 export function lokaleTijd(nu) {
@@ -102,6 +104,29 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date() }) {
             gedaan.push(W.slice(0, 4) + ':inout');
           }
         }
+      }
+      const dl = inst.deadline || {};
+      for (const [lev, naamLev, ods, bronnen] of [['versunie', 'Versunie', ['agf', 'vers', 'brood', 'diep'], ['vers', 'eigen']], ['vantol', 'Van Tol', ['kw'], ['kw']]]) {
+        if (!dl[lev]) continue;
+        if (!ods.some(o => (schema[o] || schema.vers || []).some(x => x.b === wd(dag)))) continue;
+        const dmin = minuten(dl[lev]), nmin = minuten(tijd); if (nmin < dmin - 30 || nmin >= dmin) continue;
+        if (!(await eenmalig(`deadline:${W}:${lev}:${dag}`))) continue;
+        const { data: be } = await sb.from('bestellingen').select('besteld,aantal,bron').eq('winkel_id', W).eq('besteldag', dag).in('bron', bronnen);
+        const open = (be || []).filter(r => !r.besteld && +r.aantal > 0).length; const besteld = (be || []).filter(r => r.besteld).length;
+        if (!open && besteld) continue;
+        await stuur(wa.filter(a => wil(a, 'deadline')), { titel: `Nog ${dmin - nmin} min: bestellen bij ${naamLev}`, tekst: open ? `${open} artikelen nog niet afgevinkt. Deadline ${dl[lev]}.` : `Er is nog niets afgevinkt. Deadline ${dl[lev]}.`, tag: 'deadline-' + lev });
+        gedaan.push(W.slice(0, 4) + ':deadline_' + lev);
+      }
+      if (wd(dag) === 0 && tijd >= t.bestel && await eenmalig(`week:${W}:${dag}`)) {
+        const van = add(dag, -7), tot = add(dag, -1);
+        const [{ data: be }, { data: dv }, { data: as }] = await Promise.all([
+          sb.from('bestellingen').select('besteld').eq('winkel_id', W).gte('besteldag', van).lte('besteldag', tot),
+          sb.from('derving').select('aantal').eq('winkel_id', W).gte('dag', van).lte('dag', tot),
+          sb.from('assortiment').select('status,opgenomen,sinds').eq('winkel_id', W).gte('sinds', van).lte('sinds', tot)]);
+        const nb = (be || []).filter(r => r.besteld).length; const nd = (dv || []).reduce((x, r) => x + (+r.aantal || 0), 0);
+        const ns = (as || []).filter(r => r.status === 'gesaneerd').length, no = (as || []).filter(r => r.status === 'in' && r.opgenomen).length;
+        await stuur(wa.filter(a => wil(a, 'week')), { titel: `Weekoverzicht week ${isoWeek(van)}`, tekst: `${nb} artikelen besteld · derving ${Math.round(nd)} st · ${ns} gesaneerd · ${no} opgenomen. Bekijk "Hoe goed was het advies" in de app.`, tag: 'week' });
+        gedaan.push(W.slice(0, 4) + ':week');
       }
     }
     return { status: 200, dag, tijd, gedaan, ...verstuurd };
