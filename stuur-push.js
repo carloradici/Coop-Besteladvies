@@ -1,7 +1,7 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
 // Wordt door de korte stuur-push in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
 // Soorten: test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
-export const FUNCTIE_VERSIE = '1.13';
+export const FUNCTIE_VERSIE = '1.15';
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };
 const ONDERDELEN = [['agf', 'AGF'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries'], ['kw', 'KW']];
 const STD_OPEN = [['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['', '']];
@@ -79,8 +79,9 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date() }) {
       if (tijd >= t.export) {
         const gister = add(dag, -1);
         if (!gesloten(gister) && await eenmalig(`export:${W}:${dag}`)) {
-          const { data: dv } = await sb.from('dagverkoop').select('dag').eq('winkel_id', W).eq('dag', gister);
-          if (!dv || !dv.length) { await stuur(wa.filter(a => a.rol === 'beheer' && wil(a, 'export')), { titel: 'Dag-export ontbreekt', tekst: `De verkoop van ${fmtDag(gister)} is nog niet geüpload.`, tag: 'export' }); gedaan.push(W.slice(0, 4) + ':export'); }
+          const { data: dv } = await sb.from('dagverkoop').select('dag').eq('winkel_id', W).gte('dag', add(dag, -14)).lte('dag', gister);
+          const heb = new Set((dv || []).map(r => r.dag)); const mis = []; if (heb.size) { const eerste = [...heb].sort()[0]; for (let d = add(dag, -14); d <= gister; d = add(d, 1)) if (d >= eerste && !heb.has(d) && !gesloten(d)) mis.push(d); } else if (!gesloten(gister)) mis.push(gister);
+          if (mis.includes(gister)) { await stuur(wa.filter(a => a.rol === 'beheer' && wil(a, 'export')), { titel: mis.length > 1 ? `${mis.length} dag-exports ontbreken` : 'Dag-export ontbreekt', tekst: mis.length > 1 ? `Nog niet geüpload: ${mis.slice(-5).map(fmtDag).join(', ')}${mis.length > 5 ? ' en meer' : ''}.` : `De verkoop van ${fmtDag(gister)} is nog niet geüpload.`, tag: 'export' }); gedaan.push(W.slice(0, 4) + ':export'); }
         }
       }
       if (tijd >= t.inout && await eenmalig(`inout:${W}:${dag}`)) {
