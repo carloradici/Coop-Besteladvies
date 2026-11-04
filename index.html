@@ -438,6 +438,17 @@ ol.stappen{padding-left:20px;margin:6px 0 12px}ol.stappen li{margin:4px 0}
 .kwselbalk{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--oranje-licht,#fdebd6);color:#5a3200;border-radius:10px;padding:8px 10px;margin:8px 0;font-size:14px}
 .tafel.kies .vak.selaan{outline:3px solid #222;outline-offset:-3px;color:#fff;font-weight:800;font-size:18px}.tafel.kies .vak.bezetander{opacity:.45}
 .kwteken .tafel{margin-top:8px}.kplrij{grid-template-columns:1fr 64px auto auto}
+
+/* 1.17 */
+#printArea .kopprint{display:grid;gap:4mm;align-items:start}
+#printArea .kopprint h1{font-size:14px;margin:0}
+#printArea .kpb h2{font-size:13px;margin:0 0 2mm}
+#printArea .kpb .tafel .vak{font-size:9px;padding:1mm}
+#printArea .kpb .tafel .vak b{font-size:9px!important}
+#printArea .kpb table{width:100%;border-collapse:collapse;margin-top:1mm}
+#printArea .kpb td{border:1px solid #999;padding:1px 3px;font-size:9px;text-align:left;vertical-align:top}
+#printArea .kpb td.pl{width:9mm;text-align:center;font-weight:800}
+#printArea .kpb svg.msi{display:inline-block;width:38mm;height:7mm;margin:1px 3mm 0 0;vertical-align:top}
 </style>
 </head>
 <body>
@@ -685,6 +696,15 @@ C.parseFolder = pages => {
   return { week, van, tm, thema, items };
 };
 C.folderNaarActie = (f, id) => ({ id, week: f.week, van: f.van, tm: f.tm, folder: true, items: f.items.flatMap(it => it.nrs.filter(n => /^\d{6}$/.test(n)).map(nr => ({ nr, naam: it.naam, eh: '', van: it.streep[0] || 0, voor: it.prijs[0] || 0, cap: it.prijs.length === 1 && !/STUKS/i.test(it.mech || '') ? it.prijs[0] : 0, opm: (() => { const st = (it.mech || '').match(/(\d+)\s*STUKS/i); return st && it.prijs.length === 1 ? `${st[1]} voor ${String(it.prijs[0].toFixed(2)).replace('.', ',')}` : it.mech || ''; })(), folder: true, dag: null }))) });
+C.parseLijst = pages => {
+  const out = []; const gezien = new Set();
+  for (const pg of pages) for (const ln of C.lines(pg)) {
+    const m = ln.txt.match(/^(\d{8,14})\s+(\d{1,6})\s+(.+?)\s+€\s*([\d.,]+)\s*$/); if (!m) continue;
+    const nr = m[2].padStart(6, '0'); if (gezien.has(nr)) continue; gezien.add(nr);
+    out.push({ ean: m[1], nr, naam: m[3].replace(/\s+/g, ' ').trim(), prijs: C.num(m[4]) });
+  }
+  return out;
+};
 C.dagActie = opm => { const m = (opm || '').toLowerCase().match(/^(maandag|dinsdag|woensdag|donderd+ag|vrijdag|zaterdag|zondag)/); if (!m) return null; return C.DAGNAAM.indexOf(m[1].replace(/donderd+ag/, 'donderdag')); };
 C.actieKorting = (a, cons) => {
   const o = (a.opm || '').toLowerCase();
@@ -820,7 +840,7 @@ C.buildModel = (S) => {
       const key = M.art['vers:' + it.nr] ? 'vers:' + it.nr : M.art['kw:' + it.nr] ? 'kw:' + it.nr : null; if (!key) continue;
       const a = M.art[key];
       const disc = C.actieKorting(it, a.cons) ?? 0.25;
-      (M.actieArt[key] = M.actieArt[key] || []).push(Object.assign({}, per, { folder: it.folder, cap: it.cap, opm: it.opm, dag: it.dag, disc }));
+      (M.actieArt[key] = M.actieArt[key] || []).push(Object.assign({}, per, { folder: it.folder, cap: it.cap, opm: it.opm, dag: it.dag, disc, plekF: it.plekF, plek: it.plek }));
     }
   }
   // feestdag-effecten leren (winkeltotaal)
@@ -892,7 +912,7 @@ C.verwacht = (M, key, d) => {
   let b = C.basis(M, key, C.wd(d), ref); if (b === null) b = 0;
   let f = b * C.dagFactor(M, d);
   const p = C.actieOp(M, key, d);
-  if (p) f *= C.actieUplift(M, key, p);
+  if (p) f *= C.actieUplift(M, key, p) * (p.plekF > 0 ? p.plekF : 1);
   if (M.weerFactor && d > M.vandaag) f *= M.weerFactor(key, d);
   return f;
 };
@@ -1048,7 +1068,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.16';
+const VERSIE = '1.17';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -1470,7 +1490,7 @@ function ingelogd(g) {
   eigenaar = berekenEigenaar(); rol = eigenaar ? 'admin' : 'winkel';
   if (!DEMO) return start();
   S.pref = Object.assign({}, (ls.get('cba-pref-' + wieSleutel()) || {})); pasPrefToe();
-  shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig(); setTimeout(weerHist, 2500);
+  shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig(); setTimeout(weerHist, 2500); setTimeout(kwAutoHaal, 4000);
 }
 async function faceInstellen() {
   if (DEMO) return toast('Face ID werkt alleen in de echte app');
@@ -2000,7 +2020,7 @@ async function werkBij() {
 if (!DEMO) { setInterval(() => { if (!document.hidden) zoekUpdate(true); }, 30 * 60000); setTimeout(() => zoekUpdate(true), 8000); }
 
 /* ---------- pushmeldingen ---------- */
-const SOORTEN = BESTEL_OD.map(o => ['bestel_' + o, 'Besteldag ' + odNaam(o), `Op de besteldag een herinnering om ${odNaam(o)} te bestellen`, 'o_' + o]).concat([['boek', 'Nieuw bestelboek', 'Wat er nieuw is en wat uit het assortiment gaat'], ['export', 'Dag-export ontbreekt', 'Als de verkoop van gisteren nog niet is geüpload', 'upload'], ['inout', 'In/out bijna op', 'Als een in/out-artikel te vroeg op dreigt te raken', 'inout'], ['deadline', 'Besteldeadline', 'Een half uur voor de deadline als er nog iets open staat', 'afvinken'], ['week', 'Weekoverzicht', 'Elke maandag een samenvatting van vorige week'], ['auto', 'Automatische upload', 'Als de dag-export vanzelf is binnengekomen (alleen beheerders)', 'x_beheer']]);
+const SOORTEN = BESTEL_OD.map(o => ['bestel_' + o, 'Besteldag ' + odNaam(o), `Op de besteldag een herinnering om ${odNaam(o)} te bestellen`, 'o_' + o]).concat([['boek', 'Nieuw bestelboek', 'Wat er nieuw is en wat uit het assortiment gaat'], ['export', 'Dag-export ontbreekt', 'Als de verkoop van gisteren nog niet is geüpload', 'upload'], ['inout', 'In/out bijna op', 'Als een in/out-artikel te vroeg op dreigt te raken', 'inout'], ['deadline', 'Besteldeadline', 'Een half uur voor de deadline als er nog iets open staat', 'afvinken'], ['week', 'Weekoverzicht', 'Elke maandag een samenvatting van vorige week'], ['auto', 'Automatische upload', 'Als de dag-export vanzelf is binnengekomen (alleen beheerders)', 'x_beheer'], ['folder', 'Nieuwe folderplanning', 'Als de folderplanning van een nieuwe week online staat', 'o_kw']]);
 function pushStatus() {
   if (DEMO) return 'demo';
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'niet';
@@ -2193,6 +2213,7 @@ function kaart(a, bd, laatste) {
   for (const [ri, r2] of wt.rows.entries()) { if (comp && ri !== 2) continue; let s = 0, any = false; tbl += `<tr><td class="l">${r2.week}</td>${r2.cells.map(c => { if (c.v !== null) { s += c.v; any = true; } return `<td class="${c.actie ? 'a' : ''} ${c.dag === C.today() ? 'today' : ''}">${c.v === null ? '' : C.fmt(c.v)}</td>`; }).join('')}<td>${any ? C.fmt(s) : ''}</td></tr>`; }
   tbl += `<tr class="gd"><td class="l">gem.</td>${wt.gd.map(g => `<td>${C.fmt(g)}</td>`).join('')}<td class="gwt">${C.fmt(wt.gwt)}</td></tr></table>`;
   const labels = [];
+  { const pa = (M.actieArt[a.key] || []).find(x => x.plek && x.zon >= C.today()); if (pa) labels.push(`<span class="lbl info">📍 ${esc(pa.plek)}${pa.plekF > 0 && pa.plekF !== 1 ? ' ×' + String(pa.plekF).replace('.', ',') : ''}</span>`); }
   if (lbl) for (const l of lbl) { labels.push(`<span class="lbl ${l.t}">Actie ${l.t} week${l.dag !== null && l.dag !== undefined ? ' (' + C.DAGNAAM[l.dag] + ')' : ''}</span><span class="lbl ${l.folder ? 'folder' : 'instore'}">${l.folder ? 'Folder' : 'Instore'}</span>`); }
   if (lbl) { const l0 = lbl[0]; labels.push(`<span class="lbl info">${l0.cap ? '€ ' + l0.cap.toFixed(2).replace('.', ',') : ''}${l0.opm && !/^(maandag|dinsdag|woensdag|donderd|vrijdag|zaterdag|zondag)$/i.test(l0.opm) ? ' · ' + esc(l0.opm) : ''}${l0.disc ? ' · −' + Math.round(l0.disc * 100) + '%' : ''}</span>`); }
   if (a.eigen) { labels.push('<span class="lbl eigen">Eigen artikel</span>'); const bk = eigenInBoek(a); if (bk) labels.push(`<span class="lbl chk">Staat nu in het bestelboek</span>${mag('saneren') ? `<button class="link" data-eigover="${bk.key}">Boekartikel overnemen</button>` : ''}`); }
@@ -3059,7 +3080,10 @@ function alleActies() {
   const l = (S.acties || []).slice(); const per = {}; l.forEach(a => { per[a.week + '|' + (a.van || '').slice(0, 4)] = new Set((a.items || []).map(i => i.nr)); });
   for (const p of Object.values(S.kwplan || {})) {
     const f = p.folder; if (!f || !f.week || !f.van) continue; const ac = C.folderNaarActie(f, 'fp-' + p.week); const al = per[f.week + '|' + f.van.slice(0, 4)];
-    if (al) ac.items = ac.items.filter(i => !al.has(i.nr)); if (ac.items.length) l.push(ac);
+    const pf = {}; for (const it of f.items) { const pk = (p.plek || {})[it.id]; if (pk && plekVan(pk)) for (const nr of it.nrs || []) pf[nr] = [plekF(pk), pk]; }
+    ac.items.forEach(i => { if (pf[i.nr]) { i.plekF = pf[i.nr][0]; i.plek = pf[i.nr][1]; } });
+    if (al) { const idx = l.findIndex(a => a.week === f.week && (a.van || '').slice(0, 4) === f.van.slice(0, 4) && !String(a.id).startsWith('fp-')); if (idx >= 0 && Object.keys(pf).length) l[idx] = Object.assign({}, l[idx], { items: l[idx].items.map(i => pf[i.nr] ? Object.assign({}, i, { plekF: pf[i.nr][0], plek: pf[i.nr][1] }) : i) }); ac.items = ac.items.filter(i => !al.has(i.nr)); }
+    if (ac.items.length) l.push(ac);
   }
   return l.sort((p, q) => (p.van || '') < (q.van || '') ? -1 : 1);
 }
@@ -3161,7 +3185,7 @@ function bewaarFolder(f, bron) {
   const wk = folderWeek(f); const oud = S.kwplan[wk] || {}; const plan = { folder: f, plek: oud.plek || {}, klaar: oud.klaar || {}, bron: bron || '', geladen: new Date().toISOString() };
   write('kw_acties', [{ week: wk, data: plan }]); S.kwplan[wk] = Object.assign({ week: wk }, plan); rebuild(); return wk;
 }
-function kwPlanOpslaan(wk) { const p = S.kwplan[wk]; const d = Object.assign({}, p); delete d.week; write('kw_acties', [{ week: wk, data: d }]); }
+function kwPlanOpslaan(wk) { const p = S.kwplan[wk]; const d = Object.assign({}, p); delete d.week; write('kw_acties', [{ week: wk, data: d }]); clearTimeout(kwPlanOpslaan.t); kwPlanOpslaan.t = setTimeout(() => { rebuild(); }, 300); }
 function kwKeys(it) { return (it.nrs || []).map(n => /^\d{6}$/.test(n) ? 'kw:' + n : null).filter(k => k && M.art[k]).concat((it.nrs || []).filter(n => /^\d{8,14}$/.test(n)).map(n => { const k = vindCode(n); return k ? k.key || k : null; }).filter(k => k && M.art[k])); }
 function kwVerwacht(it, f, plek) {
   let keys = [...new Set(kwKeys(it))].filter(k => M.keys[k]); const n0 = kwKeys(it).length;
@@ -3196,20 +3220,20 @@ function renderKwActies() {
     const plek = p.plek || {}, klaar = p.klaar || {}; const toonAlles = !!ui.kwAlles;
     const items = f.items.filter(i => toonAlles || i.soort === 'kw'); const kwN = f.items.filter(i => i.soort === 'kw').length; const ingedeeld = f.items.filter(i => i.soort === 'kw' && plek[i.id]).length;
     h += `<div class="blk"><h2 style="margin:0">Week ${f.week}${f.thema ? ' · ' + esc(f.thema) : ''}</h2><p class="small">${f.van ? `${C.fmtDag(f.van)} t/m ${C.fmtDag(f.tm)} · ` : ''}${kwN} KW-acties · <b class="${ingedeeld < kwN ? 'oranje' : 'groen'}">${ingedeeld} ingedeeld</b></p>
-    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm sec" id="kwAlles">${toonAlles ? 'Alleen KW' : `Ook vers, diepvries en brood (${f.items.length - kwN})`}</button><button class="btn sm sec" id="kwDeel">📤 Lijst per plek delen</button></div></div>`;
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm sec" id="kwAlles">${toonAlles ? 'Alleen KW' : `Ook vers, diepvries en brood (${f.items.length - kwN})`}</button><button class="btn sm sec" id="kwDeel">📤 Lijst per plek delen</button>${kwPlekken().some(x => x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg) ? '<button class="btn sm sec" id="kwPrint">🖨️ Printen</button>' : ''}</div></div>`;
     h += kwTekeningen(wk, kan);
-    const groepen = [['', 'Nog geen plek']].concat(kwPlekken().map(x => [x.naam, x.naam]));
+    const groepen = [['', 'Nog geen plek']].concat(kwPlekken().map(x => [x.naam, x.naam])); const bekend = new Set(kwPlekken().map(x => x.naam));
     for (const [pk, titel] of groepen) {
-      const l = items.filter(i => (plek[i.id] || '') === pk); if (!l.length) continue;
+      const l = items.filter(i => { const v = plek[i.id] || ''; return pk === '' ? !v || !bekend.has(v) : v === pk; }); if (!l.length) continue;
       h += `<div class="grp"><span>${esc(titel)}</span><small>${l.length}${pk ? ` · ${l.filter(i => kwKlaar(wk, i.id)).length} staat erin` : ''}</small></div>`;
       for (const it of l) {
         const ver = it.soort === 'kw' ? kwVerwacht(it, f, pk) : null; const vg = it.soort === 'kw' ? kwVorige(it, wk) : null;
         h += `<div class="card kwit ${it.soort !== 'kw' ? 'kwvers' : ''}"><div style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1"><div class="nm">${esc(it.naam)}${it.extra ? ' <span class="lbl uit">Extra</span>' : ''}${it.soort !== 'kw' ? ` <span class="lbl info">${odNaam(it.soort === 'diep' ? 'diep' : it.soort === 'brood' ? 'brood' : 'vers')}</span>` : ''}</div>
         <div class="small">${[it.variant, it.inhoud].filter(Boolean).map(esc).join(' · ')}</div>
         <div class="small"><b>${it.prijs.length ? '€ ' + it.prijs.map(x => x.toFixed(2).replace('.', ',')).join(' – ') : ''}${it.mech ? ' ' + esc(it.mech) : ''}</b>${it.bijz ? ' · ' + esc(it.bijz) : ''} · pag ${esc((it.pag || '').split(' ')[0])}${it.groot ? ' · grote plek' : it.klein ? ' · kleine plek' : ''}</div>
-        ${ver && ver.geen ? '<div class="small">Geen verkoop bekend van deze artikelnummers</div>' : ver ? `<div class="small">${ver.uit ? 'Niet bestellen' : `Verwacht ±${C.fmt(Math.round(ver.st))} st${ver.he ? ` (${C.fmt(Math.ceil(ver.he))} HE)` : ''} · ${ver.n} art.`}</div>` : it.soort === 'kw' ? '<div class="small">Nog niet in het KW-bestelboek gevonden</div>' : ''}
+        ${ver && ver.geen ? (vg && vg.verk ? `<div class="small">Verwacht ±${C.fmt(Math.round(vg.verk * (plekF(pk) > 0 ? plekF(pk) / Math.max(0.1, plekF(vg.plek) || 1) : 0)))} st (zoals vorige keer)</div>` : '<div class="small">Geen verkoop bekend van deze artikelnummers</div>') : ver ? `<div class="small">${ver.uit ? 'Niet bestellen' : `Verwacht ±${C.fmt(Math.round(ver.st))} st${ver.he ? ` (${C.fmt(Math.ceil(ver.he))} HE)` : ''} · ${ver.n} art.`}</div>` : it.soort === 'kw' ? '<div class="small">Nog niet in het KW-bestelboek gevonden</div>' : ''}
         ${vg ? `<div class="small">Vorige keer wk ${vg.week}${vg.plek ? ': ' + esc(vg.plek) : ''}${vg.verk !== null ? ` · ${C.fmt(Math.round(vg.verk))} verkocht` : ''}</div>` : ''}</div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${kan ? `<button class="btn sm ${pk ? 'sec' : ''}" data-kp="${it.id}">${pk ? 'Plek' : 'Kies plek'}</button>` : ''}${pk && pk !== 'Niet bestellen' ? `<button class="btn sm ${kwKlaar(wk, it.id) ? 'groenk' : 'sec'}" data-kk="${it.id}">${kwKlaar(wk, it.id) ? '✓ Staat' : 'Staat erin?'}</button>` : ''}</div></div></div>`;
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${kan ? `<button class="btn sm ${pk ? 'sec' : ''}" data-kp="${it.id}">${pk ? 'Plek' : 'Kies plek'}</button>` : ''}${pk && plekF(pk) > 0 && plekVan(pk) ? `<button class="btn sm ${kwKlaar(wk, it.id) ? 'groenk' : 'sec'}" data-kk="${it.id}">${kwKlaar(wk, it.id) ? '✓ Staat' : 'Staat erin?'}</button>` : ''}</div></div></div>`;
       }
     }
   }
@@ -3226,6 +3250,7 @@ function renderKwActies() {
   v.querySelectorAll('[data-kk]').forEach(b => b.onclick = () => { const pp = S.kwplan[wk]; const id = b.dataset.kk; pp.klaar = Object.assign({}, pp.klaar || {}); const aan = !kwKlaar(wk, id); if (aan) pp.klaar[id] = mijnNaam(); else delete pp.klaar[id]; kwPlanOpslaan(wk);
     const pl = kwPlekken().find(x => x.naam === (pp.plek || {})[id]); if (pl && pl.tafel && S.tafels[pl.tafel]) { const ind = JSON.parse(JSON.stringify(indelingVan(wk, pl.tafel))); const it = (ind.items || []).find(x => x.kw === id); if (it) { it.klaar = aan; it.door = aan ? mijnNaam() : null; it.om = aan ? new Date().toISOString() : null; slaIndelingOp(wk, pl.tafel, ind); } }
     render(true); });
+  const kpb = $('#kwPrint'); if (kpb) kpb.onclick = () => kwPrintKies(wk);
   $('#kwDeel').onclick = async () => {
     const pp = S.kwplan[wk]; const t = `Acties KW week ${f.week}${f.thema ? ' – ' + f.thema : ''}\n` + kwPlekken().map(x => { const l = f.items.filter(i => (pp.plek || {})[i.id] === x.naam); const pt = x.tafel ? kwPlankTekst(wk, x) : ''; return l.length ? `\n${x.naam.toUpperCase()}\n` + (pt ? pt + '\n' : '') + l.map(i => `${kwKlaar(wk, i.id) ? '☑' : '☐'} ${i.naam}${i.variant ? ' (' + i.variant + ')' : ''}`).join('\n') : ''; }).join('\n').trim() + (f.items.some(i => i.soort === 'kw' && !(pp.plek || {})[i.id]) ? `\n\nNOG GEEN PLEK\n` + f.items.filter(i => i.soort === 'kw' && !(pp.plek || {})[i.id]).map(i => '☐ ' + i.naam).join('\n') : '');
     window.__laatsteDeel = t; try { if (navigator.share) await navigator.share({ text: t }); else { await navigator.clipboard.writeText(t); toast('Gekopieerd'); } } catch (e) { }
@@ -3245,16 +3270,19 @@ function kwNaarTafel(wk, it, oud, nieuw) {
   if (tn) { const ind = JSON.parse(JSON.stringify(indelingVan(wk, tn))); ind.items = (ind.items || []).filter(x => x.kw !== it.id); ind.items.push({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: [], aantal: '', opm: [it.mech, it.variant].filter(Boolean).join(' · '), kleur: ind.items.length % TKLEUR.length, klaar: false, kw: it.id }); slaIndelingOp(wk, tn, ind); }
 }
 function kwPlekkenBewerk() {
-  let l = JSON.parse(JSON.stringify(kwPlekken())); const ov = sheet('<div id="kpl"></div>');
+  let l = JSON.parse(JSON.stringify(kwPlekken())).map(x => Object.assign(x, { _oud: x.naam })); const ov = sheet('<div id="kpl"></div>');
   const teken = () => {
     ov.querySelector('#kpl').innerHTML = `<h2 style="margin:0">Plekken voor KW-acties</h2><p class="small">Factor = hoeveel meer een actie daar verkoopt dan in het vak (1,3 = 30% meer). Geef een kop een tekening (planken × vakken); dan vul je per vakje in wat erin komt. Vergeet niet op Opslaan te tikken.</p>
-    ${l.map((x, i) => `<div class="kplrij"><input data-pn="${i}" value="${esc(x.naam)}"><input data-pf="${i}" type="number" step="0.05" inputmode="decimal" value="${x.factor}" style="width:70px"><button type="button" class="btn sm sec" data-ptk="${i}">${x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? `✏️ ${S.tafels[x.tafel].rijen}×${S.tafels[x.tafel].kol}` : '+ Tekening'}</button><button class="btn sm sec" data-pw="${i}">✕</button></div>`).join('')}
+    ${l.map((x, i) => `<div class="kplrij"><input data-pn="${i}" value="${esc(x.naam)}"><input data-pf="${i}" type="number" step="0.05" inputmode="decimal" value="${x.factor}" style="width:70px"><button type="button" class="btn sm sec" data-plk="${i}">📋 ${(x.lijst || []).length || ''}</button><button type="button" class="btn sm sec" data-ptk="${i}">${x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? `✏️ ${S.tafels[x.tafel].rijen}×${S.tafels[x.tafel].kol}` : '+ Tekening'}</button><button class="btn sm sec" data-pw="${i}">✕</button></div>`).join('')}
     <button class="btn sm sec" id="kplA">+ Plek</button><div class="row" style="margin-top:12px"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="kplS" style="flex:1">Opslaan</button></div>`;
     const lees = () => l.forEach((x, i) => { x.naam = ov.querySelector(`[data-pn="${i}"]`).value.trim(); x.factor = C.num(ov.querySelector(`[data-pf="${i}"]`).value); });
+    ov.querySelectorAll('[data-plk]').forEach(b => b.onclick = () => { lees(); const x = l[+b.dataset.plk]; kwLijstKeuze(ov, x, () => { ov.querySelector('.sheetIn').innerHTML = '<div id="kpl"></div>'; teken(); }); });
     ov.querySelectorAll('[data-ptk]').forEach(b => b.onclick = () => { lees(); const x = l[+b.dataset.ptk]; const t = x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? S.tafels[x.tafel] : null; tafelBewerk(t, { kop: true, voor: { naam: x.naam || 'Plek', rijen: 4, kol: 4, kw: true }, klaar: id => { x.tafel = id; teken(); } }); });
     ov.querySelectorAll('[data-pw]').forEach(b => b.onclick = () => { lees(); l.splice(+b.dataset.pw, 1); teken(); });
     ov.querySelector('#kplA').onclick = () => { lees(); l.push({ naam: '', factor: 1 }); teken(); };
-    ov.querySelector('#kplS').onclick = () => { lees(); l = l.filter(x => x.naam); const w = JSON.parse(JSON.stringify(S.inst || {})); w.kwPlekken = l; saveInst(w); ov.remove(); render(); };
+    ov.querySelector('#kplS').onclick = () => { lees(); const hernoem = {}; l.forEach(x => { if (x._oud && x.naam && x._oud !== x.naam) hernoem[x._oud] = x.naam; }); l = l.filter(x => x.naam).map(x => { const y = Object.assign({}, x); delete y._oud; return y; });
+      for (const wk of Object.keys(S.kwplan || {})) { const p = S.kwplan[wk]; let ander = false; const pl = Object.assign({}, p.plek || {}); for (const id in pl) if (hernoem[pl[id]]) { pl[id] = hernoem[pl[id]]; ander = true; } if (ander) { p.plek = pl; kwPlanOpslaan(wk); } }
+      const w = JSON.parse(JSON.stringify(S.inst || {})); w.kwPlekken = l; saveInst(w); ov.remove(); render(); };
   };
   teken();
 }
@@ -3279,11 +3307,14 @@ function kwVakKies(wk, tid, cel) {
   const hier = f.items.filter(i => (p.plek || {})[i.id] === pl.naam), rest = f.items.filter(i => i.soort === 'kw' && (p.plek || {})[i.id] !== pl.naam);
   const rij = i => `<button class="it rijtik" data-vk="${i.id}"><span style="flex:1;text-align:left"><b>${esc(i.naam)}</b>${getekend.has(i.id) ? ' <span class="small">· al getekend</span>' : ''}<br><span class="small">${esc([i.variant, i.mech].filter(Boolean).join(' · '))}${(p.plek || {})[i.id] && (p.plek || {})[i.id] !== pl.naam ? ' · nu: ' + esc(p.plek[i.id]) : ''}</span></span></button>`;
   const ov = sheet(`<h2 style="margin:0">Wat komt hier?</h2><p class="small">${esc(pl.naam)} · ${plekTekst(S.tafels[tid], [cel])}</p>
+  ${(pl.lijst || []).length ? `<h3>Keuzelijst</h3><input type="search" id="vlQ" placeholder="🔍 Zoek in de keuzelijst" style="width:100%"><div class="list" id="vlL">${pl.lijst.map((a, i) => `<button class="it rijtik" data-vl="${i}"><span style="flex:1;text-align:left"><b>${esc(a.naam)}</b><br><span class="small">${esc(a.nr || '')}</span></span></button>`).join('')}</div>` : ''}
   ${hier.length ? `<h3>Op deze plek</h3><div class="list">${hier.map(rij).join('')}</div>` : ''}<h3>${hier.length ? 'Andere KW-acties' : 'KW-acties van week ' + f.week}</h3><input type="search" id="vkQ" placeholder="🔍 Zoek" style="width:100%"><div class="list" id="vkL">${rest.map(rij).join('')}</div>
   <button class="btn sec" id="vkT" style="width:100%;margin-top:10px">✏️ Vrije tekst</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`, (e, o) => {
+    const vl = e.target.closest('[data-vl]'); if (vl) { o.remove(); const a = pl.lijst[+vl.dataset.vl]; const key = a.nr && M.art['kw:' + a.nr] ? 'kw:' + a.nr : null; const ind2 = JSON.parse(JSON.stringify(indelingVan(wk, tid))); ind2.items = ind2.items || []; ind2.items.forEach(x => { x.cellen = (x.cellen || []).filter(c => c !== cel); }); let j = ind2.items.findIndex(x => x.lijst && x.naam === a.naam); if (j < 0) { ind2.items.push({ naam: a.naam, artikelen: key ? [{ key, naam: M.art[key].naam, nr: M.art[key].nr }] : a.nr ? [{ naam: a.naam, nr: a.nr }] : [], cellen: [], aantal: '', opm: '', kleur: ind2.items.length % TKLEUR.length, klaar: false, lijst: true }); j = ind2.items.length - 1; } ind2.items[j].cellen.push(cel); slaIndelingOp(wk, tid, ind2); ui.kwSel = { tafel: tid, idx: j }; return render(true); }
     const b = e.target.closest('[data-vk]'); if (!b) return; o.remove(); const it = f.items.find(i => i.id === b.dataset.vk);
     const idx = kwTekenItem(wk, it, pl.naam, tid, cel); ui.kwSel = { tafel: tid, idx }; log('acties', `${pl.naam}: ${it.naam} getekend`); render(true);
   });
+  const vq = ov.querySelector('#vlQ'); if (vq) vq.oninput = e => { const q = e.target.value.toLowerCase(); ov.querySelectorAll('#vlL [data-vl]').forEach(x => x.style.display = !q || x.textContent.toLowerCase().includes(q) ? '' : 'none'); };
   ov.querySelector('#vkQ').oninput = e => { const q = e.target.value.toLowerCase(); ov.querySelectorAll('#vkL [data-vk]').forEach(x => x.style.display = !q || x.textContent.toLowerCase().includes(q) ? '' : 'none'); };
   ov.querySelector('#vkT').onclick = () => {
     ov.querySelector('.sheetIn').innerHTML = `<h2 style="margin:0">Vrije tekst</h2><input type="text" id="vkN" placeholder="Bijv. Kerstpakketten" style="width:100%;margin:10px 0"><div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="vkS" style="flex:1">Opslaan</button></div>`;
@@ -3353,6 +3384,54 @@ function kwPlankTekst(wk, x) {
   const t = S.tafels[x.tafel]; if (!t) return ''; const ind = indelingVan(wk, x.tafel); const R = +t.rijen || 2, K = +t.kol || 3; const regels = [];
   for (let r = 0; r < R; r++) { const l = (ind.items || []).filter(it => (it.cellen || []).some(c => Math.floor(c / K) === r)).map(it => { const ks = it.cellen.filter(c => Math.floor(c / K) === r).map(c => c % K); return `${it.naam} (${ks.length === K ? 'hele plank' : 'vak ' + [...new Set(ks)].sort((a, b) => a - b).map(k => k + 1).join(',')})`; }); if (l.length) regels.push(`Plank ${r + 1}: ${l.join(', ')}`); }
   return regels.join('\n');
+}
+/* ---------- 1.17 ---------- */
+function plekVan(naam) { return kwPlekken().find(p => p.naam === naam) || null; }
+function plekF(naam) { const p = plekVan(naam); return p ? C.num(p.factor) : 1; }
+function kwLijstKeuze(ov, x, klaar) {
+  const teken = () => {
+    const l = x.lijst || [];
+    ov.querySelector('.sheetIn').innerHTML = `<h2 style="margin:0">Keuzelijst · ${esc(x.naam)}</h2><p class="small">Deze artikelen zie je als eerste als je in de tekening van deze plek een vakje aantikt. Bijvoorbeeld de euro-koopjes.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><label class="btn sm">📄 Pdf inlezen<input type="file" id="klP" accept=".pdf" class="hide"></label><button class="btn sm sec" id="klZ">🔍 Uit bestelboek</button><button class="btn sm sec" id="klT">✏️ Tekst plakken</button>${l.length ? '<button class="btn sm sec" id="klW">Leegmaken</button>' : ''}</div>
+    <div class="msg" id="klM"></div><div class="list" style="margin-top:8px">${l.map((a, i) => `<div class="it"><span style="flex:1">${esc(a.naam)}<br><span class="small">${esc(a.nr || '')}${a.nr && M.art['kw:' + a.nr] ? ' · in bestelboek' : a.nr ? ' · niet in KW-boek' : ''}</span></span><button class="btn sm sec" data-klx="${i}">✕</button></div>`).join('') || '<div class="small">Nog leeg.</div>'}</div>
+    <button class="btn" id="klK" style="width:100%;margin-top:10px">Klaar (${l.length})</button>`;
+    const q = s => ov.querySelector(s);
+    q('#klP').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const l2 = C.parseLijst(await C.pdfPages(await pdfjs(), await f.arrayBuffer())); if (!l2.length) throw new Error('Geen artikelen gevonden'); x.lijst = l2; teken(); q('#klM').textContent = `✓ ${l2.length} artikelen ingelezen`; } catch (er) { q('#klM').textContent = 'Niet gelukt: ' + er.message; } };
+    q('#klZ').onclick = () => { ov.querySelector('.sheetIn').innerHTML = `<h2 style="margin:0">Uit bestelboek</h2><input type="search" id="klQ" placeholder="🔍 Naam of nummer" style="width:100%"><div class="list" id="klR" style="margin-top:8px"></div><button class="btn" id="klB" style="width:100%;margin-top:10px">Terug</button>`; const r = () => { const t = q('#klQ').value.toLowerCase().trim(); q('#klR').innerHTML = t.length < 2 ? '' : Object.values(M.art).filter(a => !a.uit && (a.naam.toLowerCase().includes(t) || a.nr.includes(t))).slice(0, 25).map(a => `<button class="it rijtik" data-kla="${esc(a.key)}"><span style="flex:1">${esc(a.naam)}<br><span class="small">${esc(a.nr)}</span></span>${(x.lijst || []).some(y => y.nr === a.nr) ? '✓' : '+'}</button>`).join(''); }; q('#klQ').oninput = r; q('#klR').onclick = e => { const b = e.target.closest('[data-kla]'); if (!b) return; const a = M.art[b.dataset.kla]; if (!(x.lijst || []).some(y => y.nr === a.nr)) x.lijst = (x.lijst || []).concat([{ naam: a.naam, nr: a.nr }]); r(); }; q('#klB').onclick = teken; };
+    q('#klT').onclick = () => { ov.querySelector('.sheetIn').innerHTML = `<h2 style="margin:0">Tekst plakken</h2><p class="small">Eén artikel per regel. Staat er een artikelnummer in, dan neemt de app dat over.</p><textarea id="klTa" rows="8" style="width:100%"></textarea><button class="btn" id="klTo" style="width:100%;margin-top:10px">Toevoegen</button>`; q('#klTo').onclick = () => { const r = q('#klTa').value.split(/\n/).map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/\b(\d{4,6})\b/); return { naam: s.replace(/\b\d{8,14}\b/g, '').replace(m ? m[0] : '', '').replace(/[;\t,]+/g, ' ').replace(/\s+/g, ' ').trim() || s, nr: m ? m[1].padStart(6, '0') : '' }; }); x.lijst = (x.lijst || []).concat(r); teken(); }; };
+    const w = q('#klW'); if (w) w.onclick = () => { x.lijst = []; teken(); };
+    ov.querySelectorAll('[data-klx]').forEach(b => b.onclick = () => { x.lijst.splice(+b.dataset.klx, 1); teken(); });
+    q('#klK').onclick = klaar;
+  };
+  teken();
+}
+function kwPrintKies(wk) {
+  const pls = kwPlekken().filter(x => x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg); if (!pls.length) return toast('Geef eerst een kop een tekening (Plekken instellen)');
+  const gekozen = new Set(ls.get('cba-kwprint') || pls.map(x => x.naam));
+  const ov = sheet(`<h2 style="margin:0">Printen</h2><p class="small">Alles komt op één A4.</p><div class="list">${pls.map(x => `<label class="it"><span style="flex:1">${esc(x.naam)}</span><input type="checkbox" class="schak" data-pp="${esc(x.naam)}" ${gekozen.has(x.naam) ? 'checked' : ''}></label>`).join('')}<label class="it"><span style="flex:1">Met barcodes</span><input type="checkbox" class="schak" id="ppB" ${ls.get('cba-kwprintbc') ? 'checked' : ''}></label></div><button class="btn" id="ppO" style="width:100%;margin-top:10px">🖨️ Printen</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`);
+  ov.querySelector('#ppO').onclick = () => { const k = [...ov.querySelectorAll('[data-pp]')].filter(c => c.checked).map(c => c.dataset.pp); if (!k.length) return toast('Kies minstens één plek'); const bc = ov.querySelector('#ppB').checked; ls.set('cba-kwprint', k); ls.set('cba-kwprintbc', bc); ov.remove(); kwPrint(wk, pls.filter(x => k.includes(x.naam)), bc); };
+}
+function kwPrint(wk, pls, bc) {
+  const n = pls.length; const kol = n === 1 ? 1 : n <= 4 ? 2 : 3; const rij = Math.ceil(n / kol); const hoog = Math.floor((rij === 1 ? 120 : rij === 2 ? 58 : 36) * (bc ? 0.75 : 1));
+  const f = S.kwplan[wk].folder;
+  const blok = x => {
+    const t = S.tafels[x.tafel]; const ind = indelingVan(wk, x.tafel); const R = +t.rijen || 2, K = +t.kol || 3;
+    const teken = tafelTekening(t, ind).replace(/grid-template-rows:[^"]*"/, `grid-template-rows:repeat(${R},${(hoog / R).toFixed(1)}mm)"`);
+    const rg = l => { const u = [...new Set(l)].sort((x, y) => x - y); return u.length === 1 ? String(u[0] + 1) : u[u.length - 1] - u[0] === u.length - 1 ? `${u[0] + 1}–${u[u.length - 1] + 1}` : u.map(x => x + 1).join(','); };
+    const regels = (ind.items || []).filter(it => (it.cellen || []).length).sort((x, y) => Math.min(...x.cellen) - Math.min(...y.cellen)).map(it => `<tr><td class="pl">${rg(it.cellen.map(c => Math.floor(c / K)))}</td><td class="n">☐ <b>${esc(it.naam)}</b> <span style="color:#555">· vak ${rg(it.cellen.map(c => c % K))}</span>${bc ? tafelArts(it).filter(a => /^\d{4,}$/.test(a.nr || '')).slice(0, 2).map(a => C.msi(a.nr, 22, true)).join('') : ''}</td></tr>`);
+    return `<div class="kpb"><h2>${esc(x.naam)}</h2>${teken}${regels.length ? `<table><tr><td class="pl">Plank</td><td class="n"><b>Wat</b></td></tr>${regels.join('')}</table>` : ''}</div>`;
+  };
+  $('#printArea').innerHTML = `<div class="kopprint" style="grid-template-columns:repeat(${kol},1fr)"><h1 style="grid-column:1/-1">Acties KW week ${f.week} · ${esc((WINKEL && WINKEL.naam) || '')}</h1>${pls.map(blok).join('')}</div>`;
+  window.__laatstePrint = { koppen: pls.map(x => x.naam), bc }; log('acties', `Koppen geprint: ${pls.map(x => x.naam).join(', ')}`);
+  setTimeout(() => window.print(), 100);
+}
+async function kwAutoHaal() {
+  if (DEMO || OEFEN || !mag('o_kw') || !magKwPlan() || !navigator.onLine) return; const vandaag = C.today();
+  for (let n = 1; n <= 5; n++) {
+    const d = C.add(C.monday(vandaag), 7 * n); const x = C.isoWeek(d); const k = weekSleutel(d); if (S.kwplan[k]) continue;
+    const lk = `cba-kwhaal-${W}-${k}`; if (ls.get(lk) === vandaag) continue; ls.set(lk, vandaag);
+    try { const wk = await folderOphalen(x.y, x.w); toast(`📣 Folderplanning week ${x.w} automatisch opgehaald`, 4000); log('acties', `Folderplanning week ${x.w} automatisch opgehaald`); if (ui.tab === 'home' || ui.tab === 'kwacties') render(true); } catch (e) { }
+  }
 }
 /* ---------- 1.14: bluetooth-scanner ---------- */
 let telHook = null, scanHook = null, scannerGezien = false;

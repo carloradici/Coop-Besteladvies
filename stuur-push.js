@@ -1,7 +1,7 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
 // Wordt door de korte stuur-push in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
 // Soorten: test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
-export const FUNCTIE_VERSIE = '1.15';
+export const FUNCTIE_VERSIE = '1.17';
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };
 const ONDERDELEN = [['agf', 'AGF'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries'], ['kw', 'KW']];
 const STD_OPEN = [['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['', '']];
@@ -21,7 +21,8 @@ export function lokaleTijd(nu) {
   return { dag: `${p.year}-${p.month}-${p.day}`, tijd: `${p.hour === '24' ? '00' : p.hour}:${p.minute}` };
 }
 
-export async function verwerk({ sb, webpush, body, token, nu = new Date() }) {
+export const folderUrls = (jaar, week) => { const w = String(week).padStart(2, '0'); return [...new Set([jaar, jaar - 1, jaar + 1].map(m => `https://static.reto.media/ordervantolversuniecom/upload-${m}/folderplanning-${jaar}-coop-wk-${w}.pdf`))]; };
+export async function verwerk({ sb, webpush, body, token, nu = new Date(), haal = (u, o) => fetch(u, o) }) {
   const soort = body && body.soort;
   const { data: abos, error: dbFout } = await sb.from('push_abos').select('*');
   if (dbFout) return { status: 500, fout: 'Database: ' + (dbFout.message || dbFout.code || JSON.stringify(dbFout)) };
@@ -128,6 +129,14 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date() }) {
             await stuur(wa.filter(a => wil(a, 'deadline')), { titel: `Nog ${dmin - nmin} min: ${u.naam}${voor}`, tekst: open ? `${open} artikelen nog niet afgevinkt. Deadline ${u.t}.` : `Er is nog niets afgevinkt. Deadline ${u.t}.`, tag: 'deadline-' + lev + '-' + u.id });
             gedaan.push(W.slice(0, 4) + ':deadline_' + lev + '_' + u.id);
           }
+        }
+      }
+      if (tijd >= t.export && abos.some(a => a.winkel_id === W && wil(a, 'folder')) && await eenmalig(`folderchk:${W}:${dag}`)) {
+        const { data: kw } = await sb.from('kw_acties').select('week').eq('winkel_id', W); const heb = new Set((kw || []).map(r => r.week));
+        for (let n = 1; n <= 4; n++) {
+          const ma = add(dag, 7 * n - wd(dag)); const iw = isoWeek(ma); const x = typeof iw === "object" ? iw : { y: +ma.slice(0, 4) + (iw < 10 && ma.slice(5, 7) === "12" ? 1 : iw > 50 && ma.slice(5, 7) === "01" ? -1 : 0), w: iw }; const k = `${x.y}-${String(x.w).padStart(2, '0')}`; if (heb.has(k)) continue;
+          let online = false; for (const u of folderUrls(x.y, x.w)) { try { const r = await haal(u, { headers: { Range: 'bytes=0-1023' } }); if (r.ok) { online = true; try { await r.body?.cancel?.(); } catch (e) { } break; } } catch (e) { } }
+          if (online && await eenmalig(`folder:${W}:${k}`)) { await stuur(wa.filter(a => wil(a, 'folder')), { titel: `Folderplanning week ${x.w} staat online`, tekst: 'Open Acties KW om de acties in te delen. De app haalt hem vanzelf op.', tag: 'folder-' + k }); gedaan.push(W.slice(0, 4) + ':folder_' + x.w); }
         }
       }
       if (wd(dag) === 0 && tijd >= t.bestel && await eenmalig(`week:${W}:${dag}`)) {
