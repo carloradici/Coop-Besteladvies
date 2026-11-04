@@ -395,6 +395,13 @@ body.detailsaan .card .meerknop{display:none}
 .telbol{display:inline-block;min-width:20px;padding:1px 6px;border-radius:10px;background:#e30613;color:#fff;font-size:12px;text-align:center}
 .grp .grpbtn{border-color:rgba(255,255,255,.9);color:#fff;background:rgba(255,255,255,.18);margin-left:4px;font-size:12px;padding:3px 9px}
 .grp small{white-space:normal;text-align:right}
+
+/* 1.12 */
+.tafel .vak b{overflow-wrap:anywhere;word-break:break-word;-webkit-hyphens:auto;hyphens:auto}
+.tafel .vak.smal{padding:4px 3px}.tafel .vak.smal b{font-size:11px;line-height:1.15}.tafel .vak.smal span{font-size:11px}
+.tafel .vak.klaar i{text-shadow:0 0 3px rgba(0,0,0,.5)}
+.homeup{padding:12px 14px}.homeupKnop{display:flex;align-items:center;gap:8px;cursor:pointer}.homeupKnop .btn{pointer-events:none;flex:none}
+ol.stappen{padding-left:20px;margin:6px 0 12px}ol.stappen li{margin:4px 0}
 </style>
 </head>
 <body>
@@ -927,7 +934,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.11';
+const VERSIE = '1.12';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -1483,12 +1490,12 @@ function renderHome() {
     if (k === 'beheer') { const last = M.dagLijst[M.dagLijst.length - 1]; const oud = last ? C.diff(last, C.today()) : 99; sub = last ? `Verkoop t/m ${C.fmtDag(last)}` : 'Nog geen verkoop'; if (oud > 1) { sub = `<b class="rood">${sub}</b>`; waarsch = true; } }
     return `<button class="tegel ${on ? 'actief' : ''} ${waarsch ? 'let' : ''}" data-ga="${k}"><span class="ic">${ICOON[k]}</span><span class="tt">${titel}</span><span class="ts">${sub}</span></button>`;
   };
-  let h = homeZoekHtml() + overdrachtHtml() + deadlineHtml() + feestdagVoorstel() + `<div class="tegels">${ind.filter(t => t.aan).map(t => tegel(t.k)).join('')}</div>`;
+  let h = homeZoekHtml() + homeUploadHtml() + overdrachtHtml() + deadlineHtml() + feestdagVoorstel() + `<div class="tegels">${ind.filter(t => t.aan).map(t => tegel(t.k)).join('')}</div>`;
   if (ui.indelen) h += `<div class="blk"><h2>Home indelen</h2><div class="list">${ind.map((t, i) => `<div class="it"><label style="flex:1"><input type="checkbox" data-hk="${t.k}" ${t.aan ? 'checked' : ''}> ${TEGELS.find(x => x[0] === t.k)[1]}</label><button class="btn sm sec" data-hu="${i}" ${i ? '' : 'disabled'}>↑</button><button class="btn sm sec" data-hd="${i}" ${i < ind.length - 1 ? '' : 'disabled'}>↓</button></div>`).join('')}</div><button class="btn" id="indK" style="width:100%;margin-top:10px">Klaar</button></div>`;
   else h += `<div style="text-align:center;margin:18px 0"><button class="btn sm sec" id="indB">✏️ Home indelen</button></div>`;
   v.innerHTML = h;
   v.querySelectorAll('[data-ga]').forEach(b => b.onclick = () => ga(b.dataset.ga));
-  homeEvents(v);
+  homeEvents(v); homeUploadEvents(v);
   v.querySelectorAll('[data-fd]').forEach(b => b.onclick = () => { const d = b.dataset.fd, s = b.dataset.s, bz = M.bijz[d]; const row = { dag: d, naam: bz.naam, soort: s, open: s === 'aangepast' ? (M.st.open[C.wd(d)][0] || '08:00') : null, dicht: s === 'aangepast' ? '16:00' : null }; saveAgenda(row).then(() => { if (s === 'aangepast') toast('Pas de tijden aan onder Beheer → Feestdagen', 4000); }); });
   v.querySelectorAll('[data-fdx]').forEach(b => b.onclick = () => { ls.set('cba-fd-' + W + '-' + b.dataset.fdx, 1); render(); });
   const ib = $('#indB'); if (ib) ib.onclick = () => { ui.indelen = true; render(); };
@@ -1854,7 +1861,7 @@ async function werkBij() {
 if (!DEMO) { setInterval(() => { if (!document.hidden) zoekUpdate(true); }, 30 * 60000); setTimeout(() => zoekUpdate(true), 8000); }
 
 /* ---------- pushmeldingen ---------- */
-const SOORTEN = BESTEL_OD.map(o => ['bestel_' + o, 'Besteldag ' + odNaam(o), `Op de besteldag een herinnering om ${odNaam(o)} te bestellen`, 'o_' + o]).concat([['boek', 'Nieuw bestelboek', 'Wat er nieuw is en wat uit het assortiment gaat'], ['export', 'Dag-export ontbreekt', 'Als de verkoop van gisteren nog niet is geüpload', 'upload'], ['inout', 'In/out bijna op', 'Als een in/out-artikel te vroeg op dreigt te raken', 'inout'], ['deadline', 'Besteldeadline', 'Een half uur voor de deadline als er nog iets open staat', 'afvinken'], ['week', 'Weekoverzicht', 'Elke maandag een samenvatting van vorige week']]);
+const SOORTEN = BESTEL_OD.map(o => ['bestel_' + o, 'Besteldag ' + odNaam(o), `Op de besteldag een herinnering om ${odNaam(o)} te bestellen`, 'o_' + o]).concat([['boek', 'Nieuw bestelboek', 'Wat er nieuw is en wat uit het assortiment gaat'], ['export', 'Dag-export ontbreekt', 'Als de verkoop van gisteren nog niet is geüpload', 'upload'], ['inout', 'In/out bijna op', 'Als een in/out-artikel te vroeg op dreigt te raken', 'inout'], ['deadline', 'Besteldeadline', 'Een half uur voor de deadline als er nog iets open staat', 'afvinken'], ['week', 'Weekoverzicht', 'Elke maandag een samenvatting van vorige week'], ['auto', 'Automatische upload', 'Als de dag-export vanzelf is binnengekomen (alleen beheerders)', 'x_beheer']]);
 function pushStatus() {
   if (DEMO) return 'demo';
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'niet';
@@ -2182,6 +2189,7 @@ function renderBeheer() {
   <span>Acties</span><b>${S.acties.length ? S.acties.map(a => 'wk ' + a.week).join(', ') : 'nog geen'}</b></div>
   ${gaten.length ? `<p class="small" style="color:var(--red)">Ontbrekende dagen (laatste 60): ${gaten.map(C.fmtDag).join(', ')}</p>` : ''}
   ${dagen.length < 56 ? `<p class="small">Tip: upload minstens 8 weken aan dag-exports voor een betrouwbaar gemiddelde.</p>` : ''}</div>
+  <div class="blk" data-sec="auto"><h2>Automatisch uploaden</h2><p class="small">Een computer in de winkel stuurt de dag-export dan zelf naar de app. CasPos zet de export elke dag in een map; een klein script op die computer kijkt elk uur en stuurt nieuwe bestanden door.</p><div id="autoIn"><p class="small">Laden…</p></div></div>
   <div class="blk" data-sec="verwijderen"><h2>Uploads verwijderen</h2><p class="small">Alleen nodig als je per ongeluk een verkeerd bestand hebt geüpload. Je krijgt eerst de vraag of je het zeker weet.</p><h3>Acties</h3><div class="list">${S.acties.map(a => `<div class="it"><span>Week ${a.week} · ${C.fmtDag(a.van)} t/m ${C.fmtDag(a.tm)} · ${a.items.length} artikelen</span><button class="btn sm sec" data-delac="${a.id}" aria-label="Verwijderen">🗑️</button></div>`).join('') || '<div class="small">Geen</div>'}</div>
   <h3>Dag-exports (laatste 21)</h3><div class="list">${dagen.slice(-21).reverse().map(d => `<div class="it"><span>${C.fmtDag(d)} ${d.slice(0, 4)}</span><button class="btn sm sec" data-deldag="${d}" aria-label="Verwijderen">🗑️</button></div>`).join('') || '<div class="small">Geen</div>'}</div></div>` : ''}
   ${kI ? `<div class="blk" data-sec="advies"><h2>Advies-instellingen</h2><p class="small">Voor gevorderden. Meestal hoef je hier niets aan te veranderen.</p><div class="form">
@@ -2227,10 +2235,10 @@ function renderBeheer() {
   v.querySelectorAll('[data-heok]').forEach(b => b.onclick = () => { const key = b.dataset.heok; const row = b.closest('.it'); const he = C.num(row.querySelector('[data-f="he"]').value) || 1; const perHE = row.querySelector('[data-f="perHE"]').checked; work.he[key] = { he, perHE, check: false }; saveInst(work); });
   beheerMenu(v, chk);
 }
-const BEHEER_SEC = [['upload', '📤', 'Bestanden uploaden', 'Dag-exports, bestelboeken en acties · status'], ['dagen', '🗓️', 'Besteldagen en deadlines', 'Wanneer je bestelt en tot hoe laat'], ['open', '🕘', 'Openingstijden en feestdagen', 'Ook aangepaste tijden en gesloten dagen'], ['onderdelen', '🗂️', 'Onderdelen en volgorde', 'Welke groep bij welk onderdeel, en in welke volgorde'], ['controle', '🔍', 'Controleren', 'Niet gekoppelde artikelen en besteleenheden'], ['advies', '⚙️', 'Advies-instellingen', 'Voor gevorderden'], ['verwijderen', '🗑️', 'Uploads verwijderen', 'Als je per ongeluk een verkeerd bestand hebt geüpload']];
+const BEHEER_SEC = [['upload', '📤', 'Bestanden uploaden', 'Dag-exports, bestelboeken en acties · status'], ['auto', '📡', 'Automatisch uploaden', 'Dag-export elke dag vanzelf vanaf een computer'], ['dagen', '🗓️', 'Besteldagen en deadlines', 'Wanneer je bestelt en tot hoe laat'], ['open', '🕘', 'Openingstijden en feestdagen', 'Ook aangepaste tijden en gesloten dagen'], ['onderdelen', '🗂️', 'Onderdelen en volgorde', 'Welke groep bij welk onderdeel, en in welke volgorde'], ['controle', '🔍', 'Controleren', 'Niet gekoppelde artikelen en besteleenheden'], ['advies', '⚙️', 'Advies-instellingen', 'Voor gevorderden'], ['verwijderen', '🗑️', 'Uploads verwijderen', 'Als je per ongeluk een verkeerd bestand hebt geüpload']];
 function beheerMenu(v, chk) {
   const blks = [...v.querySelectorAll('[data-sec]')]; const er = new Set(blks.map(b => b.dataset.sec));
-  if (ui.bsub && er.has(ui.bsub)) { blks.forEach(b => b.classList.toggle('hide', b.dataset.sec !== ui.bsub)); window.scrollTo(0, 0); return; }
+  if (ui.bsub && er.has(ui.bsub)) { blks.forEach(b => b.classList.toggle('hide', b.dataset.sec !== ui.bsub)); window.scrollTo(0, 0); if (ui.bsub === 'auto') autoLaad(); return; }
   ui.bsub = null; blks.forEach(b => b.classList.add('hide'));
   const tel = { controle: (M.onbekend.length || 0) + ((chk || []).length || 0) };
   const m = document.createElement('div'); m.className = 'blk lijstblok';
@@ -2297,7 +2305,225 @@ async function uploads(files) {
       } else throw new Error('Bestandstype niet ondersteund');
     } catch (e) { L(`✗ ${f.name}: ${e.message}`, 'err'); }
   }
-  if (n) { await saveCache(); rebuild(); log('upload', `${n} bestand(en) geüpload: ${files.map(f => f.name).join(', ')}`); L(`Klaar: ${n} bestand(en) verwerkt.`, 'ok'); const keep = ulog.innerHTML; renderBeheer(); const l2 = $('#upLog'); l2.classList.remove('hide'); l2.innerHTML = keep; }
+  if (n) { await saveCache(); rebuild(); log('upload', `${n} bestand(en) geüpload: ${files.map(f => f.name).join(', ')}`); L(`Klaar: ${n} bestand(en) verwerkt.`, 'ok'); if (ui.tab === 'beheer') { const keep = ulog.innerHTML; renderBeheer(); const l2 = $('#upLog'); if (l2) { l2.classList.remove('hide'); l2.innerHTML = keep; } } else render(); }
+}
+
+/* ---------- 1.12: uploaden op Home en automatisch uploaden ---------- */
+const AUTO_URL = SB_URL + '/functions/v1/dagexport';
+function uploadStatus() {
+  const last = M.dagLijst[M.dagLijst.length - 1]; const oud = last ? C.diff(last, C.today()) : 99;
+  const d = [last ? `Verkoop t/m ${C.fmtDag(last)}` : 'Nog geen verkoop'];
+  if (S.boeken.vers) d.push('Vers wk ' + (S.boeken.vers.week || '?'));
+  if (S.boeken.kw && S.boeken.kw.datum) d.push('KW ' + C.fmtDag(S.boeken.kw.datum));
+  return { tekst: d.join(' · '), mist: oud > 1 };
+}
+function homeUploadHtml() {
+  if (!mag('upload')) return '';
+  const s = uploadStatus();
+  return `<div class="blk homeup"><label class="homeupKnop"><span class="meeric">📤</span><span style="flex:1"><b>Bestanden uploaden</b><br><span class="small ${s.mist ? 'rood' : ''}">${s.mist ? '⚠️ ' : ''}${esc(s.tekst)}</span></span><span class="btn sm">Kiezen</span><input type="file" id="upH" multiple accept=".xls,.xlsx,.pdf" class="hide"></label></div>`;
+}
+function homeUploadEvents(v) {
+  const i = v.querySelector('#upH'); if (!i) return;
+  i.onchange = e => {
+    const files = [...e.target.files]; e.target.value = ''; if (!files.length) return;
+    if (OEFEN) return toast('Uploaden kan niet tijdens oefenen');
+    sheet(`<h2>Uploaden</h2><p class="small">${files.length} bestand${files.length === 1 ? '' : 'en'}. Laat de app open tot het klaar is.</p><div class="log" id="upLog"></div><button class="btn" data-x style="width:100%;margin-top:12px">Sluiten</button>`);
+    uploads(files);
+  };
+}
+let AUTO_DEMO = null;
+const autoTijd = t => t ? new Date(t).toLocaleString('nl-NL', { weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–';
+async function autoLaad() {
+  const el = $('#autoIn'); if (!el) return;
+  let st, lg;
+  try {
+    if (DEMO) { st = AUTO_DEMO || { actief: false }; lg = (AUTO_DEMO && AUTO_DEMO.log) || []; }
+    else { st = (await rpc('uploadsleutel_status', { w: W })) || {}; lg = (await rest(`upload_log?winkel_id=eq.${W}&order=ts.desc&limit=10`)) || []; }
+  } catch (e) { el.innerHTML = `<p class="small rood">Kon de status niet laden: ${esc(e.message)}</p><p class="small">Is de SQL van versie 1.12 al uitgevoerd in Supabase?</p>`; return; }
+  const oud = st.actief && st.laatst && (Date.now() - new Date(st.laatst)) > 36 * 3600e3;
+  el.innerHTML = `<div class="kv"><span>Sleutel</span><b>${st.actief ? `✅ actief · …${esc(st.hint || '')}` : 'nog geen'}</b>${st.actief ? `<span>Gemaakt</span><b>${autoTijd(st.aangemaakt)}${st.door ? ' · ' + esc(st.door) : ''}</b><span>Laatst binnen</span><b class="${oud ? 'rood' : ''}">${st.laatst ? autoTijd(st.laatst) : 'nog niets'}</b>` : ''}</div>
+  <div class="row" style="margin-top:12px;gap:8px">${st.actief ? `<button class="btn sec" id="auNieuw" style="flex:1">🔑 Nieuw script</button><button class="btn sec" id="auUit">Intrekken</button>` : `<button class="btn" id="auNieuw" style="width:100%">🔑 Sleutel en script maken</button>`}</div>
+  <h3>Zo stel je het in</h3><ol class="small stappen"><li>Tik op <b>${st.actief ? 'Nieuw script' : 'Sleutel en script maken'}</b> en stuur het zip-bestand naar jezelf (bijv. per mail).</li><li>Pak het uit op de computer in de map <b>C:\\Besteladvies</b>.</li><li>Dubbelklik <b>1-testen.cmd</b>. Je ziet "Test gelukt".</li><li>Dubbelklik <b>2-installeren.cmd</b>. Het script kijkt nu elk uur in de map.</li><li>Klaar. Verstuurde bestanden gaan naar de map <b>Verzonden</b>.</li></ol>
+  <h3>Laatst ontvangen</h3><div class="list">${lg.map(r => `<div class="it"><span style="flex:1">${r.ok ? '✅' : '❌'} ${r.dag ? 'Verkoop ' + C.fmtDag(r.dag) : esc(r.bestand || 'bestand')}<br><span class="small">${autoTijd(r.ts)} · ${esc(r.melding || '')}</span></span></div>`).join('') || '<div class="small">Nog niets ontvangen</div>'}</div>`;
+  $('#auNieuw').onclick = async () => {
+    if (st.actief && !await bevestig('Nieuw script maken?', 'Er komt een nieuwe sleutel. Het oude script op de computer werkt dan niet meer; zet het nieuwe ervoor in de plaats.', 'Nieuw script', 'Annuleren')) return;
+    autoMaak();
+  };
+  const u = $('#auUit'); if (u) u.onclick = async () => {
+    if (!await bevestig('Sleutel intrekken?', 'De computer kan daarna niets meer uploaden tot je een nieuw script maakt.', 'Intrekken', 'Annuleren')) return;
+    try { if (DEMO) AUTO_DEMO = Object.assign({}, AUTO_DEMO, { actief: false }); else await rpc('trek_uploadsleutel_in', { w: W }); log('upload', 'Uploadsleutel ingetrokken'); toast('Sleutel ingetrokken'); } catch (e) { toast('Mislukt: ' + e.message, 5000); }
+    autoLaad();
+  };
+}
+function autoMaak() {
+  const ov = sheet(`<h2>Script maken</h2><p class="small">In welke map zet de computer straks de dag-exports? Weet je het nog niet, laat dit dan staan. Je kunt het later aanpassen (zie LEESMIJ).</p><div class="form"><div class="f"><label>Map</label><input id="auMap" value="${esc(ls.get('cba-automap') || 'C:\\CasPos\\Export')}" autocapitalize="off" spellcheck="false"></div></div><button class="btn" id="auMaak" style="width:100%;margin-top:10px">Maken</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`);
+  ov.querySelector('#auMaak').onclick = async e => {
+    const map = (ov.querySelector('#auMap').value || '').trim().replace(/[\\/]+$/, '') || 'C:\\CasPos\\Export';
+    if (!/^([a-z]:\\|\\\\)/i.test(map)) return toast('Vul een map in zoals C:\\CasPos\\Export');
+    e.target.disabled = true; let sleutel;
+    try {
+      if (DEMO) { sleutel = W + '.' + [...crypto.getRandomValues(new Uint8Array(24))].map(b => b.toString(16).padStart(2, '0')).join(''); AUTO_DEMO = { actief: true, hint: sleutel.slice(-4), aangemaakt: new Date().toISOString(), door: mijnNaam(), laatst: null, log: (AUTO_DEMO && AUTO_DEMO.log) || [] }; }
+      else sleutel = await rpc('nieuwe_uploadsleutel', { w: W, wie: mijnNaam() });
+    } catch (x) { e.target.disabled = false; return toast('Mislukt: ' + x.message + ' (SQL 1.12 uitgevoerd?)', 6000); }
+    ls.set('cba-automap', map); log('upload', 'Nieuwe uploadsleutel gemaakt');
+    const best = autoBestanden(sleutel, map); const zip = maakZip(best); const file = new File([zip], 'besteladvies-upload.zip', { type: 'application/zip' });
+    window.__autoZip = { naam: file.name, bestanden: best.map(b => b[0]), grootte: zip.size };
+    ov.querySelector('.sheetIn').innerHTML = `<h2>✅ Script klaar</h2><p class="small">Stuur het zip-bestand naar de computer in de winkel, bijvoorbeeld per mail. De sleutel zit erin; je ziet hem maar één keer. Kwijt? Maak dan een nieuw script.</p><div class="kv"><span>Map</span><b>${esc(map)}</b><span>Sleutel</span><b>…${esc(sleutel.slice(-4))}</b></div><button class="btn" id="auDeel" style="width:100%;margin-top:12px">📦 Zip-bestand delen</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Sluiten</button>`;
+    ov.querySelector('#auDeel').onclick = async () => {
+      try { if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: 'Besteladvies upload' }); else { const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000); } }
+      catch (x) { if (x && x.name !== 'AbortError') toast('Delen mislukt: ' + x.message, 5000); }
+    };
+    autoLaad();
+  };
+}
+function autoBestanden(sleutel, map, url = AUTO_URL) {
+  const crlf = s => s.replace(/\r?\n/g, '\r\n'); const enc = new TextEncoder(); const bom = s => { const b = enc.encode(crlf(s)); const o = new Uint8Array(b.length + 3); o.set([0xEF, 0xBB, 0xBF]); o.set(b, 3); return o; };
+  const q = s => String(s).replace(/'/g, "''"); const winkel = ((WINKEL && WINKEL.naam) || 'Coop').replace(/[^\w .-]/g, '');
+  const ps = `# Coop Besteladvies - dag-exports automatisch uploaden
+# Gemaakt in de app op ${C.today()} voor ${winkel} (versie ${VERSIE}).
+# Gebruik: zonder opties = nieuwe bestanden uploaden, -Test = alleen de verbinding testen.
+param([switch]$Test, [string]$Map = '')
+
+# ===== Instellingen =====
+# Map waar de dag-exports uit CasPos komen. Pas alleen deze regel aan als het een andere map is.
+$StandaardMap = '${q(map)}'
+$Sleutel = '${q(sleutel)}'
+$Url = '${q(url)}'
+# ========================
+
+if (-not $Map) { $Map = $StandaardMap }
+$Hier = Split-Path -Parent $MyInvocation.MyCommand.Path
+$LogBestand = Join-Path $Hier 'besteladvies-upload.log'
+
+function Schrijf([string]$Tekst) {
+  $regel = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') + '  ' + $Tekst
+  try { Add-Content -Path $LogBestand -Value $regel -Encoding UTF8 } catch { }
+  Write-Host $regel
+}
+function Foutinfo($Err) {
+  $code = 0; $tekst = $Err.Exception.Message
+  try { if ($Err.Exception.Response) { $code = [int]$Err.Exception.Response.StatusCode } } catch { }
+  try { if ($Err.ErrorDetails -and $Err.ErrorDetails.Message) { $j = $Err.ErrorDetails.Message | ConvertFrom-Json; if ($j.fout) { $tekst = $j.fout } } } catch { }
+  return New-Object PSObject -Property @{ Code = $code; Tekst = $tekst }
+}
+function Zoek {
+  Get-ChildItem -LiteralPath $Map -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'van_\\d{8}_tm_\\d{8}' -and $_.Extension -match '^\\.xlsx?$' } | Sort-Object Name
+}
+function Verplaats($Bestand, [string]$Doel) {
+  if (-not (Test-Path -LiteralPath $Doel)) { New-Item -ItemType Directory -Path $Doel | Out-Null }
+  $naar = Join-Path $Doel $Bestand.Name
+  if (Test-Path -LiteralPath $naar) { Remove-Item -LiteralPath $naar -Force }
+  Move-Item -LiteralPath $Bestand.FullName -Destination $naar
+}
+
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
+try { if ((Test-Path -LiteralPath $LogBestand) -and ((Get-Item -LiteralPath $LogBestand).Length -gt 1MB)) { Move-Item -LiteralPath $LogBestand -Destination ($LogBestand + '.oud') -Force } } catch { }
+
+if ($Test) {
+  Schrijf 'Test: verbinding met de app controleren...'
+  try {
+    $r = Invoke-RestMethod -Uri ($Url + '?test=1') -Method Get -Headers @{ 'x-sleutel' = $Sleutel } -TimeoutSec 60
+    Schrijf ('Test gelukt: ' + $r.tekst)
+  } catch { $f = Foutinfo $_; Schrijf ('Test mislukt: ' + $f.Tekst); exit 1 }
+  if (Test-Path -LiteralPath $Map) { Schrijf ('Map gevonden: ' + $Map + ' (' + @(Zoek).Count + ' dag-export(s) klaar om te versturen)') }
+  else { Schrijf ('Let op: de map ' + $Map + ' bestaat nog niet. Dat is goed zolang de export nog niet is ingesteld.') }
+  exit 0
+}
+
+if (-not (Test-Path -LiteralPath $Map)) { exit 0 }
+$Verzonden = Join-Path $Map 'Verzonden'
+$NietGelukt = Join-Path $Map 'Niet gelukt'
+foreach ($f in @(Zoek)) {
+  if ($f.LastWriteTime -gt (Get-Date).AddMinutes(-2)) { continue }
+  try {
+    $h = @{ 'x-sleutel' = $Sleutel; 'x-bestand' = [Uri]::EscapeDataString($f.Name) }
+    $r = Invoke-RestMethod -Uri $Url -Method Post -Headers $h -InFile $f.FullName -ContentType 'application/octet-stream' -TimeoutSec 300
+    if ($r.ok) { Verplaats $f $Verzonden; Schrijf ('Verzonden: ' + $f.Name + ' (' + $r.artikelen + ' artikelen)') }
+    else { Schrijf ('Onbekend antwoord voor ' + $f.Name + ', later opnieuw') }
+  } catch {
+    $e = Foutinfo $_
+    if ($e.Code -eq 401) { Schrijf ('Sleutel klopt niet of is ingetrokken. Maak in de app een nieuw script. (' + $e.Tekst + ')'); exit 2 }
+    elseif ($e.Code -ge 400 -and $e.Code -lt 500) { Verplaats $f $NietGelukt; Schrijf ('Niet gelukt: ' + $f.Name + ' - ' + $e.Tekst + ' (verplaatst naar de map Niet gelukt)') }
+    else { Schrijf ('Later opnieuw: ' + $f.Name + ' - ' + $e.Tekst) }
+  }
+}
+exit 0
+`;
+  const test = `@echo off
+title Besteladvies - testen
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0besteladvies-upload.ps1" -Test
+echo.
+pause
+`;
+  const inst = `@echo off
+title Besteladvies - installeren
+schtasks /Create /TN "Besteladvies upload" /SC HOURLY /ST 06:05 /TR "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \\"%~dp0besteladvies-upload.ps1\\"" /F
+if errorlevel 1 goto fout
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0besteladvies-upload.ps1"
+echo.
+echo Klaar. De computer kijkt nu elk uur of er een nieuwe dag-export is.
+echo.
+pause
+exit /b 0
+:fout
+echo.
+echo Installeren is NIET gelukt. Probeer het opnieuw met rechtsklik - Als administrator uitvoeren.
+pause
+exit /b 1
+`;
+  const weg = `@echo off
+title Besteladvies - stoppen
+schtasks /Delete /TN "Besteladvies upload" /F
+echo.
+echo Het automatisch uploaden is gestopt.
+pause
+`;
+  const lees = `COOP BESTELADVIES - AUTOMATISCH UPLOADEN
+${winkel} - gemaakt op ${C.today()}
+
+Wat doet dit?
+Elk uur kijkt de computer in de map:
+   ${map}
+Staat daar een nieuwe dag-export uit CasPos (bijv. ..._van_20261103_tm_20261103.xls),
+dan gaat die vanzelf naar de app. Daarna verhuist het bestand naar de map "Verzonden".
+Je krijgt in de app een melding "Dag-export binnen" (zet die aan onder Meer > Meldingen).
+
+Instellen (eenmalig, ongeveer 5 minuten)
+1. Maak op de computer de map C:\\Besteladvies
+2. Rechtsklik op het zip-bestand > Eigenschappen > vink "Blokkering opheffen" aan > OK.
+   Pak het daarna uit in C:\\Besteladvies.
+3. Dubbelklik 1-testen.cmd. Je moet zien: "Test gelukt: Koppeling met ... werkt."
+   Krijg je een blauw venster "Windows heeft uw pc beschermd"? Kies "Meer informatie" > "Toch uitvoeren".
+4. Dubbelklik 2-installeren.cmd. Vanaf nu draait het elk uur.
+5. Controleer in de app onder Beheer > Automatisch uploaden of de uploads binnenkomen.
+
+Goed om te weten
+- De computer moet aan staan en er moet iemand ingelogd zijn.
+- Bestaat de map nog niet? Geen probleem: het script doet dan niets tot de map er is.
+- Andere map? Open besteladvies-upload.ps1 met Kladblok en pas de regel $StandaardMap aan.
+- Een bestand dat niet goed is (geen dag-export, verkeerde datum) gaat naar de map "Niet gelukt".
+- Wat er gebeurd is staat in besteladvies-upload.log (in deze map).
+- Stoppen: dubbelklik 3-stoppen.cmd, of trek de sleutel in de app in.
+- Dit zip-bestand bevat een geheime sleutel. Stuur het niet door naar anderen.
+`;
+  return [['besteladvies-upload.ps1', bom(ps)], ['1-testen.cmd', enc.encode(crlf(test))], ['2-installeren.cmd', enc.encode(crlf(inst))], ['3-stoppen.cmd', enc.encode(crlf(weg))], ['LEESMIJ.txt', bom(lees)]];
+}
+function maakZip(files) {
+  const T = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; T[n] = c >>> 0; }
+  const crc = d => { let c = 0xFFFFFFFF; for (let i = 0; i < d.length; i++) c = T[(c ^ d[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const enc = new TextEncoder(); const nu = new Date(); const tm = (nu.getHours() << 11) | (nu.getMinutes() << 5) | (nu.getSeconds() >> 1); const dt = ((nu.getFullYear() - 1980) << 9) | ((nu.getMonth() + 1) << 5) | nu.getDate();
+  const delen = [], cd = []; let off = 0;
+  for (const [naam, data] of files) {
+    const nb = enc.encode(naam), c = crc(data);
+    const h = new DataView(new ArrayBuffer(30)); h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(10, tm, true); h.setUint16(12, dt, true); h.setUint32(14, c, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nb.length, true);
+    delen.push(new Uint8Array(h.buffer), nb, data);
+    const z = new DataView(new ArrayBuffer(46)); z.setUint32(0, 0x02014b50, true); z.setUint16(4, 20, true); z.setUint16(6, 20, true); z.setUint16(8, 0x0800, true); z.setUint16(12, tm, true); z.setUint16(14, dt, true); z.setUint32(16, c, true); z.setUint32(20, data.length, true); z.setUint32(24, data.length, true); z.setUint16(28, nb.length, true); z.setUint32(42, off, true);
+    cd.push(new Uint8Array(z.buffer), nb);
+    off += 30 + nb.length + data.length;
+  }
+  const cdLen = cd.reduce((s, x) => s + x.length, 0);
+  const e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cdLen, true); e.setUint32(16, off, true);
+  return new Blob([...delen, ...cd, new Uint8Array(e.buffer)], { type: 'application/zip' });
 }
 
 /* ---------- printen ---------- */
@@ -2755,12 +2981,24 @@ function tafelTekening(t, ind, klein) {
     const rs = cel.map(c => Math.floor(c / K)), ks = cel.map(c => c % K); const r1 = Math.min(...rs), r2 = Math.max(...rs), k1 = Math.min(...ks), k2 = Math.max(...ks);
     const kleur = TKLEUR[(it.kleur ?? i) % TKLEUR.length];
     const label = klein ? '' : `<b>${esc(it.naam)}</b>${it.aantal ? `<span>${C.fmt(+it.aantal)}×</span>` : ''}${it.klaar ? '<i>✓</i>' : ''}`;
-    if ((r2 - r1 + 1) * (k2 - k1 + 1) === cel.length) { h += `<div class="vak bezet ${it.klaar ? 'klaar' : ''}" data-ti="${i}" style="grid-area:${r1 + 1}/${k1 + 1}/${r2 + 2}/${k2 + 2};background:${kleur}">${label}</div>`; cel.forEach(c => gedaan.add(c)); }
+    if ((r2 - r1 + 1) * (k2 - k1 + 1) === cel.length) { const smal = !klein && ((k2 - k1 + 1) / K <= 0.25 || (K >= 4 && k2 === k1)); h += `<div class="vak bezet ${it.klaar ? 'klaar' : ''} ${smal ? 'smal' : ''}" data-ti="${i}" style="grid-area:${r1 + 1}/${k1 + 1}/${r2 + 2}/${k2 + 2};background:${kleur}">${label}</div>`; cel.forEach(c => gedaan.add(c)); }
     else { const eerste = Math.min(...cel); cel.forEach(c => { gedaan.add(c); h += `<div class="vak bezet ${it.klaar ? 'klaar' : ''}" data-ti="${i}" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1};background:${kleur}">${c === eerste ? label : ''}</div>`; }); }
   });
   const vast = new Set((t.vast || []).filter(c => c < N && !gedaan.has(c))); const eersteVast = vast.size ? Math.min(...vast) : -1;
   for (let c = 0; c < N; c++) if (!gedaan.has(c)) h += vast.has(c) ? `<div class="vak vast" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1}">${klein ? '' : `<span>🔒</span>${c === eersteVast && t.vastTekst ? `<b>${esc(t.vastTekst)}</b>` : ''}`}</div>` : `<div class="vak leeg" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1}"></div>`;
   return h + '</div>';
+}
+function tafelPas(root) {
+  root.querySelectorAll('.tafel:not(.klein) .vak.bezet b').forEach(b => {
+    const pa = b.parentElement, cs = getComputedStyle(pa); const breed = pa.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    let fs = parseFloat(getComputedStyle(b).fontSize) || 13;
+    const m = document.createElement('span'); m.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:inherit'; b.appendChild(m);
+    const woorden = b.firstChild && b.firstChild.nodeType === 3 ? b.firstChild.textContent.split(/\s+/).filter(Boolean) : [];
+    const langste = () => Math.max(0, ...woorden.map(w => { m.textContent = w; return m.getBoundingClientRect().width; }));
+    const past = () => langste() <= breed - 0.5 && b.offsetTop + b.offsetHeight <= pa.clientHeight + 1;
+    while (!past() && fs > 10) { fs -= 0.5; b.style.fontSize = fs + 'px'; }
+    m.remove();
+  });
 }
 function tafelWeken() { const s = new Set([weekSleutel(C.add(C.today(), -7)), weekSleutel(C.today()), weekSleutel(C.add(C.today(), 7))]); for (const a of S.acties || []) if (a.id >= weekSleutel(C.today())) s.add(a.id); return [...s].sort(); }
 function slaIndelingOp(week, id, data) { write('tafel_indeling', [{ week, tafel_id: id, data }]); }
@@ -2782,7 +3020,7 @@ function renderTafels() {
     <div class="row" style="margin-top:10px;flex-wrap:wrap">${kanIn ? '<button class="btn sm" id="tiAdd">+ Artikel op tafel</button>' : ''}${kanIn && !items.length && (vi.items || []).length ? `<button class="btn sm sec" id="tiCopy">Indeling week ${+vorig.split('-')[1]} overnemen</button>` : ''}${items.length ? '<button class="btn sm sec" id="tiPrint">Printen</button>' : ''}</div></div>
     <div class="blk"><h2>Wat moet erop</h2>${(t.vast || []).length ? `<p class="small">🔒 Vast assortiment${t.vastTekst ? ': ' + esc(t.vastTekst) : ''} · ${plekTekst(t, t.vast)} – hier komt geen actie.</p>` : ''}${items.length ? `<div class="list">${items.map((it, i) => `<div class="it"><span class="kleurstip" style="background:${TKLEUR[(it.kleur ?? i) % TKLEUR.length]}"></span><span style="flex:1"><b>${esc(it.naam)}</b><br><span class="small">${tafelArts(it).length ? esc(tafelArts(it).map(a => a.nr ? a.nr : a.naam).join(', ')) + ' · ' : ''}${plekTekst(t, it.cellen)}${it.aantal ? ' · ' + C.fmt(+it.aantal) + ' stuks' : ''}${it.opm ? ' · ' + esc(it.opm) : ''}${it.klaar ? ` · ✓ ${esc(ini(it.door))} ${hhmm(it.om)}` : ''}</span></span>${kanAf ? `<button class="btn sm ${it.klaar ? 'sec' : ''}" data-tk="${i}">${it.klaar ? 'Terug' : 'Staat erop'}</button>` : ''}</div>`).join('')}</div>` : '<p class="small">Nog niets ingedeeld voor deze week.</p>'}</div>`;
   }
-  v.innerHTML = h;
+  v.innerHTML = h; tafelPas(v);
   v.querySelectorAll('[data-tw]').forEach(b => b.onclick = () => { ui.tafelWeek = b.dataset.tw; render(); });
   v.querySelectorAll('[data-tt]').forEach(b => b.onclick = () => { ui.tafel = b.dataset.tt; render(); window.scrollTo(0, 0); });
   const ta = $('#tbAdd'); if (ta) ta.onclick = () => tafelBewerk(null);
