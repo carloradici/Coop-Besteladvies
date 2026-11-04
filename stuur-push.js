@@ -1,7 +1,7 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
 // Wordt door de korte stuur-push in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
 // Soorten: test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
-export const FUNCTIE_VERSIE = '1.9';
+export const FUNCTIE_VERSIE = '1.13';
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };
 const ONDERDELEN = [['agf', 'AGF'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries'], ['kw', 'KW']];
 const STD_OPEN = [['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['', '']];
@@ -12,6 +12,8 @@ const add = (s, n) => { const d = new Date(s + 'T12:00:00Z'); d.setUTCDate(d.get
 const wd = s => (new Date(s + 'T12:00:00Z').getUTCDay() + 6) % 7;
 const isoWeek = s => { const d = new Date(s + 'T12:00:00Z'); const t = new Date(d); t.setUTCDate(d.getUTCDate() + 3 - ((d.getUTCDay() + 6) % 7)); const j4 = new Date(Date.UTC(t.getUTCFullYear(), 0, 4, 12)); return 1 + Math.round(((t - j4) / 864e5 - 3 + ((j4.getUTCDay() + 6) % 7)) / 7); };
 const minuten = t => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + m; };
+const mooiGroep = g => { g = String(g || ''); return g === g.toUpperCase() ? g.charAt(0) + g.slice(1).toLowerCase() : g; };
+const regelNaam = r => { if (r.naam) return r.naam; const g = (r.groepen || []).map(mooiGroep); return g.length <= 2 ? g.join(' en ') : `${g[0]}, ${g[1]} +${g.length - 2}`; };
 const fmtDag = s => { const d = new Date(s + 'T12:00:00Z'); return `${DAGEN[wd(s)]} ${d.getUTCDate()}-${d.getUTCMonth() + 1}`; };
 
 export function lokaleTijd(nu) {
@@ -105,17 +107,27 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date() }) {
           }
         }
       }
-      const dl = inst.deadline || {};
+      const dl = inst.deadline || {}; const regels = (inst.dlRegels || []).filter(r => r && r.t && (r.groepen || []).length);
+      let grp = null; const groepen = async () => { if (grp) return grp; grp = {}; const [{ data: bk }, { data: eg }] = await Promise.all([sb.from('boeken').select('bron,artikelen').eq('winkel_id', W), sb.from('eigen_artikelen').select('id,data').eq('winkel_id', W)]); for (const b of bk || []) for (const a of b.artikelen || []) grp[b.bron + ':' + a.nr] = a.groep || ''; for (const e of eg || []) grp['eigen:' + e.id] = (e.data && e.data.groep) || 'Eigen artikelen'; return grp; };
       for (const [lev, naamLev, ods, bronnen] of [['versunie', 'Versunie', ['agf', 'vers', 'brood', 'diep'], ['vers', 'eigen']], ['vantol', 'Van Tol', ['kw'], ['kw']]]) {
-        if (!dl[lev]) continue;
-        if (!ods.some(o => (schema[o] || schema.vers || []).some(x => x.b === wd(dag)))) continue;
-        const dmin = minuten(dl[lev]), nmin = minuten(tijd); if (nmin < dmin - 30 || nmin >= dmin) continue;
-        if (!(await eenmalig(`deadline:${W}:${lev}:${dag}`))) continue;
-        const { data: be } = await sb.from('bestellingen').select('besteld,aantal,bron').eq('winkel_id', W).eq('besteldag', dag).in('bron', bronnen);
-        const open = (be || []).filter(r => !r.besteld && +r.aantal > 0).length; const besteld = (be || []).filter(r => r.besteld).length;
-        if (!open && besteld) continue;
-        await stuur(wa.filter(a => wil(a, 'deadline')), { titel: `Nog ${dmin - nmin} min: bestellen bij ${naamLev}`, tekst: open ? `${open} artikelen nog niet afgevinkt. Deadline ${dl[lev]}.` : `Er is nog niets afgevinkt. Deadline ${dl[lev]}.`, tag: 'deadline-' + lev });
-        gedaan.push(W.slice(0, 4) + ':deadline_' + lev);
+        const eigen = regels.filter(r => r.lev === lev); const inRegel = new Set(eigen.flatMap(r => r.groepen));
+        const units = (dl[lev] ? [{ id: 's', naam: naamLev, d: 0, t: dl[lev], groepen: null }] : []).concat(eigen.map((r, i) => ({ id: 'r' + i, naam: naamLev + ' · ' + regelNaam(r), d: +r.d || 0, t: r.t, groepen: r.groepen })));
+        for (const u of units) {
+          const dmin = minuten(u.t), nmin = minuten(tijd); if (nmin < dmin - 30 || nmin >= dmin) continue;
+          for (let k = 0; k <= 3; k++) {
+            const bdag = add(dag, -k); const od = ods.find(o => (schema[o] || schema.vers || []).some(x => x.b === wd(bdag))); if (!od) continue;
+            const r0 = (schema[od] || schema.vers).find(x => x.b === wd(bdag)); let L = add(bdag, 1); while (wd(L) !== r0.l) L = add(L, 1);
+            let dd = add(bdag, u.d); if (dd >= L) dd = add(L, -1); if (dd !== dag) continue;
+            if (!(await eenmalig(`deadline:${W}:${lev}:${u.id}:${bdag}`))) continue;
+            let { data: be } = await sb.from('bestellingen').select('besteld,aantal,bron,nr').eq('winkel_id', W).eq('besteldag', bdag).in('bron', bronnen);
+            if (eigen.length) { const g = await groepen(); be = (be || []).filter(x => { const gg = g[x.bron + ':' + x.nr] || ''; return u.groepen ? u.groepen.includes(gg) : !inRegel.has(gg); }); }
+            const open = (be || []).filter(r => !r.besteld && +r.aantal > 0).length; const besteld = (be || []).filter(r => r.besteld).length;
+            if (!open && besteld) continue;
+            const voor = k ? ` (levering ${DAGEN[wd(L)]})` : '';
+            await stuur(wa.filter(a => wil(a, 'deadline')), { titel: `Nog ${dmin - nmin} min: ${u.naam}${voor}`, tekst: open ? `${open} artikelen nog niet afgevinkt. Deadline ${u.t}.` : `Er is nog niets afgevinkt. Deadline ${u.t}.`, tag: 'deadline-' + lev + '-' + u.id });
+            gedaan.push(W.slice(0, 4) + ':deadline_' + lev + '_' + u.id);
+          }
+        }
       }
       if (wd(dag) === 0 && tijd >= t.bestel && await eenmalig(`week:${W}:${dag}`)) {
         const van = add(dag, -7), tot = add(dag, -1);
