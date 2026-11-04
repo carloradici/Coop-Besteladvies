@@ -450,6 +450,13 @@ ol.stappen{padding-left:20px;margin:6px 0 12px}ol.stappen li{margin:4px 0}
 #printArea .kpb td.pl{width:9mm;text-align:center;font-weight:800}
 #printArea .kpb svg.msi{display:inline-block;width:38mm;height:7mm;margin:1px 3mm 0 0;vertical-align:top}
 .kwsrt{font:inherit;font-size:12px;cursor:pointer;background:none}
+
+/* 1.19 */
+.kwseg{display:flex;gap:6px;margin-top:8px}.kwseg button{flex:1;border:1.5px solid var(--oranje);background:none;color:var(--oranje);border-radius:12px;padding:10px;font:inherit;font-weight:800}.kwseg button.on{background:var(--oranje);color:#fff}
+.kwchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.kwchips button{border:1.5px solid var(--lijn);background:var(--kaart);color:var(--tekst);border-radius:18px;padding:8px 12px;font:inherit;font-size:14px;font-weight:700}.kwchips button.aan{background:var(--oranje);border-color:var(--oranje);color:#fff}
+.kwit.kwklaar{border-left:4px solid #2e7d32}.kwnot{margin-top:6px;font-size:13px;font-weight:700;color:var(--oranje)}
+.kwkoppen{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.pbmini{max-width:220px;margin:6px 0}
 </style>
 </head>
 <body>
@@ -1070,7 +1077,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.18';
+const VERSIE = '1.19';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -3081,7 +3088,7 @@ function advies115() {
 function alleActies() {
   const l = (S.acties || []).slice(); const per = {}; l.forEach(a => { per[a.week + '|' + (a.van || '').slice(0, 4)] = new Set((a.items || []).map(i => i.nr)); });
   for (const p of Object.values(S.kwplan || {})) {
-    const f = p.folder; if (!f || !f.week || !f.van) continue; const ac = C.folderNaarActie(f, 'fp-' + p.week); const al = per[f.week + '|' + f.van.slice(0, 4)];
+    kwNormPlan(p); const f = p.folder; if (!f || !f.week || !f.van) continue; const ac = C.folderNaarActie(f, 'fp-' + p.week); const al = per[f.week + '|' + f.van.slice(0, 4)];
     const pf = {}; for (const it of f.items) { const pk = (p.plek || {})[it.id]; if (pk && plekVan(pk)) for (const nr of it.nrs || []) pf[nr] = [plekF(pk), pk]; }
     ac.items.forEach(i => { if (pf[i.nr]) { i.plekF = pf[i.nr][0]; i.plek = pf[i.nr][1]; } });
     if (al) { const idx = l.findIndex(a => a.week === f.week && (a.van || '').slice(0, 4) === f.van.slice(0, 4) && !String(a.id).startsWith('fp-')); if (idx >= 0 && Object.keys(pf).length) l[idx] = Object.assign({}, l[idx], { items: l[idx].items.map(i => pf[i.nr] ? Object.assign({}, i, { plekF: pf[i.nr][0], plek: pf[i.nr][1] }) : i) }); ac.items = ac.items.filter(i => !al.has(i.nr)); }
@@ -3178,8 +3185,25 @@ function kalenderHtml() {
   return h + '<div class="small" style="margin-top:6px"><span class="kalleg ok"></span> binnen <span class="kalleg mist"></span> ontbreekt <span class="kalleg dicht"></span> gesloten / voor de eerste export</div></div>';
 }
 /* ---------- 1.15: KW-acties (folderplanning) ---------- */
-const STD_PLEKKEN = [{ naam: 'Kop 1 (links)', factor: 1.3 }, { naam: 'Kop 2 (rechts)', factor: 1.3 }, { naam: 'Meter naast afbakbrood', factor: 1.15 }, { naam: 'In het vak', factor: 1 }, { naam: 'Euro coopje', factor: 1 }, { naam: 'Niet bestellen', factor: 0 }];
-function kwPlekken() { const l = (S.inst || {}).kwPlekken; return Array.isArray(l) && l.length ? l : STD_PLEKKEN; }
+const STD_PLEKKEN = [{ naam: 'Kop 1 (links)', factor: 1.3 }, { naam: 'Kop 2 (rechts)', factor: 1.3 }, { naam: 'Euro-Coopjes', factor: 1.15 }];
+const KW_OUD_NOTITIE = { 'in het vak': 'In het vak', 'niet bestellen': 'Niet besteld', 'niet besteld': 'Niet besteld' };
+const KW_OUD_NAAM = { 'meter naast afbakbrood': 'Euro-Coopjes', 'meter naast afbakbroodjes': 'Euro-Coopjes', 'euro coopje': 'Euro-Coopjes', 'euro coopjes': 'Euro-Coopjes' };
+function kwPlekkenNorm(l) {
+  const out = [];
+  for (const x of l || []) { const k = String(x.naam || '').trim().toLowerCase(); if (KW_OUD_NOTITIE[k]) continue; const naam = KW_OUD_NAAM[k] || x.naam; const al = out.find(y => y.naam === naam); if (al) { if (!al.tafel && x.tafel) al.tafel = x.tafel; if (!(al.lijst || []).length && (x.lijst || []).length) al.lijst = x.lijst; continue; } out.push(Object.assign({}, x, { naam })); }
+  return out;
+}
+function kwPlekken() { const l = (S.inst || {}).kwPlekken; return Array.isArray(l) && l.length ? kwPlekkenNorm(l) : STD_PLEKKEN; }
+function kwNormPlan(p) {
+  let ander = false; if (!p) return false; const pl = Object.assign({}, p.plek || {}), no = Object.assign({}, p.notitie || {});
+  for (const id in pl) { const k = String(pl[id] || '').toLowerCase(); if (KW_OUD_NOTITIE[k]) { no[id] = no[id] || KW_OUD_NOTITIE[k]; delete pl[id]; ander = true; } else if (KW_OUD_NAAM[k]) { pl[id] = KW_OUD_NAAM[k]; ander = true; } }
+  if (ander) { p.plek = pl; p.notitie = no; } return ander;
+}
+function kwMigreer() {
+  if (!mag('instellingen') || kwMigreer.klaar) return; kwMigreer.klaar = true;
+  const oud = (S.inst || {}).kwPlekken; if (Array.isArray(oud) && oud.length) { const n = kwPlekkenNorm(oud); if (JSON.stringify(n) !== JSON.stringify(oud)) { const w = JSON.parse(JSON.stringify(S.inst)); w.kwPlekken = n; saveInst(w); for (const x of n) { const t = x.tafel && S.tafels[x.tafel]; if (t && t.naam !== x.naam) { const d = Object.assign({}, t, { naam: x.naam }); delete d.id; write('tafels', [{ id: x.tafel, data: d }]); } } } }
+  for (const wk of Object.keys(S.kwplan || {})) if (kwNormPlan(S.kwplan[wk])) kwPlanOpslaan(wk);
+}
 function magKwPlan() { return mag('tafels') || mag('bestellen'); }
 function folderWeek(f) { return weekSleutel(f.van || C.mondayOf(C.isoWeek(C.today()).y, f.week)); }
 function bewaarFolder(f, bron) {
@@ -3211,53 +3235,139 @@ async function folderOphalen(jaar, week) {
   if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } if (r.status === 404 && !/staat nog niet/.test(t)) t = 'De functie "folder" staat nog niet in Supabase'; throw new Error(t); }
   const buf = await r.arrayBuffer(); const f = C.parseFolder(await C.pdfVlakken(await pdfjs(), buf)); return bewaarFolder(f, 'opgehaald');
 }
+function kwStatus(p, id) { const pk = (p.plek || {})[id]; if (pk && plekVan(pk)) return { plek: pk }; const n = (p.notitie || {})[id]; return n ? { notitie: n } : null; }
+function kwZetPlek(wk, id, nieuw) {
+  const p = S.kwplan[wk]; const it = p.folder.items.find(i => i.id === id); const oud = (p.plek || {})[id] || '';
+  p.plek = Object.assign({}, p.plek || {}); if (nieuw) p.plek[id] = nieuw; else delete p.plek[id];
+  if (nieuw && p.notitie && /^(in het vak|niet besteld)$/i.test(p.notitie[id] || '')) { p.notitie = Object.assign({}, p.notitie); delete p.notitie[id]; }
+  kwPlanOpslaan(wk); kwNaarTafel(wk, it, oud, nieuw);
+}
+function kwNotitieKies(wk, id) {
+  const p = S.kwplan[wk]; const it = p.folder.items.find(i => i.id === id); const nu = (p.notitie || {})[id] || '';
+  const ov = sheet(`<h2 style="margin:0">📝 Notitie</h2><p class="small">${esc(it.naam)}</p><div class="list">${['In het vak', 'Niet besteld'].map(n => `<button class="it rijtik ${nu === n ? 'on' : ''}" data-nt="${n}"><span style="flex:1">${nu === n ? '✓ ' : ''}${n}</span></button>`).join('')}</div>
+  <label class="small" style="display:block;margin-top:10px">Of eigen tekst</label><input type="text" id="ntT" value="${/^(In het vak|Niet besteld)$/.test(nu) ? '' : esc(nu)}" placeholder="Bijv. bij de kassa" style="width:100%"><button class="btn" id="ntS" style="width:100%;margin-top:8px">Opslaan</button>${nu ? '<button class="btn sec" id="ntW" style="width:100%;margin-top:8px">Notitie weghalen</button>' : ''}<button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`);
+  const zet = t => { p.notitie = Object.assign({}, p.notitie || {}); if (t) p.notitie[id] = t; else delete p.notitie[id]; if (t && /^(In het vak|Niet besteld)$/.test(t) && (p.plek || {})[id]) { const oud = p.plek[id]; p.plek = Object.assign({}, p.plek); delete p.plek[id]; kwNaarTafel(wk, it, oud, ''); } kwPlanOpslaan(wk); ov.remove(); render(true); };
+  ov.querySelectorAll('[data-nt]').forEach(b => b.onclick = () => zet(b.dataset.nt));
+  ov.querySelector('#ntS').onclick = () => zet(ov.querySelector('#ntT').value.trim());
+  const w = ov.querySelector('#ntW'); if (w) w.onclick = () => zet('');
+}
+function kwItemKaart(wk, p, it, kan) {
+  const f = p.folder; const st = kwStatus(p, it.id); const pk = st && st.plek || ''; const no = (p.notitie || {})[it.id] || '';
+  const ver = it.soort === 'kw' ? kwVerwacht(it, f, pk) : null; const vg = it.soort === 'kw' ? kwVorige(it, wk) : null;
+  const vt = ver && ver.geen ? (vg && vg.verk ? `Verwacht ±${C.fmt(Math.round(vg.verk * (pk ? plekF(pk) : 1) / Math.max(0.1, plekF(vg.plek) || 1)))} st (zoals vorige keer)` : 'Geen verkoop bekend van deze artikelnummers') : ver ? `Verwacht ±${C.fmt(Math.round(ver.st))} st${ver.he ? ` (${C.fmt(Math.ceil(ver.he))} HE)` : ''}` : '';
+  return `<div class="card kwit ${it.soort !== 'kw' ? 'kwvers' : ''} ${st ? 'kwklaar' : ''}"><div class="nm">${esc(it.naam)}${it.extra ? ' <span class="lbl uit">Extra</span>' : ''}${kan ? ` <button class="lbl info kwsrt" data-ks="${it.id}">${(KW_SOORT.find(x => x[0] === it.soort) || ['', 'KW'])[1]} ▾</button>` : ''}</div>
+    <div class="small">${[it.variant, it.inhoud].filter(Boolean).map(esc).join(' · ')}</div>
+    <div class="small"><b>${it.prijs.length ? '€ ' + it.prijs.map(x => x.toFixed(2).replace('.', ',')).join(' – ') : ''}${it.mech ? ' ' + esc(it.mech) : ''}</b>${it.bijz ? ' · ' + esc(it.bijz) : ''} · pag ${esc((it.pag || '').split(' ')[0])}${it.groot ? ' · grote plek' : it.klein ? ' · kleine plek' : ''}</div>
+    ${vt ? `<div class="small">${vt}</div>` : ''}${vg && vg.plek ? `<div class="small">Vorige keer wk ${vg.week}: ${esc(vg.plek)}${vg.verk !== null ? ` · ${C.fmt(Math.round(vg.verk))} verkocht` : ''}</div>` : ''}
+    ${no ? `<div class="kwnot">📝 ${esc(no)}</div>` : ''}
+    ${kan ? `<div class="kwchips">${kwPlekken().map(x => `<button class="${pk === x.naam ? 'aan' : ''}" data-kz="${it.id}" data-kzp="${esc(x.naam)}">${esc(x.naam)}</button>`).join('')}<button class="${no ? 'aan' : ''}" data-knt="${it.id}">📝</button></div>` : pk ? `<div class="small">📍 ${esc(pk)}</div>` : ''}
+  </div>`;
+}
 function renderKwActies() {
+  kwMigreer();
   const v = $('#view'); const nu = weekSleutel(C.today()); const weken = Object.keys(S.kwplan || {}).sort();
   if (!ui.kwWeek || !S.kwplan[ui.kwWeek]) ui.kwWeek = weken.find(w => w >= nu) || weken[weken.length - 1] || null;
-  const wk = ui.kwWeek; const p = wk ? kwPas(S.kwplan[wk]) : null; const f = p && p.folder; const kan = magKwPlan();
-  const iw = C.isoWeek(C.today()); const volg = [1, 2, 3, 4, 5, 6].map(n => { const d = C.add(C.monday(C.today()), 7 * n); const x = C.isoWeek(d); return { y: x.y, w: x.w, k: weekSleutel(d) }; }).filter(x => !S.kwplan[x.k]);
-  let h = `<div class="bar"><div class="chips">${weken.filter(w => w >= weekSleutel(C.add(C.today(), -21))).map(w => `<button class="chip ${w === wk ? 'on' : ''}" data-kw="${w}"><b>Week ${+w.slice(5)}</b></button>`).join('')}${kan ? volg.slice(0, 2).map(x => `<button class="chip" data-haal="${x.y}|${x.w}"><b>+ Week ${x.w} ophalen</b></button>`).join('') : ''}</div></div>`;
+  const wk = ui.kwWeek; const p = wk ? kwPas(S.kwplan[wk]) : null; if (p) kwNormPlan(p); const f = p && p.folder; const kan = magKwPlan();
+  const volg = [1, 2, 3, 4, 5, 6].map(n => { const d = C.add(C.monday(C.today()), 7 * n); const x = C.isoWeek(d); return { y: x.y, w: x.w, k: weekSleutel(d) }; }).filter(x => !S.kwplan[x.k]);
+  const stap = ui.kwStap || 'sort';
+  let h = `<div class="bar"><div class="chips">${weken.filter(w => w >= weekSleutel(C.add(C.today(), -21))).map(w => `<button class="chip ${w === wk ? 'on' : ''}" data-kw="${w}"><b>Week ${+w.slice(5)}</b></button>`).join('')}${kan ? volg.slice(0, 2).map(x => `<button class="chip" data-haal="${x.y}|${x.w}"><b>+ Week ${x.w} ophalen</b></button>`).join('') : ''}</div>
+  ${f ? `<div class="seg kwseg"><button class="${stap === 'sort' ? 'on' : ''}" data-kst="sort">1 · Sorteren</button><button class="${stap === 'in' ? 'on' : ''}" data-kst="in">2 · Indelen</button></div>` : ''}</div>`;
   if (!f) h += `<div class="empty">Nog geen folderplanning. ${kan ? 'Tik op "Week ophalen" of kies de pdf hieronder.' : 'De beheerder zet hem klaar.'}</div>`;
-  else {
-    const plek = p.plek || {}, klaar = p.klaar || {}; const toonAlles = !!ui.kwAlles;
-    const items = f.items.filter(i => toonAlles || i.soort === 'kw'); const kwN = f.items.filter(i => i.soort === 'kw').length; const ingedeeld = f.items.filter(i => i.soort === 'kw' && plek[i.id]).length;
-    h += `<div class="blk"><h2 style="margin:0">Week ${f.week}${f.thema ? ' · ' + esc(f.thema) : ''}</h2><p class="small">${f.van ? `${C.fmtDag(f.van)} t/m ${C.fmtDag(f.tm)} · ` : ''}${kwN} KW-acties · <b class="${ingedeeld < kwN ? 'oranje' : 'groen'}">${ingedeeld} ingedeeld</b></p>
-    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm sec" id="kwAlles">${toonAlles ? 'Alleen KW' : `Ook vers, diepvries en brood (${f.items.length - kwN})`}</button><button class="btn sm sec" id="kwDeel">📤 Lijst per plek delen</button>${kwPlekken().some(x => x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg) ? '<button class="btn sm sec" id="kwPrint">🖨️ Printen</button>' : ''}</div></div>`;
-    h += kwTekeningen(wk, kan);
-    const groepen = [['', 'Nog geen plek']].concat(kwPlekken().map(x => [x.naam, x.naam])); const bekend = new Set(kwPlekken().map(x => x.naam));
-    for (const [pk, titel] of groepen) {
-      const l = items.filter(i => { const v = plek[i.id] || ''; return pk === '' ? !v || !bekend.has(v) : v === pk; }); if (!l.length) continue;
-      h += `<div class="grp"><span>${esc(titel)}</span><small>${l.length}${pk ? ` · ${l.filter(i => kwKlaar(wk, i.id)).length} staat erin` : ''}</small></div>`;
-      for (const it of l) {
-        const ver = it.soort === 'kw' ? kwVerwacht(it, f, pk) : null; const vg = it.soort === 'kw' ? kwVorige(it, wk) : null;
-        h += `<div class="card kwit ${it.soort !== 'kw' ? 'kwvers' : ''}"><div style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1"><div class="nm">${esc(it.naam)}${it.extra ? ' <span class="lbl uit">Extra</span>' : ''}${kan ? ` <button class="lbl info kwsrt" data-ks="${it.id}">${(KW_SOORT.find(x => x[0] === it.soort) || ['', 'KW'])[1]} ▾</button>` : it.soort !== 'kw' ? ` <span class="lbl info">${odNaam(it.soort === 'diep' ? 'diep' : it.soort === 'brood' ? 'brood' : 'vers')}</span>` : ''}</div>
-        <div class="small">${[it.variant, it.inhoud].filter(Boolean).map(esc).join(' · ')}</div>
-        <div class="small"><b>${it.prijs.length ? '€ ' + it.prijs.map(x => x.toFixed(2).replace('.', ',')).join(' – ') : ''}${it.mech ? ' ' + esc(it.mech) : ''}</b>${it.bijz ? ' · ' + esc(it.bijz) : ''} · pag ${esc((it.pag || '').split(' ')[0])}${it.groot ? ' · grote plek' : it.klein ? ' · kleine plek' : ''}</div>
-        ${ver && ver.geen ? (vg && vg.verk ? `<div class="small">Verwacht ±${C.fmt(Math.round(vg.verk * (plekF(pk) > 0 ? plekF(pk) / Math.max(0.1, plekF(vg.plek) || 1) : 0)))} st (zoals vorige keer)</div>` : '<div class="small">Geen verkoop bekend van deze artikelnummers</div>') : ver ? `<div class="small">${ver.uit ? 'Niet bestellen' : `Verwacht ±${C.fmt(Math.round(ver.st))} st${ver.he ? ` (${C.fmt(Math.ceil(ver.he))} HE)` : ''} · ${ver.n} art.`}</div>` : it.soort === 'kw' ? '<div class="small">Nog niet in het KW-bestelboek gevonden</div>' : ''}
-        ${vg ? `<div class="small">Vorige keer wk ${vg.week}${vg.plek ? ': ' + esc(vg.plek) : ''}${vg.verk !== null ? ` · ${C.fmt(Math.round(vg.verk))} verkocht` : ''}</div>` : ''}</div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${kan ? `<button class="btn sm ${pk ? 'sec' : ''}" data-kp="${it.id}">${pk ? 'Plek' : 'Kies plek'}</button>` : ''}${pk && plekF(pk) > 0 && plekVan(pk) ? `<button class="btn sm ${kwKlaar(wk, it.id) ? 'groenk' : 'sec'}" data-kk="${it.id}">${kwKlaar(wk, it.id) ? '✓ Staat' : 'Staat erin?'}</button>` : ''}</div></div></div>`;
+  else if (stap === 'sort') {
+    const toonAlles = !!ui.kwAlles; const alle = f.items.filter(i => toonAlles || i.soort === 'kw'); const kwL = f.items.filter(i => i.soort === 'kw');
+    const klaarN = kwL.filter(i => kwStatus(p, i.id)).length; const items = ui.kwOpen ? alle.filter(i => !kwStatus(p, i.id)) : alle;
+    h += `<div class="blk"><h2 style="margin:0">Week ${f.week}${f.thema ? ' · ' + esc(f.thema) : ''}</h2><p class="small">${f.van ? `${C.fmtDag(f.van)} t/m ${C.fmtDag(f.tm)} · ` : ''}<b class="${klaarN < kwL.length ? 'oranje' : 'groen'}">${kwL.length - klaarN ? `${kwL.length - klaarN} van ${kwL.length} nog sorteren` : `✓ alle ${kwL.length} gesorteerd`}</b></p>
+    <p class="small">Tik bij elke actie op de kop waar hij komt, of 📝 voor een notitie zoals "In het vak". Daarna ga je naar <b>2 · Indelen</b>.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm ${ui.kwOpen ? '' : 'sec'}" id="kwOpen">${ui.kwOpen ? '✓ ' : ''}Alleen nog te doen</button><button class="btn sm sec" id="kwAlles">${toonAlles ? 'Alleen KW' : `+ vers, diepvries, brood (${f.items.length - kwL.length})`}</button><button class="btn sm sec" id="kwDeel">📤 Delen</button></div></div>`;
+    h += items.map(it => kwItemKaart(wk, p, it, kan)).join('') || '<div class="empty">✓ Alles gesorteerd. Ga naar 2 · Indelen.</div>';
+  } else {
+    const pls = kwPlekken();
+    if (!ui.kwKop || !pls.some(x => x.naam === ui.kwKop)) {
+      h += `<div class="kwkoppen">${pls.map(x => { const t = x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? S.tafels[x.tafel] : null; const l = f.items.filter(i => (p.plek || {})[i.id] === x.naam); const ind = t ? indelingVan(wk, x.tafel) : { items: [] }; const open = l.filter(i => !(ind.items || []).some(y => y.kw === i.id && (y.cellen || []).length)).length;
+        return `<button class="tafelkaart" data-kkop="${esc(x.naam)}"><b>${esc(x.naam)}</b>${t ? tafelTekening(t, ind, true) : '<span class="small">Nog geen tekening</span>'}<span class="small">${l.length} acties${t && open ? ` · <b class="oranje">${open} nog plaatsen</b>` : l.length && t ? ' · ✓ geplaatst' : ''}</span></button>`; }).join('')}</div>`;
+      const notL = f.items.filter(i => !kwStatus(p, i.id) || kwStatus(p, i.id).notitie).filter(i => i.soort === 'kw');
+      const groep = {}; notL.forEach(i => { const n = (p.notitie || {})[i.id] || 'Nog sorteren'; (groep[n] = groep[n] || []).push(i); });
+      h += Object.keys(groep).sort((a, b) => a === 'Nog sorteren' ? 1 : b === 'Nog sorteren' ? -1 : a < b ? -1 : 1).map(n => `<div class="blk"><h2 style="margin:0 0 6px">${n === 'Nog sorteren' ? '⏳ Nog sorteren' : '📝 ' + esc(n)} <span class="small">(${groep[n].length})</span></h2><div class="small">${groep[n].map(i => esc(i.naam)).join(' · ')}</div></div>`).join('');
+      h += `<div class="blk"><div class="row" style="gap:8px;flex-wrap:wrap">${kwPlekken().some(x => x.tafel && S.tafels[x.tafel]) ? '<button class="btn sm sec" id="kwPrint">🖨️ Printen</button>' : ''}<button class="btn sm sec" id="kwDeel">📤 Delen</button></div></div>`;
+    } else {
+      const x = pls.find(y => y.naam === ui.kwKop); const t = x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? S.tafels[x.tafel] : null;
+      h += `<div class="blk"><button class="link" id="kwTerug">‹ Alle koppen</button></div>`;
+      if (!t) h += `<div class="blk"><h2>${esc(x.naam)}</h2><p class="small">Deze plek heeft nog geen tekening.</p>${mag('instellingen') ? '<button class="btn" id="kwMaakT">Tekening maken</button>' : ''}</div>`;
+      else {
+        h += kwTekeningen(wk, kan, x.naam);
+        const ind = indelingVan(wk, x.tafel); const l = f.items.filter(i => (p.plek || {})[i.id] === x.naam); const open = l.filter(i => !(ind.items || []).some(y => y.kw === i.id && (y.cellen || []).length));
+        const sel = ui.kwSel && ui.kwSel.tafel === x.tafel;
+        h += `<div class="blk"><h2>Nog plaatsen (${open.length})</h2>${open.length ? `<p class="small">Tik een actie aan en daarna de vakjes in de tekening.</p><div class="list">${open.map(i => `<button class="it rijtik" data-plaats="${i.id}"><span style="flex:1;text-align:left"><b>${esc(i.naam)}</b><br><span class="small">${esc([i.variant, i.mech].filter(Boolean).join(' · '))}</span></span><span class="pijl">›</span></button>`).join('')}</div>` : `<p class="small">${l.length ? '✓ Alles van deze kop staat in de tekening.' : 'Nog geen acties naar deze kop gesorteerd (stap 1).'}</p>`}
+        ${(x.lijst || []).length ? `<details class="hbd" ${sel ? '' : ''}><summary>Uit de keuzelijst (${x.lijst.length})</summary><input type="search" id="kplQ" placeholder="🔍 Zoek" style="width:100%"><div class="list" id="kplL">${x.lijst.map((a, i) => `<button class="it rijtik" data-plaatsl="${i}"><span style="flex:1;text-align:left">${esc(a.naam)}<br><span class="small">${esc(a.nr || '')}</span></span><span class="pijl">›</span></button>`).join('')}</div></details>` : ''}
+        <div class="row" style="gap:8px;margin-top:10px"><button class="btn sm sec" id="kwPrint1">🖨️ Deze kop printen</button></div></div>`;
       }
     }
   }
-  if (kan) h += `<div class="blk"><h2>Folderplanning kiezen</h2><p class="small">Of kies de pdf zelf, bijvoorbeeld uit je mail.</p><label class="btn sec" style="display:block;text-align:center">📄 Pdf kiezen<input type="file" id="kwPdf" accept=".pdf" class="hide"></label>${mag('instellingen') ? '<button class="btn sm sec" id="kwPl" style="margin-top:10px">⚙️ Plekken instellen</button>' : ''}</div>`;
+  if (kan) h += `<div class="blk"><h2>Instellen</h2><div class="row" style="gap:8px;flex-wrap:wrap"><label class="btn sm sec">📄 Pdf kiezen<input type="file" id="kwPdf" accept=".pdf" class="hide"></label>${mag('instellingen') ? '<button class="btn sm sec" id="kwPl">⚙️ Plekken</button>' : ''}</div></div>`;
   v.innerHTML = h; tafelPas(v);
   v.querySelectorAll('[data-kw]').forEach(b => b.onclick = () => { ui.kwWeek = b.dataset.kw; ui.kwSel = null; render(); });
+  v.querySelectorAll('[data-kst]').forEach(b => b.onclick = () => { ui.kwStap = b.dataset.kst; ui.kwKop = null; ui.kwSel = null; render(); window.scrollTo(0, 0); });
   v.querySelectorAll('[data-haal]').forEach(hb => hb.onclick = async () => { const [y, w] = hb.dataset.haal.split('|').map(Number); hb.disabled = true; hb.innerHTML = '<b>Ophalen…</b>'; try { ui.kwWeek = await folderOphalen(y, w); toast('✓ Folderplanning opgehaald'); log('acties', `Folderplanning week ${w} opgehaald`); } catch (e) { toast(e.message, 5000); } render(); });
   const pi = $('#kwPdf'); if (pi) pi.onchange = async e => { const fl = e.target.files[0]; e.target.value = ''; if (!fl) return; try { const buf = await fl.arrayBuffer(); const fp = C.parseFolder(await C.pdfVlakken(await pdfjs(), buf)); ui.kwWeek = bewaarFolder(fp, fl.name); toast(`✓ Week ${fp.week}: ${fp.items.filter(i => i.soort === 'kw').length} KW-acties`); log('acties', `Folderplanning week ${fp.week} geüpload`); } catch (x) { toast('Niet gelukt: ' + x.message, 5000); } render(); };
-  const pl = $('#kwPl'); if (pl) pl.onclick = kwPlekkenBewerk;
+  const pl = $('#kwPl'); if (pl) pl.onclick = kwPlekkenBeheer;
   if (!f) return;
-  kwTekenEvents(v, wk, kan);
-  $('#kwAlles').onclick = () => { ui.kwAlles = !ui.kwAlles; render(); };
-  v.querySelectorAll('[data-kp]').forEach(b => b.onclick = () => kwPlekKies(wk, b.dataset.kp));
-  v.querySelectorAll('[data-ks]').forEach(b => b.onclick = () => kwSoortKies(wk, b.dataset.ks));
-  v.querySelectorAll('[data-kk]').forEach(b => b.onclick = () => { const pp = S.kwplan[wk]; const id = b.dataset.kk; pp.klaar = Object.assign({}, pp.klaar || {}); const aan = !kwKlaar(wk, id); if (aan) pp.klaar[id] = mijnNaam(); else delete pp.klaar[id]; kwPlanOpslaan(wk);
-    const pl = kwPlekken().find(x => x.naam === (pp.plek || {})[id]); if (pl && pl.tafel && S.tafels[pl.tafel]) { const ind = JSON.parse(JSON.stringify(indelingVan(wk, pl.tafel))); const it = (ind.items || []).find(x => x.kw === id); if (it) { it.klaar = aan; it.door = aan ? mijnNaam() : null; it.om = aan ? new Date().toISOString() : null; slaIndelingOp(wk, pl.tafel, ind); } }
-    render(true); });
+  const deel = $('#kwDeel'); if (deel) deel.onclick = () => kwDelen(wk);
   const kpb = $('#kwPrint'); if (kpb) kpb.onclick = () => kwPrintKies(wk);
-  $('#kwDeel').onclick = async () => {
-    const pp = S.kwplan[wk]; const t = `Acties KW week ${f.week}${f.thema ? ' – ' + f.thema : ''}\n` + kwPlekken().map(x => { const l = f.items.filter(i => (pp.plek || {})[i.id] === x.naam); const pt = x.tafel ? kwPlankTekst(wk, x) : ''; return l.length ? `\n${x.naam.toUpperCase()}\n` + (pt ? pt + '\n' : '') + l.map(i => `${kwKlaar(wk, i.id) ? '☑' : '☐'} ${i.naam}${i.variant ? ' (' + i.variant + ')' : ''}`).join('\n') : ''; }).join('\n').trim() + (f.items.some(i => i.soort === 'kw' && !(pp.plek || {})[i.id]) ? `\n\nNOG GEEN PLEK\n` + f.items.filter(i => i.soort === 'kw' && !(pp.plek || {})[i.id]).map(i => '☐ ' + i.naam).join('\n') : '');
-    window.__laatsteDeel = t; try { if (navigator.share) await navigator.share({ text: t }); else { await navigator.clipboard.writeText(t); toast('Gekopieerd'); } } catch (e) { }
+  const ko = $('#kwOpen'); if (ko) ko.onclick = () => { ui.kwOpen = !ui.kwOpen; render(); };
+  const ka = $('#kwAlles'); if (ka) ka.onclick = () => { ui.kwAlles = !ui.kwAlles; render(); };
+  v.querySelectorAll('[data-ks]').forEach(b => b.onclick = () => kwSoortKies(wk, b.dataset.ks));
+  v.querySelectorAll('[data-kz]').forEach(b => b.onclick = () => { const id = b.dataset.kz, pk = b.dataset.kzp; kwZetPlek(wk, id, (p.plek || {})[id] === pk ? '' : pk); render(true); });
+  v.querySelectorAll('[data-knt]').forEach(b => b.onclick = () => kwNotitieKies(wk, b.dataset.knt));
+  v.querySelectorAll('[data-kkop]').forEach(b => b.onclick = () => { ui.kwKop = b.dataset.kkop; ui.kwSel = null; render(); window.scrollTo(0, 0); });
+  const kt = $('#kwTerug'); if (kt) kt.onclick = () => { ui.kwKop = null; ui.kwSel = null; render(); window.scrollTo(0, 0); };
+  const mt = $('#kwMaakT'); if (mt) mt.onclick = () => kwPlekBewerk(ui.kwKop);
+  kwTekenEvents(v, wk, kan);
+  const x = kwPlekken().find(y => y.naam === ui.kwKop);
+  v.querySelectorAll('[data-plaats]').forEach(b => b.onclick = () => { const it = f.items.find(i => i.id === b.dataset.plaats); const ind = JSON.parse(JSON.stringify(indelingVan(wk, x.tafel))); ind.items = ind.items || []; let j = ind.items.findIndex(y => y.kw === it.id); if (j < 0) { ind.items.push({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: [], aantal: '', opm: [it.mech, it.variant].filter(Boolean).join(' · '), kleur: ind.items.length % TKLEUR.length, klaar: false, kw: it.id }); j = ind.items.length - 1; slaIndelingOp(wk, x.tafel, ind); } ui.kwSel = { tafel: x.tafel, idx: j }; render(true); window.scrollTo(0, 0); });
+  v.querySelectorAll('[data-plaatsl]').forEach(b => b.onclick = () => { const a = x.lijst[+b.dataset.plaatsl]; const key = a.nr && M.art['kw:' + a.nr] ? 'kw:' + a.nr : null; const ind = JSON.parse(JSON.stringify(indelingVan(wk, x.tafel))); ind.items = ind.items || []; let j = ind.items.findIndex(y => y.lijst && y.naam === a.naam); if (j < 0) { ind.items.push({ naam: a.naam, artikelen: key ? [{ key, naam: M.art[key].naam, nr: M.art[key].nr }] : a.nr ? [{ naam: a.naam, nr: a.nr }] : [], cellen: [], aantal: '', opm: '', kleur: ind.items.length % TKLEUR.length, klaar: false, lijst: true }); j = ind.items.length - 1; slaIndelingOp(wk, x.tafel, ind); } ui.kwSel = { tafel: x.tafel, idx: j }; render(true); window.scrollTo(0, 0); });
+  const kq = $('#kplQ'); if (kq) kq.oninput = e => { const q = e.target.value.toLowerCase(); v.querySelectorAll('#kplL [data-plaatsl]').forEach(y => y.style.display = !q || y.textContent.toLowerCase().includes(q) ? '' : 'none'); };
+  const p1 = $('#kwPrint1'); if (p1) p1.onclick = () => kwPrint(wk, [x], !!ls.get('cba-kwprintbc'));
+}
+async function kwDelen(wk) {
+  const p = S.kwplan[wk]; const f = p.folder; const kwL = f.items.filter(i => i.soort === 'kw');
+  let t = `Acties KW week ${f.week}${f.thema ? ' – ' + f.thema : ''}\n`;
+  for (const x of kwPlekken()) { const l = kwL.filter(i => (p.plek || {})[i.id] === x.naam); if (!l.length) continue; const pt = x.tafel ? kwPlankTekst(wk, x) : ''; t += `\n${x.naam.toUpperCase()}\n` + (pt ? pt + '\n' : '') + l.map(i => `${kwKlaar(wk, i.id) ? '☑' : '☐'} ${i.naam}${i.variant ? ' (' + i.variant + ')' : ''}`).join('\n') + '\n'; }
+  const not = {}; kwL.filter(i => !kwStatus(p, i.id) || kwStatus(p, i.id).notitie).forEach(i => { const n = (p.notitie || {})[i.id] || 'NOG SORTEREN'; (not[n] = not[n] || []).push(i); });
+  for (const n of Object.keys(not).sort((a, b) => a === 'NOG SORTEREN' ? 1 : b === 'NOG SORTEREN' ? -1 : 0)) t += `\n${n.toUpperCase()}\n` + not[n].map(i => '☐ ' + i.naam).join('\n') + '\n';
+  t = t.trim(); window.__laatsteDeel = t; try { if (navigator.share) await navigator.share({ text: t }); else { await navigator.clipboard.writeText(t); toast('Gekopieerd'); } } catch (e) { }
+}
+function kwPlekkenOpslaan(l) { const w = JSON.parse(JSON.stringify(S.inst || {})); w.kwPlekken = l; return saveInst(w); }
+function kwPlekkenBeheer() {
+  const pct = f => { f = C.num(f); return f === 1 ? 'normaal' : f === 2 ? 'dubbel' : f > 1 ? Math.round((f - 1) * 100) + '% meer' : Math.round((1 - f) * 100) + '% minder'; };
+  const ov = sheet(`<h2 style="margin:0">Plekken</h2><p class="small">De vaste plekken in de winkel waar KW-acties komen. Tik op een plek om hem aan te passen.</p><div class="list">${kwPlekken().map(x => { const t = x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? S.tafels[x.tafel] : null; return `<button class="it rijtik" data-pb="${esc(x.naam)}"><span style="flex:1;text-align:left"><b>🗂️ ${esc(x.naam)}</b><br><span class="small">${pct(x.factor)}${t ? ` · tekening ${t.rijen}×${t.kol}` : ' · nog geen tekening'}${(x.lijst || []).length ? ` · keuzelijst ${x.lijst.length}` : ''}</span></span><span class="pijl">›</span></button>`; }).join('')}</div>
+  <button class="btn sec" id="pbN" style="width:100%;margin-top:10px">+ Plek toevoegen</button><button class="btn" data-x style="width:100%;margin-top:8px">Klaar</button>`, (e, o) => { const b = e.target.closest('[data-pb]'); if (b) { o.remove(); kwPlekBewerk(b.dataset.pb); } });
+  ov.querySelector('#pbN').onclick = async () => { ov.remove(); let n = 'Nieuwe plek', i = 2; while (kwPlekken().some(x => x.naam === n)) n = 'Nieuwe plek ' + i++; await kwPlekkenOpslaan(kwPlekken().concat([{ naam: n, factor: 1.3 }])); kwPlekBewerk(n, true); };
+}
+function kwPlekBewerk(naam, nieuw) {
+  const FAC = [[1, 'Normaal'], [1.15, '15% meer'], [1.3, '30% meer'], [1.5, '50% meer'], [2, 'Dubbel']];
+  const ov = sheet('<div id="pbx"></div>');
+  const teken = () => {
+    const l = kwPlekken(); const x = l.find(y => y.naam === naam); if (!x) { ov.remove(); return; } const t = x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? S.tafels[x.tafel] : null;
+    ov.querySelector('#pbx').innerHTML = `<button class="link" id="pbT">‹ Alle plekken</button><h2 style="margin:6px 0 0">${esc(x.naam)}</h2>
+    <label class="small" style="display:block;margin-top:10px">Naam</label><input type="text" id="pbNaam" value="${esc(x.naam)}" style="width:100%">
+    <label class="small" style="display:block;margin-top:12px">Verkoopt hier</label><div class="chips2" id="pbF">${FAC.map(([f, n]) => `<button type="button" class="${Math.abs(C.num(x.factor) - f) < 0.01 ? 'aan' : ''}" data-f="${f}">${n}</button>`).join('')}</div>
+    <label class="small" style="display:block;margin-top:12px">Tekening</label>${t ? `<div class="pbmini">${tafelTekening(t, { items: [] }, true)}</div><p class="small">${t.rijen} planken × ${t.kol} vakken${(t.vast || []).length ? ` · ${t.vast.length} vast` : ''}</p><button class="btn sm sec" id="pbTk">✏️ Aanpassen</button>` : '<button class="btn sm" id="pbTk">+ Tekening maken</button>'}
+    <label class="small" style="display:block;margin-top:12px">Keuzelijst</label><p class="small">${(x.lijst || []).length ? `${x.lijst.length} artikelen (bijv. de euro-koopjes)` : 'Leeg. Handig voor bijvoorbeeld de euro-koopjes.'}</p><button class="btn sm sec" id="pbL">📋 ${(x.lijst || []).length ? 'Bekijken' : 'Vullen'}</button>
+    <button class="btn sec" id="pbW" style="width:100%;margin-top:20px;color:#d32f2f;border-color:#d32f2f">Plek verwijderen</button>`;
+    const q = s => ov.querySelector(s);
+    const bewaar = async (fn, opnieuw = true) => { const l2 = JSON.parse(JSON.stringify(kwPlekken())); const y = l2.find(z => z.naam === naam); fn(y, l2); await kwPlekkenOpslaan(l2); if (opnieuw) teken(); };
+    q('#pbT').onclick = () => { ov.remove(); kwPlekkenBeheer(); };
+    q('#pbNaam').onchange = async e => { const nn = e.target.value.trim(); if (!nn || nn === naam) return; if (kwPlekken().some(y => y.naam === nn)) { toast('Die naam bestaat al'); e.target.value = naam; return; } const oud = naam;
+      await bewaar(y => { y.naam = nn; }, false); naam = nn;
+      for (const wk of Object.keys(S.kwplan || {})) { const p = S.kwplan[wk]; let a = false; const pl = Object.assign({}, p.plek || {}); for (const id in pl) if (pl[id] === oud) { pl[id] = nn; a = true; } if (a) { p.plek = pl; kwPlanOpslaan(wk); } }
+      const x2 = kwPlekken().find(y => y.naam === nn); const t2 = x2 && x2.tafel && S.tafels[x2.tafel]; if (t2) { const d = Object.assign({}, t2, { naam: nn }); delete d.id; write('tafels', [{ id: x2.tafel, data: d }]); }
+      if (ui.kwKop === oud) ui.kwKop = nn; teken(); };
+    q('#pbF').onclick = e => { const b = e.target.closest('[data-f]'); if (b) bewaar(y => { y.factor = +b.dataset.f; }); };
+    q('#pbTk').onclick = () => tafelBewerk(t, { kop: true, voor: { naam: x.naam, rijen: 4, kol: 4, kw: true }, klaar: id => { bewaar(y => { y.tafel = id; }); } });
+    q('#pbL').onclick = () => { const y = JSON.parse(JSON.stringify(x)); kwLijstKeuze(ov, y, async () => { ov.querySelector('.sheetIn').innerHTML = '<div id="pbx"></div>'; await bewaar(z => { z.lijst = y.lijst || []; }); }); };
+    q('#pbW').onclick = async () => { if (!await bevestig('Plek verwijderen?', `<b>${esc(x.naam)}</b> verdwijnt. Acties die hier stonden komen terug bij "Nog sorteren".`, 'Verwijderen', 'Annuleren')) return; const l2 = kwPlekken().filter(y => y.naam !== naam); await kwPlekkenOpslaan(l2); if (x.tafel && S.tafels[x.tafel]) { const d = Object.assign({}, S.tafels[x.tafel], { weg: true }); delete d.id; write('tafels', [{ id: x.tafel, data: d }]); } ov.remove(); render(); };
   };
+  teken();
 }
 function kwPlekKies(wk, id) {
   const p = S.kwplan[wk]; const it = p.folder.items.find(i => i.id === id); const vg = kwVorige(it, wk); const nu = (p.plek || {})[id] || '';
@@ -3272,23 +3382,6 @@ function kwNaarTafel(wk, it, oud, nieuw) {
   if (to) { const ind = JSON.parse(JSON.stringify(indelingVan(wk, to))); ind.items = (ind.items || []).filter(x => x.kw !== it.id); slaIndelingOp(wk, to, ind); }
   if (tn) { const ind = JSON.parse(JSON.stringify(indelingVan(wk, tn))); ind.items = (ind.items || []).filter(x => x.kw !== it.id); ind.items.push({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: [], aantal: '', opm: [it.mech, it.variant].filter(Boolean).join(' · '), kleur: ind.items.length % TKLEUR.length, klaar: false, kw: it.id }); slaIndelingOp(wk, tn, ind); }
 }
-function kwPlekkenBewerk() {
-  let l = JSON.parse(JSON.stringify(kwPlekken())).map(x => Object.assign(x, { _oud: x.naam })); const ov = sheet('<div id="kpl"></div>');
-  const teken = () => {
-    ov.querySelector('#kpl').innerHTML = `<h2 style="margin:0">Plekken voor KW-acties</h2><p class="small">Factor = hoeveel meer een actie daar verkoopt dan in het vak (1,3 = 30% meer). Geef een kop een tekening (planken × vakken); dan vul je per vakje in wat erin komt. Vergeet niet op Opslaan te tikken.</p>
-    ${l.map((x, i) => `<div class="kplrij"><input data-pn="${i}" value="${esc(x.naam)}"><input data-pf="${i}" type="number" step="0.05" inputmode="decimal" value="${x.factor}" style="width:70px"><button type="button" class="btn sm sec" data-plk="${i}">📋 ${(x.lijst || []).length || ''}</button><button type="button" class="btn sm sec" data-ptk="${i}">${x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? `✏️ ${S.tafels[x.tafel].rijen}×${S.tafels[x.tafel].kol}` : '+ Tekening'}</button><button class="btn sm sec" data-pw="${i}">✕</button></div>`).join('')}
-    <button class="btn sm sec" id="kplA">+ Plek</button><div class="row" style="margin-top:12px"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="kplS" style="flex:1">Opslaan</button></div>`;
-    const lees = () => l.forEach((x, i) => { x.naam = ov.querySelector(`[data-pn="${i}"]`).value.trim(); x.factor = C.num(ov.querySelector(`[data-pf="${i}"]`).value); });
-    ov.querySelectorAll('[data-plk]').forEach(b => b.onclick = () => { lees(); const x = l[+b.dataset.plk]; kwLijstKeuze(ov, x, () => { ov.querySelector('.sheetIn').innerHTML = '<div id="kpl"></div>'; teken(); }); });
-    ov.querySelectorAll('[data-ptk]').forEach(b => b.onclick = () => { lees(); const x = l[+b.dataset.ptk]; const t = x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? S.tafels[x.tafel] : null; tafelBewerk(t, { kop: true, voor: { naam: x.naam || 'Plek', rijen: 4, kol: 4, kw: true }, klaar: id => { x.tafel = id; teken(); } }); });
-    ov.querySelectorAll('[data-pw]').forEach(b => b.onclick = () => { lees(); l.splice(+b.dataset.pw, 1); teken(); });
-    ov.querySelector('#kplA').onclick = () => { lees(); l.push({ naam: '', factor: 1 }); teken(); };
-    ov.querySelector('#kplS').onclick = () => { lees(); const hernoem = {}; l.forEach(x => { if (x._oud && x.naam && x._oud !== x.naam) hernoem[x._oud] = x.naam; }); l = l.filter(x => x.naam).map(x => { const y = Object.assign({}, x); delete y._oud; return y; });
-      for (const wk of Object.keys(S.kwplan || {})) { const p = S.kwplan[wk]; let ander = false; const pl = Object.assign({}, p.plek || {}); for (const id in pl) if (hernoem[pl[id]]) { pl[id] = hernoem[pl[id]]; ander = true; } if (ander) { p.plek = pl; kwPlanOpslaan(wk); } }
-      const w = JSON.parse(JSON.stringify(S.inst || {})); w.kwPlekken = l; saveInst(w); ov.remove(); render(); };
-  };
-  teken();
-}
 function kwKlaar(wk, id) { const p = S.kwplan[wk]; if ((p.klaar || {})[id]) return true; const pl = kwPlekken().find(x => x.naam === (p.plek || {})[id]); if (!pl || !pl.tafel) return false; const it = (indelingVan(wk, pl.tafel).items || []).find(x => x.kw === id); return !!(it && it.klaar); }
 const KW_SOORT = [['kw', 'KW'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries']];
 function kwPas(p) { if (!p || !p.folder) return p; const o = p.soort || {}; for (const it of p.folder.items || []) { if (it.soort0 === undefined) it.soort0 = it.soort; it.soort = o[it.id] || it.soort0; } return p; }
@@ -3298,7 +3391,7 @@ function kwSoortKies(wk, id) {
     const b = e.target.closest('[data-ks2]'); if (!b) return; o.remove(); p.soort = Object.assign({}, p.soort || {}); if (b.dataset.ks2 === it.soort0) delete p.soort[id]; else p.soort[id] = b.dataset.ks2; kwPas(p); kwPlanOpslaan(wk); render(true);
   });
 }
-function kwTegel() { const nu = weekSleutel(C.today()); const w = Object.keys(S.kwplan || {}).sort().find(x => x >= nu); if (!w) return 'Nog geen folderplanning'; kwPas(S.kwplan[w]); const f = S.kwplan[w].folder; const kw = f.items.filter(i => i.soort === 'kw'); const ing = kw.filter(i => (S.kwplan[w].plek || {})[i.id]).length; return `<b class="${ing < kw.length ? 'oranje' : ''}">Week ${f.week}: ${ing} van ${kw.length} ingedeeld</b>`; }
+function kwTegel() { const nu = weekSleutel(C.today()); const w = Object.keys(S.kwplan || {}).sort().find(x => x >= nu); if (!w) return 'Nog geen folderplanning'; kwPas(S.kwplan[w]); const f = S.kwplan[w].folder; const kw = f.items.filter(i => i.soort === 'kw'); kwNormPlan(S.kwplan[w]); const ing = kw.filter(i => kwStatus(S.kwplan[w], i.id)).length; return `<b class="${ing < kw.length ? 'oranje' : ''}">Week ${f.week}: ${ing} van ${kw.length} gesorteerd</b>`; }
 /* ---------- 1.16: plekken tekenen ---------- */
 function kwPlekVanTafel(tid) { return kwPlekken().find(p => p.tafel === tid); }
 function kwTekenItem(wk, it, plekNaam, tid, cel) {
@@ -3350,8 +3443,8 @@ function kwSelTekening(t, ind, idx) {
   const R = Math.max(1, +t.rijen || 2), K = Math.max(1, +t.kol || 3); const eig = new Array(R * K).fill(-1); (ind.items || []).forEach((it, i) => (it.cellen || []).forEach(c => { if (c < R * K) eig[c] = i; })); const vast = new Set(t.vast || []);
   return `<div class="tafel kies" style="grid-template-columns:repeat(${K},1fr);grid-template-rows:repeat(${R},48px)">${eig.map((o, c) => vast.has(c) && o < 0 ? `<div class="vak vast"><span>🔒</span></div>` : `<button type="button" class="vak ${o === idx ? 'selaan' : o >= 0 ? 'bezetander' : 'leeg'}" data-sc="${c}" style="${o >= 0 ? 'background:' + TKLEUR[(ind.items[o].kleur ?? o) % TKLEUR.length] : ''}">${o === idx ? '✓' : ''}</button>`).join('')}</div>`;
 }
-function kwTekeningen(wk, kan) {
-  const p = S.kwplan[wk]; const pls = kwPlekken().filter(x => x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg); if (!pls.length) return kan && mag('instellingen') ? '<div class="blk"><p class="small">Tip: geef een kop een tekening (⚙️ Plekken instellen onderaan). Dan kun je per vakje invullen wat erin komt.</p></div>' : '';
+function kwTekeningen(wk, kan, enkel) {
+  const p = S.kwplan[wk]; const pls = kwPlekken().filter(x => x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg && (!enkel || x.naam === enkel)); if (!pls.length) return kan && mag('instellingen') ? '<div class="blk"><p class="small">Tip: geef een kop een tekening (⚙️ Plekken instellen onderaan). Dan kun je per vakje invullen wat erin komt.</p></div>' : '';
   return pls.map(x => {
     const t = S.tafels[x.tafel]; const ind = indelingVan(wk, x.tafel); const sel = ui.kwSel && ui.kwSel.tafel === x.tafel ? ui.kwSel : null;
     const open = (p.folder.items || []).filter(i => (p.plek || {})[i.id] === x.naam && !(ind.items || []).some(y => y.kw === i.id && (y.cellen || []).length));
@@ -3359,7 +3452,7 @@ function kwTekeningen(wk, kan) {
     return `<div class="blk kwteken" data-kt="${x.tafel}"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">${esc(x.naam)}</h2>${vorige ? `<button class="btn sm sec" data-kvo="${x.tafel}">Indeling van vorige keer</button>` : ''}</div>
     ${sel ? `<div class="kwselbalk"><span>Tik de vakjes voor <b>${esc((ind.items[sel.idx] || {}).naam || '')}</b></span><button class="btn sm" data-kwklaar="1">Klaar</button></div>${kwSelTekening(t, ind, sel.idx)}` : tafelTekening(t, ind)}
     ${!sel && kan ? `<p class="small">${leeg ? 'Tik op een vakje en kies wat erin komt.' : 'Tik op een leeg vakje om iets toe te voegen, of op een blok om het aan te passen.'}</p>` : ''}
-    ${open.length ? `<p class="small">Nog tekenen: ${open.map(i => esc(i.naam)).join(', ')}</p>` : ''}</div>`;
+    ${open.length && !enkel ? `<p class="small">Nog tekenen: ${open.map(i => esc(i.naam)).join(', ')}</p>` : ''}</div>`;
   }).join('');
 }
 function kwVorigeIndeling(wk, tid, alleenCheck) {
