@@ -433,6 +433,11 @@ ol.stappen{padding-left:20px;margin:6px 0 12px}ol.stappen li{margin:4px 0}
 .kwit .nm{font-weight:800;font-size:16px}.kwit.kwvers{opacity:.75}.btn.groenk{background:#2e7d32;color:#fff;border-color:#2e7d32}
 .rijtik.on{font-weight:800;color:var(--oranje)}
 .kplrij{display:grid;grid-template-columns:1fr 70px 1fr auto;gap:6px;margin:6px 0}.kplrij input,.kplrij select{min-width:0}
+
+/* 1.16 */
+.kwselbalk{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--oranje-licht,#fdebd6);color:#5a3200;border-radius:10px;padding:8px 10px;margin:8px 0;font-size:14px}
+.tafel.kies .vak.selaan{outline:3px solid #222;outline-offset:-3px;color:#fff;font-weight:800;font-size:18px}.tafel.kies .vak.bezetander{opacity:.45}
+.kwteken .tafel{margin-top:8px}.kplrij{grid-template-columns:1fr 64px auto auto}
 </style>
 </head>
 <body>
@@ -1043,7 +1048,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.15';
+const VERSIE = '1.16';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -1172,7 +1177,7 @@ async function sync(full) {
       rest(wq('medewerkers?select=id,naam,rol,rechten,actief,heeft_pin,email&order=naam.asc')), getAll(wq('assortiment?select=*')), rest(wq('notities?select=*')), rest(`winkels?id=eq.${W}&select=koppelcode,code_tot,naam,plaats`),
       rest(wq('eigen_artikelen?select=id,data')).catch(() => []), rest(wq('schap_min?select=bron,nr,min')).catch(() => []),
       rest(wq('overdracht?klaar=eq.false&select=*')).catch(() => []), rest(wq(`levercheck?lever=gte.${C.add(C.today(), -35)}&select=*`)).catch(() => []), getAll(wq(`derving?dag=gte.${C.add(C.today(), -60)}&select=*`)).catch(() => []),
-      rest(wq('prijs_ok?select=bron,nr,prijs')).catch(() => []), rest(wq('tafels?select=id,data')).catch(() => []), rest(wq(`tafel_indeling?week=gte.${weekSleutel(C.add(C.today(), -7))}&select=week,tafel_id,data`)).catch(() => []),
+      rest(wq('prijs_ok?select=bron,nr,prijs')).catch(() => []), rest(wq('tafels?select=id,data')).catch(() => []), rest(wq(`tafel_indeling?week=gte.${weekSleutel(C.add(C.today(), -63))}&select=week,tafel_id,data`)).catch(() => []),
       rest(wq(`leeg?dag=gte.${C.add(C.today(), -35)}&select=bron,nr,dag,door`)).catch(() => []), rest(wq('kw_acties?select=week,data&order=week.asc')).catch(() => [])
     ]);
     S.overdracht = {}; ovd.forEach(r => S.overdracht[r.id] = r);
@@ -3159,9 +3164,11 @@ function bewaarFolder(f, bron) {
 function kwPlanOpslaan(wk) { const p = S.kwplan[wk]; const d = Object.assign({}, p); delete d.week; write('kw_acties', [{ week: wk, data: d }]); }
 function kwKeys(it) { return (it.nrs || []).map(n => /^\d{6}$/.test(n) ? 'kw:' + n : null).filter(k => k && M.art[k]).concat((it.nrs || []).filter(n => /^\d{8,14}$/.test(n)).map(n => { const k = vindCode(n); return k ? k.key || k : null; }).filter(k => k && M.art[k])); }
 function kwVerwacht(it, f, plek) {
-  const keys = [...new Set(kwKeys(it))]; if (!keys.length || !f.van) return null; const pl = kwPlekken().find(p => p.naam === plek); const fac = pl ? +pl.factor : 1;
-  let st = 0, he = 0; for (const k of keys) { let v = 0; for (let d = f.van; d <= (f.tm || C.add(f.van, 6)); d = C.add(d, 1)) v += C.verwacht(M, k, d); st += v; const a = M.art[k]; he += v / (a.perHE && a.he > 0 ? a.he : 1); }
-  return { st: st * (fac || 1), he: he * (fac || 1), n: keys.length, uit: fac === 0 };
+  let keys = [...new Set(kwKeys(it))].filter(k => M.keys[k]); const n0 = kwKeys(it).length;
+  const alt = []; for (const nr of it.nrs || []) for (const k of Object.values(S.kassa || {})) if (k.b === nr || k.ean === nr) { const kk = 'e:' + k.ean; if (M.keys[kk] && !alt.includes(kk)) alt.push(kk); }
+  keys = keys.concat(alt); if (!keys.length) return n0 || (it.nrs || []).length ? { st: 0, he: 0, n: n0, geen: true } : null; if (!f.van) return null; const pl = kwPlekken().find(p => p.naam === plek); const fac = pl ? +pl.factor : 1;
+  let st = 0, he = 0; for (const k of keys) { let v = 0; for (let d = f.van; d <= (f.tm || C.add(f.van, 6)); d = C.add(d, 1)) v += C.verwacht(M, k, d); st += v; const a = M.art[k]; he += v / (a && a.perHE && a.he > 0 ? a.he : 1); }
+  return { st: st * (fac || 1), he: he * (fac || 1), n: Math.max(n0, keys.length), uit: fac === 0 };
 }
 function kwVorige(it, wk) {
   const nrs = new Set(it.nrs || []); if (!nrs.size) return null;
@@ -3190,33 +3197,37 @@ function renderKwActies() {
     const items = f.items.filter(i => toonAlles || i.soort === 'kw'); const kwN = f.items.filter(i => i.soort === 'kw').length; const ingedeeld = f.items.filter(i => i.soort === 'kw' && plek[i.id]).length;
     h += `<div class="blk"><h2 style="margin:0">Week ${f.week}${f.thema ? ' · ' + esc(f.thema) : ''}</h2><p class="small">${f.van ? `${C.fmtDag(f.van)} t/m ${C.fmtDag(f.tm)} · ` : ''}${kwN} KW-acties · <b class="${ingedeeld < kwN ? 'oranje' : 'groen'}">${ingedeeld} ingedeeld</b></p>
     <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm sec" id="kwAlles">${toonAlles ? 'Alleen KW' : `Ook vers, diepvries en brood (${f.items.length - kwN})`}</button><button class="btn sm sec" id="kwDeel">📤 Lijst per plek delen</button></div></div>`;
+    h += kwTekeningen(wk, kan);
     const groepen = [['', 'Nog geen plek']].concat(kwPlekken().map(x => [x.naam, x.naam]));
     for (const [pk, titel] of groepen) {
       const l = items.filter(i => (plek[i.id] || '') === pk); if (!l.length) continue;
-      h += `<div class="grp"><span>${esc(titel)}</span><small>${l.length}${pk ? ` · ${l.filter(i => klaar[i.id]).length} staat erin` : ''}</small></div>`;
+      h += `<div class="grp"><span>${esc(titel)}</span><small>${l.length}${pk ? ` · ${l.filter(i => kwKlaar(wk, i.id)).length} staat erin` : ''}</small></div>`;
       for (const it of l) {
         const ver = it.soort === 'kw' ? kwVerwacht(it, f, pk) : null; const vg = it.soort === 'kw' ? kwVorige(it, wk) : null;
         h += `<div class="card kwit ${it.soort !== 'kw' ? 'kwvers' : ''}"><div style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1"><div class="nm">${esc(it.naam)}${it.extra ? ' <span class="lbl uit">Extra</span>' : ''}${it.soort !== 'kw' ? ` <span class="lbl info">${odNaam(it.soort === 'diep' ? 'diep' : it.soort === 'brood' ? 'brood' : 'vers')}</span>` : ''}</div>
         <div class="small">${[it.variant, it.inhoud].filter(Boolean).map(esc).join(' · ')}</div>
         <div class="small"><b>${it.prijs.length ? '€ ' + it.prijs.map(x => x.toFixed(2).replace('.', ',')).join(' – ') : ''}${it.mech ? ' ' + esc(it.mech) : ''}</b>${it.bijz ? ' · ' + esc(it.bijz) : ''} · pag ${esc((it.pag || '').split(' ')[0])}${it.groot ? ' · grote plek' : it.klein ? ' · kleine plek' : ''}</div>
-        ${ver ? `<div class="small">${ver.uit ? 'Niet bestellen' : `Verwacht ±${C.fmt(Math.round(ver.st))} st${ver.he ? ` (${C.fmt(Math.ceil(ver.he))} HE)` : ''} · ${ver.n} art.`}</div>` : it.soort === 'kw' ? '<div class="small">Nog niet in het KW-bestelboek gevonden</div>' : ''}
+        ${ver && ver.geen ? '<div class="small">Geen verkoop bekend van deze artikelnummers</div>' : ver ? `<div class="small">${ver.uit ? 'Niet bestellen' : `Verwacht ±${C.fmt(Math.round(ver.st))} st${ver.he ? ` (${C.fmt(Math.ceil(ver.he))} HE)` : ''} · ${ver.n} art.`}</div>` : it.soort === 'kw' ? '<div class="small">Nog niet in het KW-bestelboek gevonden</div>' : ''}
         ${vg ? `<div class="small">Vorige keer wk ${vg.week}${vg.plek ? ': ' + esc(vg.plek) : ''}${vg.verk !== null ? ` · ${C.fmt(Math.round(vg.verk))} verkocht` : ''}</div>` : ''}</div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${kan ? `<button class="btn sm ${pk ? 'sec' : ''}" data-kp="${it.id}">${pk ? 'Plek' : 'Kies plek'}</button>` : ''}${pk && pk !== 'Niet bestellen' ? `<button class="btn sm ${klaar[it.id] ? 'groenk' : 'sec'}" data-kk="${it.id}">${klaar[it.id] ? '✓ Staat' : 'Staat erin?'}</button>` : ''}</div></div></div>`;
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${kan ? `<button class="btn sm ${pk ? 'sec' : ''}" data-kp="${it.id}">${pk ? 'Plek' : 'Kies plek'}</button>` : ''}${pk && pk !== 'Niet bestellen' ? `<button class="btn sm ${kwKlaar(wk, it.id) ? 'groenk' : 'sec'}" data-kk="${it.id}">${kwKlaar(wk, it.id) ? '✓ Staat' : 'Staat erin?'}</button>` : ''}</div></div></div>`;
       }
     }
   }
   if (kan) h += `<div class="blk"><h2>Folderplanning kiezen</h2><p class="small">Of kies de pdf zelf, bijvoorbeeld uit je mail.</p><label class="btn sec" style="display:block;text-align:center">📄 Pdf kiezen<input type="file" id="kwPdf" accept=".pdf" class="hide"></label>${mag('instellingen') ? '<button class="btn sm sec" id="kwPl" style="margin-top:10px">⚙️ Plekken instellen</button>' : ''}</div>`;
-  v.innerHTML = h;
-  v.querySelectorAll('[data-kw]').forEach(b => b.onclick = () => { ui.kwWeek = b.dataset.kw; render(); });
+  v.innerHTML = h; tafelPas(v);
+  v.querySelectorAll('[data-kw]').forEach(b => b.onclick = () => { ui.kwWeek = b.dataset.kw; ui.kwSel = null; render(); });
   v.querySelectorAll('[data-haal]').forEach(hb => hb.onclick = async () => { const [y, w] = hb.dataset.haal.split('|').map(Number); hb.disabled = true; hb.innerHTML = '<b>Ophalen…</b>'; try { ui.kwWeek = await folderOphalen(y, w); toast('✓ Folderplanning opgehaald'); log('acties', `Folderplanning week ${w} opgehaald`); } catch (e) { toast(e.message, 5000); } render(); });
   const pi = $('#kwPdf'); if (pi) pi.onchange = async e => { const fl = e.target.files[0]; e.target.value = ''; if (!fl) return; try { const buf = await fl.arrayBuffer(); const fp = C.parseFolder(await C.pdfVlakken(await pdfjs(), buf)); ui.kwWeek = bewaarFolder(fp, fl.name); toast(`✓ Week ${fp.week}: ${fp.items.filter(i => i.soort === 'kw').length} KW-acties`); log('acties', `Folderplanning week ${fp.week} geüpload`); } catch (x) { toast('Niet gelukt: ' + x.message, 5000); } render(); };
   const pl = $('#kwPl'); if (pl) pl.onclick = kwPlekkenBewerk;
   if (!f) return;
+  kwTekenEvents(v, wk, kan);
   $('#kwAlles').onclick = () => { ui.kwAlles = !ui.kwAlles; render(); };
   v.querySelectorAll('[data-kp]').forEach(b => b.onclick = () => kwPlekKies(wk, b.dataset.kp));
-  v.querySelectorAll('[data-kk]').forEach(b => b.onclick = () => { const pp = S.kwplan[wk]; pp.klaar = Object.assign({}, pp.klaar || {}); if (pp.klaar[b.dataset.kk]) delete pp.klaar[b.dataset.kk]; else pp.klaar[b.dataset.kk] = mijnNaam(); kwPlanOpslaan(wk); render(true); });
+  v.querySelectorAll('[data-kk]').forEach(b => b.onclick = () => { const pp = S.kwplan[wk]; const id = b.dataset.kk; pp.klaar = Object.assign({}, pp.klaar || {}); const aan = !kwKlaar(wk, id); if (aan) pp.klaar[id] = mijnNaam(); else delete pp.klaar[id]; kwPlanOpslaan(wk);
+    const pl = kwPlekken().find(x => x.naam === (pp.plek || {})[id]); if (pl && pl.tafel && S.tafels[pl.tafel]) { const ind = JSON.parse(JSON.stringify(indelingVan(wk, pl.tafel))); const it = (ind.items || []).find(x => x.kw === id); if (it) { it.klaar = aan; it.door = aan ? mijnNaam() : null; it.om = aan ? new Date().toISOString() : null; slaIndelingOp(wk, pl.tafel, ind); } }
+    render(true); });
   $('#kwDeel').onclick = async () => {
-    const pp = S.kwplan[wk]; const t = `Acties KW week ${f.week}${f.thema ? ' – ' + f.thema : ''}\n` + kwPlekken().map(x => { const l = f.items.filter(i => (pp.plek || {})[i.id] === x.naam); return l.length ? `\n${x.naam.toUpperCase()}\n` + l.map(i => `☐ ${i.naam}${i.variant ? ' (' + i.variant + ')' : ''}`).join('\n') : ''; }).join('\n').trim() + (f.items.some(i => i.soort === 'kw' && !(pp.plek || {})[i.id]) ? `\n\nNOG GEEN PLEK\n` + f.items.filter(i => i.soort === 'kw' && !(pp.plek || {})[i.id]).map(i => '☐ ' + i.naam).join('\n') : '');
+    const pp = S.kwplan[wk]; const t = `Acties KW week ${f.week}${f.thema ? ' – ' + f.thema : ''}\n` + kwPlekken().map(x => { const l = f.items.filter(i => (pp.plek || {})[i.id] === x.naam); const pt = x.tafel ? kwPlankTekst(wk, x) : ''; return l.length ? `\n${x.naam.toUpperCase()}\n` + (pt ? pt + '\n' : '') + l.map(i => `${kwKlaar(wk, i.id) ? '☑' : '☐'} ${i.naam}${i.variant ? ' (' + i.variant + ')' : ''}`).join('\n') : ''; }).join('\n').trim() + (f.items.some(i => i.soort === 'kw' && !(pp.plek || {})[i.id]) ? `\n\nNOG GEEN PLEK\n` + f.items.filter(i => i.soort === 'kw' && !(pp.plek || {})[i.id]).map(i => '☐ ' + i.naam).join('\n') : '');
     window.__laatsteDeel = t; try { if (navigator.share) await navigator.share({ text: t }); else { await navigator.clipboard.writeText(t); toast('Gekopieerd'); } } catch (e) { }
   };
 }
@@ -3234,20 +3245,115 @@ function kwNaarTafel(wk, it, oud, nieuw) {
   if (tn) { const ind = JSON.parse(JSON.stringify(indelingVan(wk, tn))); ind.items = (ind.items || []).filter(x => x.kw !== it.id); ind.items.push({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: [], aantal: '', opm: [it.mech, it.variant].filter(Boolean).join(' · '), kleur: ind.items.length % TKLEUR.length, klaar: false, kw: it.id }); slaIndelingOp(wk, tn, ind); }
 }
 function kwPlekkenBewerk() {
-  let l = JSON.parse(JSON.stringify(kwPlekken())); const tafels = Object.values(S.tafels || {}).filter(t => !t.weg);
-  const ov = sheet('<div id="kpl"></div>');
+  let l = JSON.parse(JSON.stringify(kwPlekken())); const ov = sheet('<div id="kpl"></div>');
   const teken = () => {
-    ov.querySelector('#kpl').innerHTML = `<h2 style="margin:0">Plekken voor KW-acties</h2><p class="small">Factor = hoeveel meer een actie daar verkoopt dan in het vak (1,3 = 30% meer). Koppel een plek aan een actietafel om hem daar te kunnen tekenen.</p>
-    ${l.map((x, i) => `<div class="kplrij"><input data-pn="${i}" value="${esc(x.naam)}"><input data-pf="${i}" type="number" step="0.05" inputmode="decimal" value="${x.factor}" style="width:70px"><select data-pt="${i}"><option value="">geen tafel</option>${tafels.map(t => `<option value="${t.id}" ${x.tafel === t.id ? 'selected' : ''}>${esc(t.naam || 'Tafel')}</option>`).join('')}</select><button class="btn sm sec" data-pw="${i}">✕</button></div>`).join('')}
+    ov.querySelector('#kpl').innerHTML = `<h2 style="margin:0">Plekken voor KW-acties</h2><p class="small">Factor = hoeveel meer een actie daar verkoopt dan in het vak (1,3 = 30% meer). Geef een kop een tekening (planken × vakken); dan vul je per vakje in wat erin komt. Vergeet niet op Opslaan te tikken.</p>
+    ${l.map((x, i) => `<div class="kplrij"><input data-pn="${i}" value="${esc(x.naam)}"><input data-pf="${i}" type="number" step="0.05" inputmode="decimal" value="${x.factor}" style="width:70px"><button type="button" class="btn sm sec" data-ptk="${i}">${x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? `✏️ ${S.tafels[x.tafel].rijen}×${S.tafels[x.tafel].kol}` : '+ Tekening'}</button><button class="btn sm sec" data-pw="${i}">✕</button></div>`).join('')}
     <button class="btn sm sec" id="kplA">+ Plek</button><div class="row" style="margin-top:12px"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="kplS" style="flex:1">Opslaan</button></div>`;
-    const lees = () => l.forEach((x, i) => { x.naam = ov.querySelector(`[data-pn="${i}"]`).value.trim(); x.factor = C.num(ov.querySelector(`[data-pf="${i}"]`).value); x.tafel = ov.querySelector(`[data-pt="${i}"]`).value || undefined; });
+    const lees = () => l.forEach((x, i) => { x.naam = ov.querySelector(`[data-pn="${i}"]`).value.trim(); x.factor = C.num(ov.querySelector(`[data-pf="${i}"]`).value); });
+    ov.querySelectorAll('[data-ptk]').forEach(b => b.onclick = () => { lees(); const x = l[+b.dataset.ptk]; const t = x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? S.tafels[x.tafel] : null; tafelBewerk(t, { kop: true, voor: { naam: x.naam || 'Plek', rijen: 4, kol: 4, kw: true }, klaar: id => { x.tafel = id; teken(); } }); });
     ov.querySelectorAll('[data-pw]').forEach(b => b.onclick = () => { lees(); l.splice(+b.dataset.pw, 1); teken(); });
     ov.querySelector('#kplA').onclick = () => { lees(); l.push({ naam: '', factor: 1 }); teken(); };
     ov.querySelector('#kplS').onclick = () => { lees(); l = l.filter(x => x.naam); const w = JSON.parse(JSON.stringify(S.inst || {})); w.kwPlekken = l; saveInst(w); ov.remove(); render(); };
   };
   teken();
 }
+function kwKlaar(wk, id) { const p = S.kwplan[wk]; if ((p.klaar || {})[id]) return true; const pl = kwPlekken().find(x => x.naam === (p.plek || {})[id]); if (!pl || !pl.tafel) return false; const it = (indelingVan(wk, pl.tafel).items || []).find(x => x.kw === id); return !!(it && it.klaar); }
 function kwTegel() { const nu = weekSleutel(C.today()); const w = Object.keys(S.kwplan || {}).sort().find(x => x >= nu); if (!w) return 'Nog geen folderplanning'; const f = S.kwplan[w].folder; const kw = f.items.filter(i => i.soort === 'kw'); const ing = kw.filter(i => (S.kwplan[w].plek || {})[i.id]).length; return `<b class="${ing < kw.length ? 'oranje' : ''}">Week ${f.week}: ${ing} van ${kw.length} ingedeeld</b>`; }
+/* ---------- 1.16: plekken tekenen ---------- */
+function kwPlekVanTafel(tid) { return kwPlekken().find(p => p.tafel === tid); }
+function kwTekenItem(wk, it, plekNaam, tid, cel) {
+  const ind = JSON.parse(JSON.stringify(indelingVan(wk, tid))); ind.items = ind.items || [];
+  ind.items.forEach(x => { x.cellen = (x.cellen || []).filter(c => c !== cel); });
+  let i = ind.items.findIndex(x => x.kw === it.id);
+  if (i < 0) { ind.items.push({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: [], aantal: '', opm: [it.mech, it.variant].filter(Boolean).join(' · '), kleur: ind.items.length % TKLEUR.length, klaar: false, kw: it.id }); i = ind.items.length - 1; }
+  ind.items[i].cellen.push(cel); ind.items = ind.items.filter((x, j) => j === i || x.kw || (x.cellen || []).length);
+  slaIndelingOp(wk, tid, ind);
+  const p = S.kwplan[wk]; const oud = (p.plek || {})[it.id] || '';
+  if (oud !== plekNaam) { const ot = kwPlekken().find(x => x.naam === oud); if (ot && ot.tafel && ot.tafel !== tid) { const oi = JSON.parse(JSON.stringify(indelingVan(wk, ot.tafel))); oi.items = (oi.items || []).filter(x => x.kw !== it.id); slaIndelingOp(wk, ot.tafel, oi); } p.plek = Object.assign({}, p.plek || {}, { [it.id]: plekNaam }); kwPlanOpslaan(wk); }
+  return ind.items.findIndex(x => x.kw === it.id);
+}
+function kwVakKies(wk, tid, cel) {
+  const p = S.kwplan[wk]; const f = p.folder; const pl = kwPlekVanTafel(tid); const ind = indelingVan(wk, tid);
+  const getekend = new Set((ind.items || []).filter(x => x.kw && (x.cellen || []).length).map(x => x.kw));
+  const hier = f.items.filter(i => (p.plek || {})[i.id] === pl.naam), rest = f.items.filter(i => i.soort === 'kw' && (p.plek || {})[i.id] !== pl.naam);
+  const rij = i => `<button class="it rijtik" data-vk="${i.id}"><span style="flex:1;text-align:left"><b>${esc(i.naam)}</b>${getekend.has(i.id) ? ' <span class="small">· al getekend</span>' : ''}<br><span class="small">${esc([i.variant, i.mech].filter(Boolean).join(' · '))}${(p.plek || {})[i.id] && (p.plek || {})[i.id] !== pl.naam ? ' · nu: ' + esc(p.plek[i.id]) : ''}</span></span></button>`;
+  const ov = sheet(`<h2 style="margin:0">Wat komt hier?</h2><p class="small">${esc(pl.naam)} · ${plekTekst(S.tafels[tid], [cel])}</p>
+  ${hier.length ? `<h3>Op deze plek</h3><div class="list">${hier.map(rij).join('')}</div>` : ''}<h3>${hier.length ? 'Andere KW-acties' : 'KW-acties van week ' + f.week}</h3><input type="search" id="vkQ" placeholder="🔍 Zoek" style="width:100%"><div class="list" id="vkL">${rest.map(rij).join('')}</div>
+  <button class="btn sec" id="vkT" style="width:100%;margin-top:10px">✏️ Vrije tekst</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`, (e, o) => {
+    const b = e.target.closest('[data-vk]'); if (!b) return; o.remove(); const it = f.items.find(i => i.id === b.dataset.vk);
+    const idx = kwTekenItem(wk, it, pl.naam, tid, cel); ui.kwSel = { tafel: tid, idx }; log('acties', `${pl.naam}: ${it.naam} getekend`); render(true);
+  });
+  ov.querySelector('#vkQ').oninput = e => { const q = e.target.value.toLowerCase(); ov.querySelectorAll('#vkL [data-vk]').forEach(x => x.style.display = !q || x.textContent.toLowerCase().includes(q) ? '' : 'none'); };
+  ov.querySelector('#vkT').onclick = () => {
+    ov.querySelector('.sheetIn').innerHTML = `<h2 style="margin:0">Vrije tekst</h2><input type="text" id="vkN" placeholder="Bijv. Kerstpakketten" style="width:100%;margin:10px 0"><div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="vkS" style="flex:1">Opslaan</button></div>`;
+    ov.querySelector('#vkS').onclick = () => { const n = ov.querySelector('#vkN').value.trim(); if (!n) return; const ind2 = JSON.parse(JSON.stringify(indelingVan(wk, tid))); ind2.items = ind2.items || []; ind2.items.forEach(x => { x.cellen = (x.cellen || []).filter(c => c !== cel); }); ind2.items.push({ naam: n, artikelen: [], cellen: [cel], aantal: '', opm: '', kleur: ind2.items.length % TKLEUR.length, klaar: false }); slaIndelingOp(wk, tid, ind2); ov.remove(); ui.kwSel = { tafel: tid, idx: ind2.items.length - 1 }; render(true); };
+  };
+}
+function kwBlokMenu(wk, tid, idx) {
+  const ind = JSON.parse(JSON.stringify(indelingVan(wk, tid))); const it = ind.items[idx]; if (!it) return; const t = S.tafels[tid];
+  const ov = sheet(`<h2 style="margin:0">${esc(it.naam)}</h2><p class="small">${plekTekst(t, it.cellen)}${it.opm ? ' · ' + esc(it.opm) : ''}</p>
+  <button class="belrij" data-bm="vak"><span class="ic">✏️</span><span><b>Vakjes aanpassen</b><small>Tik vakjes aan of uit</small></span></button>
+  <button class="belrij" data-bm="klaar"><span class="ic">${it.klaar ? '↩️' : '✅'}</span><span><b>${it.klaar ? 'Staat er nog niet' : 'Staat erin'}</b><small>${it.klaar && it.door ? 'Afgevinkt door ' + esc(it.door) : 'Afvinken als het is opgebouwd'}</small></span></button>
+  <button class="belrij" data-bm="weg"><span class="ic">🗑️</span><span><b>Weghalen van deze plek</b><small>De actie gaat terug naar "Nog geen plek"</small></span></button>
+  <button class="btn sec" data-x style="width:100%;margin-top:10px">Sluiten</button>`, (e, o) => {
+    const b = e.target.closest('[data-bm]'); if (!b) return; o.remove(); const k = b.dataset.bm; const p = S.kwplan[wk];
+    if (k === 'vak') { ui.kwSel = { tafel: tid, idx }; }
+    if (k === 'klaar') { it.klaar = !it.klaar; it.door = it.klaar ? mijnNaam() : null; it.om = it.klaar ? new Date().toISOString() : null; slaIndelingOp(wk, tid, ind); if (it.kw) { p.klaar = Object.assign({}, p.klaar || {}); if (it.klaar) p.klaar[it.kw] = mijnNaam(); else delete p.klaar[it.kw]; kwPlanOpslaan(wk); } }
+    if (k === 'weg') { ind.items.splice(idx, 1); slaIndelingOp(wk, tid, ind); if (it.kw && p.plek) { p.plek = Object.assign({}, p.plek); delete p.plek[it.kw]; kwPlanOpslaan(wk); } }
+    render(true);
+  });
+}
+function kwSelTekening(t, ind, idx) {
+  const R = Math.max(1, +t.rijen || 2), K = Math.max(1, +t.kol || 3); const eig = new Array(R * K).fill(-1); (ind.items || []).forEach((it, i) => (it.cellen || []).forEach(c => { if (c < R * K) eig[c] = i; })); const vast = new Set(t.vast || []);
+  return `<div class="tafel kies" style="grid-template-columns:repeat(${K},1fr);grid-template-rows:repeat(${R},48px)">${eig.map((o, c) => vast.has(c) && o < 0 ? `<div class="vak vast"><span>🔒</span></div>` : `<button type="button" class="vak ${o === idx ? 'selaan' : o >= 0 ? 'bezetander' : 'leeg'}" data-sc="${c}" style="${o >= 0 ? 'background:' + TKLEUR[(ind.items[o].kleur ?? o) % TKLEUR.length] : ''}">${o === idx ? '✓' : ''}</button>`).join('')}</div>`;
+}
+function kwTekeningen(wk, kan) {
+  const p = S.kwplan[wk]; const pls = kwPlekken().filter(x => x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg); if (!pls.length) return kan && mag('instellingen') ? '<div class="blk"><p class="small">Tip: geef een kop een tekening (⚙️ Plekken instellen onderaan). Dan kun je per vakje invullen wat erin komt.</p></div>' : '';
+  return pls.map(x => {
+    const t = S.tafels[x.tafel]; const ind = indelingVan(wk, x.tafel); const sel = ui.kwSel && ui.kwSel.tafel === x.tafel ? ui.kwSel : null;
+    const open = (p.folder.items || []).filter(i => (p.plek || {})[i.id] === x.naam && !(ind.items || []).some(y => y.kw === i.id && (y.cellen || []).length));
+    const leeg = !(ind.items || []).some(y => (y.cellen || []).length); const vorige = kan && leeg && kwVorigeIndeling(wk, x.tafel, true);
+    return `<div class="blk kwteken" data-kt="${x.tafel}"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">${esc(x.naam)}</h2>${vorige ? `<button class="btn sm sec" data-kvo="${x.tafel}">Indeling van vorige keer</button>` : ''}</div>
+    ${sel ? `<div class="kwselbalk"><span>Tik de vakjes voor <b>${esc((ind.items[sel.idx] || {}).naam || '')}</b></span><button class="btn sm" data-kwklaar="1">Klaar</button></div>${kwSelTekening(t, ind, sel.idx)}` : tafelTekening(t, ind)}
+    ${!sel && kan ? `<p class="small">${leeg ? 'Tik op een vakje en kies wat erin komt.' : 'Tik op een leeg vakje om iets toe te voegen, of op een blok om het aan te passen.'}</p>` : ''}
+    ${open.length ? `<p class="small">Nog tekenen: ${open.map(i => esc(i.naam)).join(', ')}</p>` : ''}</div>`;
+  }).join('');
+}
+function kwVorigeIndeling(wk, tid, alleenCheck) {
+  const p = S.kwplan[wk]; const f = p.folder; const R = +S.tafels[tid].rijen || 2, K = +S.tafels[tid].kol || 3; const vast = new Set(S.tafels[tid].vast || []);
+  const vorig = Object.keys(S.indeling || {}).filter(k => k.endsWith('|' + tid) && k.split('|')[0] < wk).map(k => k.split('|')[0]).sort().reverse();
+  const nieuw = []; const bezet = new Set();
+  for (const it of f.items.filter(i => i.soort === 'kw')) {
+    const nrs = new Set(it.nrs || []);
+    for (const w of vorig) {
+      const pp = S.kwplan[w]; const oi = indelingVan(w, tid); const x = (oi.items || []).find(y => { if (!(y.cellen || []).length) return false; if (y.kw && pp && pp.folder) { const fi = pp.folder.items.find(z => z.id === y.kw); if (fi && (fi.nrs || []).some(n => nrs.has(n))) return true; } return y.naam && y.naam.toLowerCase() === it.naam.toLowerCase(); });
+      if (x) { const cel = x.cellen.filter(c => c < R * K && !vast.has(c) && !bezet.has(c)); if (cel.length) { cel.forEach(c => bezet.add(c)); nieuw.push([it, cel]); } break; }
+    }
+  }
+  if (alleenCheck) return nieuw.length > 0;
+  const pl = kwPlekVanTafel(tid); const ind = { items: nieuw.map(([it, cel], i) => ({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: cel, aantal: '', opm: [it.mech, it.variant].filter(Boolean).join(' · '), kleur: i % TKLEUR.length, klaar: false, kw: it.id })) };
+  slaIndelingOp(wk, tid, ind); p.plek = Object.assign({}, p.plek || {}); nieuw.forEach(([it]) => p.plek[it.id] = pl.naam); kwPlanOpslaan(wk); return nieuw.length;
+}
+function kwTekenEvents(v, wk, kan) {
+  v.querySelectorAll('[data-kt]').forEach(bl => bl.onclick = e => {
+    if (!kan) return; const tid = bl.dataset.kt;
+    if (e.target.closest('[data-kwklaar]')) { ui.kwSel = null; return render(true); }
+    const vo = e.target.closest('[data-kvo]'); if (vo) { const n = kwVorigeIndeling(wk, tid); toast(`✓ ${n} acties op dezelfde plek gezet`); return render(true); }
+    const sc = e.target.closest('[data-sc]'); if (sc && ui.kwSel && ui.kwSel.tafel === tid) {
+      const c = +sc.dataset.sc; const ind = JSON.parse(JSON.stringify(indelingVan(wk, tid))); const it = ind.items[ui.kwSel.idx]; if (!it) return;
+      if ((it.cellen || []).includes(c)) it.cellen = it.cellen.filter(x => x !== c); else { ind.items.forEach(x => { x.cellen = (x.cellen || []).filter(y => y !== c); }); it.cellen.push(c); }
+      slaIndelingOp(wk, tid, ind); return render(true);
+    }
+    const lc = e.target.closest('[data-vc]'); if (lc) return kwVakKies(wk, tid, +lc.dataset.vc);
+    const ti = e.target.closest('[data-ti]'); if (ti) return kwBlokMenu(wk, tid, +ti.dataset.ti);
+  });
+}
+function kwPlankTekst(wk, x) {
+  const t = S.tafels[x.tafel]; if (!t) return ''; const ind = indelingVan(wk, x.tafel); const R = +t.rijen || 2, K = +t.kol || 3; const regels = [];
+  for (let r = 0; r < R; r++) { const l = (ind.items || []).filter(it => (it.cellen || []).some(c => Math.floor(c / K) === r)).map(it => { const ks = it.cellen.filter(c => Math.floor(c / K) === r).map(c => c % K); return `${it.naam} (${ks.length === K ? 'hele plank' : 'vak ' + [...new Set(ks)].sort((a, b) => a - b).map(k => k + 1).join(',')})`; }); if (l.length) regels.push(`Plank ${r + 1}: ${l.join(', ')}`); }
+  return regels.join('\n');
+}
 /* ---------- 1.14: bluetooth-scanner ---------- */
 let telHook = null, scanHook = null, scannerGezien = false;
 let piepCtx = null;
@@ -3562,7 +3668,7 @@ function tafelTekening(t, ind, klein) {
     else { const eerste = Math.min(...cel); cel.forEach(c => { gedaan.add(c); h += `<div class="vak bezet ${it.klaar ? 'klaar' : ''}" data-ti="${i}" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1};background:${kleur}">${c === eerste ? label : ''}</div>`; }); }
   });
   const vast = new Set((t.vast || []).filter(c => c < N && !gedaan.has(c))); const eersteVast = vast.size ? Math.min(...vast) : -1;
-  for (let c = 0; c < N; c++) if (!gedaan.has(c)) h += vast.has(c) ? `<div class="vak vast" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1}">${klein ? '' : `<span>🔒</span>${c === eersteVast && t.vastTekst ? `<b>${esc(t.vastTekst)}</b>` : ''}`}</div>` : `<div class="vak leeg" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1}"></div>`;
+  for (let c = 0; c < N; c++) if (!gedaan.has(c)) h += vast.has(c) ? `<div class="vak vast" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1}">${klein ? '' : `<span>🔒</span>${c === eersteVast && t.vastTekst ? `<b>${esc(t.vastTekst)}</b>` : ''}`}</div>` : `<div class="vak leeg" data-vc="${c}" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1}"></div>`;
   return h + '</div>';
 }
 function tafelPas(root) {
@@ -3577,7 +3683,7 @@ function tafelPas(root) {
     m.remove();
   });
 }
-function tafelWeken() { const s = new Set([weekSleutel(C.add(C.today(), -7)), weekSleutel(C.today()), weekSleutel(C.add(C.today(), 7))]); for (const a of S.acties || []) if (a.id >= weekSleutel(C.today())) s.add(a.id); return [...s].sort(); }
+function tafelWeken() { const s = new Set([weekSleutel(C.add(C.today(), -7)), weekSleutel(C.today()), weekSleutel(C.add(C.today(), 7))]); for (const a of S.acties || []) if (a.id >= weekSleutel(C.today())) s.add(a.id); for (const w of Object.keys(S.kwplan || {})) if (w >= weekSleutel(C.today())) s.add(w); return [...s].sort(); }
 function slaIndelingOp(week, id, data) { write('tafel_indeling', [{ week, tafel_id: id, data }]); }
 function renderTafels() {
   const v = $('#view'); const week = tafelWeek(); const kanIn = mag('tafels'); const kanAf = mag('schap') || kanIn;
@@ -3621,10 +3727,10 @@ function plekTekst(t, cellen) {
   if (cellen.length === 1) return [kol(ks[0]), rij(rs[0])].filter(Boolean).join(' ') || 'vak';
   return `${cellen.length} vakken`;
 }
-function tafelBewerk(t) {
-  const nieuw = !t; const d = Object.assign({ naam: '', rijen: 2, kol: 3, foto: '', volg: tafelLijst().length }, t || {});
-  const ov = sheet(`<h2 style="margin:0">${nieuw ? 'Tafel toevoegen' : 'Tafel aanpassen'}</h2><div class="form"><label>Naam</label><input type="text" id="tbN" value="${esc(d.naam)}" placeholder="Bijv. Tafel 1 bij de ingang">
-  <div class="row"><div style="flex:1"><label>Rijen (vakken van voor naar achter)</label><input type="number" id="tbR" min="1" max="8" value="${d.rijen}"></div><div style="flex:1"><label>Kolommen (van links naar rechts)</label><input type="number" id="tbK" min="1" max="10" value="${d.kol}"></div></div>
+function tafelBewerk(t, opt) {
+  opt = opt || {}; const nieuw = !t; const d = Object.assign({ naam: '', rijen: 2, kol: 3, foto: '', volg: tafelLijst().length }, opt.voor || {}, t || {});
+  const ov = sheet(`<h2 style="margin:0">${opt.kop ? 'Tekening van de plek' : nieuw ? 'Tafel toevoegen' : 'Tafel aanpassen'}</h2><div class="form"><label>Naam</label><input type="text" id="tbN" value="${esc(d.naam)}" placeholder="Bijv. Tafel 1 bij de ingang">
+  <div class="row"><div style="flex:1"><label>${opt.kop ? 'Planken (van boven naar onder)' : 'Rijen (vakken van voor naar achter)'}</label><input type="number" id="tbR" min="1" max="8" value="${d.rijen}"></div><div style="flex:1"><label>${opt.kop ? 'Vakken per plank (van links naar rechts)' : 'Kolommen (van links naar rechts)'}</label><input type="number" id="tbK" min="1" max="10" value="${d.kol}"></div></div>
   <label>Vast assortiment – tik de vakken aan die geblokkeerd zijn</label><div id="tbVast"></div>
   <label for="tbVt">Wat ligt er vast (optioneel)</label><input type="text" id="tbVt" value="${esc(d.vastTekst || '')}" placeholder="Bijv. koffie en thee">
   <label>Foto (optioneel)</label><div style="display:flex;gap:12px;align-items:center"><div class="fotovak" id="tbFv">${d.foto ? `<img src="${d.foto}" alt="">` : 'Geen foto'}</div><label class="btn sm sec" style="margin:0">Foto kiezen<input type="file" accept="image/*" id="tbF" class="hide"></label></div>
@@ -3634,7 +3740,7 @@ function tafelBewerk(t) {
   const rasterR = () => Math.max(1, Math.min(8, +$('#tbR').value || 2)), rasterK = () => Math.max(1, Math.min(10, +$('#tbK').value || 3));
   const tekenVast = () => { const R = rasterR(), K = rasterK(); [...vast].forEach(c => { if (c >= R * K) vast.delete(c); }); $('#tbVast').innerHTML = `<div class="tafel kies" style="grid-template-columns:repeat(${K},1fr);grid-template-rows:repeat(${R},40px)">${Array.from({ length: R * K }, (_, c) => `<button type="button" class="vak ${vast.has(c) ? 'vastaan' : 'leeg'}" data-v="${c}">${vast.has(c) ? '🔒' : ''}</button>`).join('')}</div>`; $('#tbVast').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const c = +b.dataset.v; vast.has(c) ? vast.delete(c) : vast.add(c); tekenVast(); }); };
   tekenVast(); $('#tbR').oninput = tekenVast; $('#tbK').oninput = tekenVast;
-  $('#tbO').onclick = () => { d.naam = $('#tbN').value.trim(); if (!d.naam) return toast('Vul een naam in'); d.rijen = rasterR(); d.kol = rasterK(); d.vast = [...vast].sort((a, b) => a - b); d.vastTekst = $('#tbVt').value.trim(); const id = d.id || 'T' + Date.now().toString(36); const data = Object.assign({}, d); delete data.id; write('tafels', [{ id, data }]); ov.remove(); render(); };
+  $('#tbO').onclick = () => { d.naam = $('#tbN').value.trim(); if (!d.naam) return toast('Vul een naam in'); d.rijen = rasterR(); d.kol = rasterK(); d.vast = [...vast].sort((a, b) => a - b); d.vastTekst = $('#tbVt').value.trim(); const id = d.id || 'T' + Date.now().toString(36); const data = Object.assign({}, d); delete data.id; write('tafels', [{ id, data }]); ov.remove(); if (opt.klaar) opt.klaar(id); render(); };
   const w = $('#tbW'); if (w) w.onclick = async () => { if (!await bevestig('Tafel verwijderen?', `<b>${esc(d.naam)}</b> en de indeling verdwijnen.`, 'Verwijderen')) return; const data = Object.assign({}, d, { weg: true }); delete data.id; write('tafels', [{ id: d.id, data }]); ui.tafel = null; ov.remove(); render(); };
 }
 function tafelArts(it) { return it.artikelen || (it.key ? [{ key: it.key, naam: it.naam, nr: it.nr }] : []); }
