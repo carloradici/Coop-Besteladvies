@@ -441,12 +441,12 @@ ol.stappen{padding-left:20px;margin:6px 0 12px}ol.stappen li{margin:4px 0}
 
 /* 1.17 */
 #printArea .kopprint{display:grid;gap:4mm;align-items:start}
-#printArea .kopprint h1{font-size:14px;margin:0}
+#printArea .kopprint h1{font-size:22px;margin:0}
 #printArea .kpb h2{font-size:13px;margin:0 0 2mm}
-#printArea .kpb .tafel .vak{font-size:9px;padding:1mm}
-#printArea .kpb .tafel .vak b{font-size:9px!important}
+#printArea .kpb .tafel .vak{font-size:11px;padding:1mm}
+#printArea .kpb .tafel .vak b{font-size:11px!important}
 #printArea .kpb table{width:100%;border-collapse:collapse;margin-top:1mm}
-#printArea .kpb td{border:1px solid #999;padding:1px 3px;font-size:9px;text-align:left;vertical-align:top}
+#printArea .kpb td{border:1px solid #999;padding:3px 4px;font-size:12px;text-align:left;vertical-align:top}
 #printArea .kpb td.pl{width:9mm;text-align:center;font-weight:800}
 #printArea .kpb svg.msi{display:inline-block;width:38mm;height:7mm;margin:1px 3mm 0 0;vertical-align:top}
 .kwsrt{font:inherit;font-size:12px;cursor:pointer;background:none}
@@ -1090,7 +1090,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.20';
+const VERSIE = '1.21';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -2866,13 +2866,14 @@ let pdfCssKlaar = false;
 function pdfCss() {
   if (pdfCssKlaar) return; pdfCssKlaar = true; let css = '';
   for (const sh of document.styleSheets) { let rules; try { rules = sh.cssRules; } catch (e) { continue; } const neem = x => { if (x.selectorText && x.selectorText.includes('#printArea') && x.selectorText.trim() !== '#printArea') css += x.cssText.replace(/#printArea/g, '.pdfrender') + '\n'; }; for (const r of rules) { if (r.media && /print/.test(r.media.mediaText || '')) [...r.cssRules].forEach(neem); else if (!r.media) neem(r); } }
-  const st = document.createElement('style'); st.textContent = '.pdfrender{position:fixed;left:-20000px;top:0;width:1123px;background:#fff;color:#000;font-size:9px;padding:30px;box-sizing:border-box;display:block!important}.pdfrender *{-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#000}.pdfrender td.a{color:#d02a1e}.pdfrender .tafel .vak:not(.leeg){color:#fff}' + css; document.head.appendChild(st);
+  const st = document.createElement('style'); st.textContent = '.pdfrender{position:fixed;left:-20000px;top:0;width:1123px;background:#fff;color:#000;font-size:9px;padding:30px;box-sizing:border-box;display:block!important}.pdfrender *{-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#000}.pdfrender td.a{color:#d02a1e}.pdfrender .tafel .vak:not(.leeg){color:#fff}.pdfrender.staand{width:794px;padding:0}.pdfrender .pdfpagina{width:718px;padding:0;margin:0 0 40px;background:#fff}.pdfrender .kpsub{margin:0 0 3mm;font-size:11px;color:#555}' + css; document.head.appendChild(st);
 }
-async function maakPdf(titel) {
+async function maakPdf(titel, opt = {}) {
   await Promise.all([loadScript(LIB.h2c), loadScript(LIB.jspdf)]); pdfCss();
-  const el = document.createElement('div'); el.className = 'pdfrender'; el.innerHTML = $('#printArea').innerHTML; document.body.appendChild(el);
+  const el = document.createElement('div'); el.className = 'pdfrender' + (opt.staand ? ' staand' : ''); el.innerHTML = $('#printArea').innerHTML; document.body.appendChild(el);
   await new Promise(r => setTimeout(r, 60));
   try {
+    if (el.querySelector('.pdfpagina')) return await pdfPerPagina(el, titel, opt);
     const W = el.offsetWidth, H = el.scrollHeight, pageH = Math.floor(W * 210 / 297); const top0 = el.getBoundingClientRect().top;
     const breuk = new Set([0]); const kand = [...el.querySelectorAll('tr, .kpb, h1, h2, .tafel, p')].map(x => { const r = x.getBoundingClientRect(); return { t: r.top - top0, b: r.bottom - top0, nieuw: x.closest('tbody.nieuwepagina') && x === x.closest('tbody').firstElementChild }; });
     let start = 0; const pag = [];
@@ -2893,9 +2894,23 @@ async function maakPdf(titel) {
     return { file: new File([blob], naam, { type: 'application/pdf' }), beelden, naam };
   } finally { el.remove(); }
 }
-async function toonPdf(titel, aanpassen) {
+async function pdfPerPagina(el, titel, opt) {
+  const { jsPDF } = window.jspdf; const st = !!opt.staand; const PW = st ? 210 : 297, PH = st ? 297 : 210, M = 8;
+  const doc = new jsPDF({ orientation: st ? 'p' : 'l', unit: 'mm', format: 'a4' }); const beelden = [];
+  const pags = [...el.querySelectorAll('.pdfpagina')];
+  for (let i = 0; i < pags.length; i++) {
+    const pg = pags[i]; const cv = await window.html2canvas(pg, { scale: 2, backgroundColor: '#ffffff', logging: false });
+    const bw = PW - 2 * M, bh = PH - 2 * M; let w = bw, h = cv.height / cv.width * bw; if (h > bh) { w = w * bh / h; h = bh; }
+    const k = 4; const c = document.createElement('canvas'); c.width = Math.round(PW * k * 2.5); c.height = Math.round(PH * k * 2.5); const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
+    const sc = c.width / PW; cx.drawImage(cv, Math.round(M * sc), Math.round(M * sc), Math.round(w * sc), Math.round(h * sc));
+    const url = c.toDataURL('image/jpeg', 0.9); beelden.push(url); if (i) doc.addPage(); doc.addImage(url, 'JPEG', 0, 0, PW, PH);
+  }
+  const blob = doc.output('blob'); const naam = (titel || 'Besteladvies').replace(/[\\/:*?"<>|]/g, '-') + '.pdf';
+  return { file: new File([blob], naam, { type: 'application/pdf' }), beelden, naam };
+}
+async function toonPdf(titel, aanpassen, opt = {}) {
   const wacht = document.createElement('div'); wacht.className = 'pdfview'; wacht.innerHTML = '<div class="pdfwacht">📄 Pdf maken…</div>'; document.body.appendChild(wacht);
-  let r; try { r = await maakPdf(titel); } catch (e) { wacht.remove(); return toast('Pdf maken lukt niet: ' + e.message, 5000); }
+  let r; try { r = await maakPdf(titel, opt); } catch (e) { wacht.remove(); return toast('Pdf maken lukt niet: ' + e.message, 5000); }
   window.__laatstePdf = { naam: r.naam, paginas: r.beelden.length, grootte: r.file.size };
   let zoom = 1;
   wacht.innerHTML = `<div class="pdfkop"><b>${esc(r.naam)}</b><span>${r.beelden.length} ${r.beelden.length === 1 ? 'pagina' : "pagina's"}</span><span class="pdfzoom"><button data-z="-1">−</button><button data-z="1">+</button></span></div><div class="pdfpag">${r.beelden.map(u => `<img src="${u}" alt="">`).join('')}</div>
@@ -3578,22 +3593,23 @@ function kwLijstKeuze(ov, x, klaar) {
 function kwPrintKies(wk) {
   const pls = kwPlekken().filter(x => x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg); if (!pls.length) return toast('Geef eerst een kop een tekening (Plekken instellen)');
   const gekozen = new Set(ls.get('cba-kwprint') || pls.map(x => x.naam));
-  const ov = sheet(`<h2 style="margin:0">Pdf maken</h2><p class="small">Alles komt op één A4.</p><div class="list">${pls.map(x => `<label class="it"><span style="flex:1">${esc(x.naam)}</span><input type="checkbox" class="schak" data-pp="${esc(x.naam)}" ${gekozen.has(x.naam) ? 'checked' : ''}></label>`).join('')}<label class="it"><span style="flex:1">Met barcodes</span><input type="checkbox" class="schak" id="ppB" ${ls.get('cba-kwprintbc') ? 'checked' : ''}></label></div><button class="btn" id="ppO" style="width:100%;margin-top:10px">👁️ Pdf bekijken</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`);
+  const ov = sheet(`<h2 style="margin:0">Pdf maken</h2><p class="small">Elke kop op een eigen staande A4. Als laatste een pagina met wat in het vak moet.</p><div class="list">${pls.map(x => `<label class="it"><span style="flex:1">${esc(x.naam)}</span><input type="checkbox" class="schak" data-pp="${esc(x.naam)}" ${gekozen.has(x.naam) ? 'checked' : ''}></label>`).join('')}<label class="it"><span style="flex:1">Met barcodes</span><input type="checkbox" class="schak" id="ppB" ${ls.get('cba-kwprintbc') ? 'checked' : ''}></label></div><button class="btn" id="ppO" style="width:100%;margin-top:10px">👁️ Pdf bekijken</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`);
   ov.querySelector('#ppO').onclick = () => { const k = [...ov.querySelectorAll('[data-pp]')].filter(c => c.checked).map(c => c.dataset.pp); if (!k.length) return toast('Kies minstens één plek'); const bc = ov.querySelector('#ppB').checked; ls.set('cba-kwprint', k); ls.set('cba-kwprintbc', bc); ov.remove(); kwPrint(wk, pls.filter(x => k.includes(x.naam)), bc); };
 }
 function kwPrint(wk, pls, bc) {
-  const n = pls.length; const kol = n === 1 ? 1 : n <= 4 ? 2 : 3; const rij = Math.ceil(n / kol); const hoog = Math.floor((rij === 1 ? 120 : rij === 2 ? 58 : 36) * (bc ? 0.75 : 1));
-  const f = S.kwplan[wk].folder;
+  const f = S.kwplan[wk].folder; const pl = S.kwplan[wk]; const wn = (WINKEL && WINKEL.naam) || '';
   const blok = x => {
-    const t = S.tafels[x.tafel]; const ind = indelingVan(wk, x.tafel); const R = +t.rijen || 2, K = +t.kol || 3;
+    const t = S.tafels[x.tafel]; const ind = indelingVan(wk, x.tafel); const R = +t.rijen || 2, K = +t.kol || 3; const hoog = Math.min(150, R * 26);
     const teken = tafelTekening(t, ind).replace(/grid-template-rows:[^"]*"/, `grid-template-rows:repeat(${R},${(hoog / R).toFixed(1)}mm)"`);
     const rg = l => { const u = [...new Set(l)].sort((x, y) => x - y); return u.length === 1 ? String(u[0] + 1) : u[u.length - 1] - u[0] === u.length - 1 ? `${u[0] + 1}–${u[u.length - 1] + 1}` : u.map(x => x + 1).join(','); };
     const regels = (ind.items || []).filter(it => (it.cellen || []).length).sort((x, y) => Math.min(...x.cellen) - Math.min(...y.cellen)).map(it => `<tr><td class="pl">${rg(it.cellen.map(c => Math.floor(c / K)))}</td><td class="n">☐ <b>${esc(it.naam)}</b> <span style="color:#555">· vak ${rg(it.cellen.map(c => c % K))}</span>${bc ? tafelArts(it).filter(a => /^\d{4,}$/.test(a.nr || '')).slice(0, 2).map(a => C.msi(a.nr, 22, true)).join('') : ''}</td></tr>`);
-    return `<div class="kpb"><h2>${esc(x.naam)}</h2>${teken}${regels.length ? `<table><tr><td class="pl">Plank</td><td class="n"><b>Wat</b></td></tr>${regels.join('')}</table>` : ''}</div>`;
+    return `<div class="pdfpagina kpb"><h1>${esc(x.naam)}</h1><p class="kpsub">Acties KW week ${f.week} · ${esc(wn)}</p>${teken}${regels.length ? `<table><tr><td class="pl">Plank</td><td class="n"><b>Wat</b></td></tr>${regels.join('')}</table>` : ''}</div>`;
   };
-  $('#printArea').innerHTML = `<div class="kopprint" style="grid-template-columns:repeat(${kol},1fr)"><h1 style="grid-column:1/-1">Acties KW week ${f.week} · ${esc((WINKEL && WINKEL.naam) || '')}</h1>${pls.map(blok).join('')}</div>`;
-  window.__laatstePrint = { koppen: pls.map(x => x.naam), bc }; log('acties', `Pdf koppen: ${pls.map(x => x.naam).join(', ')}`);
-  toonPdf(`Acties KW week ${f.week}${pls.length === 1 ? ' ' + pls[0].naam : ''}`, () => kwPrintKies(wk));
+  const vak = (f.items || []).filter(it => (pl.notitie || {})[it.id] === 'In het vak');
+  const vakBlok = vak.length ? `<div class="pdfpagina kpb"><h1>In het vak</h1><p class="kpsub">Acties KW week ${f.week} · ${esc(wn)} · ${vak.length} acties</p><table><tr><td class="pl">✓</td><td class="n"><b>Wat</b></td></tr>${vak.map(it => `<tr><td class="pl">☐</td><td class="n"><b>${esc(it.naam)}</b>${it.variant ? ` <span style="color:#555">${esc(it.variant)}</span>` : ''}${(it.nrs || []).length ? ` <span style="color:#555">· ${esc(it.nrs.join(', '))}</span>` : ''}${bc ? (it.nrs || []).filter(n => /^\d{4,}$/.test(n)).slice(0, 2).map(n => C.msi(n, 22, true)).join('') : ''}</td></tr>`).join('')}</table></div>` : '';
+  $('#printArea').innerHTML = `<div class="kopprint">${pls.map(blok).join('')}${vakBlok}</div>`;
+  window.__laatstePrint = { koppen: pls.map(x => x.naam), bc, inHetVak: vak.length }; log('acties', `Pdf koppen: ${pls.map(x => x.naam).join(', ')}`);
+  toonPdf(`Acties KW week ${f.week}${pls.length === 1 ? ' ' + pls[0].naam : ''}`, () => kwPrintKies(wk), { staand: true });
 }
 async function kwAutoHaal() {
   if (DEMO || OEFEN || !mag('o_kw') || !magKwPlan() || !navigator.onLine) return; const vandaag = C.today();
