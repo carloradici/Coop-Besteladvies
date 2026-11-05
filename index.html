@@ -1199,7 +1199,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.24';
+const VERSIE = '1.25';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -1569,9 +1569,9 @@ function tekenInlog() {
   const label = !g ? 'Pincode' : nieuw ? (IN.eerste ? 'Herhaal je pincode' : 'Kies je pincode (4 cijfers)') : 'Pincode';
   const face = faceVoor(g);
   loginKader('Inloggen', `<div class="form inlog"><label for="iNaam">Naam</label><div class="naamkeuze"><select id="iNaam" aria-label="Kies je naam"><option value="" ${g ? '' : 'selected'} disabled>Kies je naam</option>${lijst.map(m => `<option value="${m.id}" ${m.id === IN.keuze ? 'selected' : ''}>${esc(m.naam)}</option>`).join('')}</select>${g && g.rol === 'beheerder' ? '<span class="rol">Beheerder</span>' : ''}<span class="pijlneer">▾</span></div>
-  ${face ? `<button class="btn faceknop" id="iFaceG">🙂 Inloggen met Face ID</button>` : ''}${`<label>${label}</label><div class="pinbolletjes" id="iDots">${[0, 1, 2, 3].map(i => `<i class="${i < IN.pin.length ? 'vol' : ''}"></i>`).join('')}</div><div class="msg" id="iM">${esc(IN.msg)}</div>
+  ${`<label>${label}</label><div class="pinbolletjes" id="iDots">${[0, 1, 2, 3].map(i => `<i class="${i < IN.pin.length ? 'vol' : ''}"></i>`).join('')}</div><div class="msg" id="iM">${esc(IN.msg)}</div>
   <div class="cijferblok">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-cijfer="${n}">${n}</button>`).join('')}${face ? `<button class="wis" id="iFace" aria-label="Inloggen met Face ID">${FACE_SVG}</button>` : '<span></span>'}<button data-cijfer="0">0</button><button class="wis" id="iWis" aria-label="Wissen">⌫</button></div>
-  <p class="merkhint">${!g ? (lijst.length ? 'Kies eerst je naam.' : 'Er zijn nog geen medewerkers. De beheerder voegt ze toe via Meer → Medewerkers.') : face ? 'Tik op Inloggen met Face ID, of vul je pincode in' : nieuw && g.mail && !g.eigen ? 'Deze pincode stel je eenmalig in op je eigen telefoon.' : 'Na het 4e cijfer log je automatisch in'}</p>
+  <p class="merkhint">${!g ? (lijst.length ? 'Kies eerst je naam.' : 'Er zijn nog geen medewerkers. De beheerder voegt ze toe via Meer → Medewerkers.') : face ? 'Tik linksonder voor Face ID, of vul je pincode in' : nieuw && g.mail && !g.eigen ? 'Deze pincode stel je eenmalig in op je eigen telefoon.' : 'Na het 4e cijfer log je automatisch in'}</p>
   ${g && g.eigen ? '<button class="merklink" id="iVerg">Pincode vergeten</button>' : ''}`}
   ${winkels.length > 1 ? '<button class="merklink" id="iWinkel">Andere winkel</button>' : ''}</div>`, true);
   $('#iNaam').onchange = e => { IN.keuze = e.target.value; IN.pin = ''; IN.eerste = null; IN.msg = ''; tekenInlog(); };
@@ -1580,7 +1580,6 @@ function tekenInlog() {
   document.querySelectorAll('[data-cijfer]').forEach(b => b.onclick = () => { if (!g) { const m = $('#iM'); if (m) m.textContent = 'Kies eerst je naam.'; const s2 = $('.naamkeuze'); if (s2) { s2.classList.remove('fout'); void s2.offsetWidth; s2.classList.add('fout'); } return; } if (IN.pin.length >= 4) return; IN.pin += b.dataset.cijfer; dots(); if (IN.pin.length === 4) setTimeout(() => probeerPin(g), 120); });
   $('#iWis').onclick = () => { IN.pin = IN.pin.slice(0, -1); dots(); };
   const fb = $('#iFace'); if (fb) fb.onclick = () => faceLogin();
-  const fg = $('#iFaceG'); if (fg) fg.onclick = () => faceLogin();
   const vg = $('#iVerg'); if (vg) vg.onclick = () => DEMO ? toast('In de echte app log je dan opnieuw in met je e-mail') : naarMail('Log in met je e-mail. Daarna kies je een nieuwe pincode.', true);
 }
 function pinFout(t) { IN.pin = ''; IN.msg = t; tekenInlog(); const d = $('#iDots'); if (d) d.classList.add('fout'); }
@@ -2502,7 +2501,7 @@ function renderBeheer() {
   <span>Acties</span><b>${S.acties.length ? S.acties.map(a => 'wk ' + a.week).join(', ') : 'nog geen'}</b></div>
   ${gaten.length ? `<p class="small" style="color:var(--red)">Ontbrekende dagen (laatste 60): ${gaten.map(C.fmtDag).join(', ')}</p>` : ''}
   ${dagen.length < 56 ? `<p class="small">Tip: upload minstens 8 weken aan dag-exports voor een betrouwbaar gemiddelde.</p>` : ''}</div>
-  <div class="blk" data-sec="auto"><h2>Automatisch uploaden</h2><p class="small">Een computer in de winkel stuurt de dag-export dan zelf naar de app. CasPos zet de export elke dag in een map; een klein script op die computer kijkt elk uur en stuurt nieuwe bestanden door.</p><div id="autoIn"><p class="small">Laden…</p></div></div>
+  <div class="blk" data-sec="auto"><h2>Automatisch uploaden</h2><p class="small">Een computer in de winkel stuurt de dag-export dan zelf naar de app. CasPos zet de export elke dag in een map; een klein script op die computer kijkt elke 5 minuten en stuurt nieuwe bestanden door.</p><div id="autoIn"><p class="small">Laden…</p></div></div>
   <div class="blk" data-sec="verwijderen"><h2>Uploads verwijderen</h2><p class="small">Alleen nodig als je per ongeluk een verkeerd bestand hebt geüpload. Je krijgt eerst de vraag of je het zeker weet.</p><h3>Acties</h3><div class="list">${S.acties.map(a => `<div class="it"><span>Week ${a.week} · ${C.fmtDag(a.van)} t/m ${C.fmtDag(a.tm)} · ${a.items.length} artikelen</span><button class="btn sm sec" data-delac="${a.id}" aria-label="Verwijderen">🗑️</button></div>`).join('') || '<div class="small">Geen</div>'}</div>
   <h3>Dag-exports (laatste 21)</h3><div class="list">${dagen.slice(-21).reverse().map(d => `<div class="it"><span>${C.fmtDag(d)} ${d.slice(0, 4)}</span><button class="btn sm sec" data-deldag="${d}" aria-label="Verwijderen">🗑️</button></div>`).join('') || '<div class="small">Geen</div>'}</div></div>` : ''}
   ${kI ? `<div class="blk" data-sec="advies"><h2>Advies-instellingen</h2><p class="small">Voor gevorderden. Meestal hoef je hier niets aan te veranderen.</p><div class="form">
@@ -2766,7 +2765,7 @@ async function autoLaad() {
   const oud = st.actief && st.laatst && (Date.now() - new Date(st.laatst)) > 36 * 3600e3;
   el.innerHTML = `<div class="kv"><span>Sleutel</span><b>${st.actief ? `✅ actief · …${esc(st.hint || '')}` : 'nog geen'}</b>${st.actief ? `<span>Gemaakt</span><b>${autoTijd(st.aangemaakt)}${st.door ? ' · ' + esc(st.door) : ''}</b><span>Laatst binnen</span><b class="${oud ? 'rood' : ''}">${st.laatst ? autoTijd(st.laatst) : 'nog niets'}</b>` : ''}</div>
   <div class="row" style="margin-top:12px;gap:8px">${st.actief ? `<button class="btn sec" id="auNieuw" style="flex:1">🔑 Nieuw script</button><button class="btn sec" id="auUit">Intrekken</button>` : `<button class="btn" id="auNieuw" style="width:100%">🔑 Sleutel en script maken</button>`}</div>
-  <h3>Zo stel je het in</h3><ol class="small stappen"><li>Tik op <b>${st.actief ? 'Nieuw script' : 'Sleutel en script maken'}</b> en stuur het zip-bestand naar jezelf (bijv. per mail).</li><li>Pak het uit op de computer in de map <b>C:\\Besteladvies</b>.</li><li>Dubbelklik <b>1-testen.cmd</b>. Je ziet "Test gelukt".</li><li>Dubbelklik <b>2-installeren.cmd</b>. Het script kijkt nu elk uur in de map.</li><li>Klaar. Verstuurde bestanden gaan naar de map <b>Verzonden</b>.</li></ol>
+  <h3>Zo stel je het in</h3><ol class="small stappen"><li>Tik op <b>${st.actief ? 'Nieuw script' : 'Sleutel en script maken'}</b> en stuur het zip-bestand naar jezelf (bijv. per mail).</li><li>Pak het uit op de computer in de map <b>C:\\Besteladvies</b>.</li><li>Dubbelklik <b>1-testen.cmd</b>. Je ziet "Test gelukt".</li><li>Dubbelklik <b>2-installeren.cmd</b>. Het script kijkt nu elke 5 minuten in de map.</li><li>Klaar. Verstuurde bestanden gaan naar de map <b>Verzonden</b>.</li></ol>
   <h3>Laatst ontvangen</h3><div class="list">${lg.map(r => `<div class="it"><span style="flex:1">${r.ok ? '✅' : '❌'} ${r.dag ? 'Verkoop ' + C.fmtDag(r.dag) : esc(r.bestand || 'bestand')}<br><span class="small">${autoTijd(r.ts)} · ${esc(r.melding || '')}</span></span></div>`).join('') || '<div class="small">Nog niets ontvangen</div>'}</div>`;
   $('#auNieuw').onclick = async () => {
     if (st.actief && !await bevestig('Nieuw script maken?', 'Er komt een nieuwe sleutel. Het oude script op de computer werkt dan niet meer; zet het nieuwe ervoor in de plaats.', 'Nieuw script', 'Annuleren')) return;
@@ -2805,7 +2804,7 @@ function autoBestanden(sleutel, map, url = AUTO_URL) {
   const ps = `# Coop Besteladvies - dag-exports automatisch uploaden
 # Gemaakt in de app op ${C.today()} voor ${winkel} (versie ${VERSIE}).
 # Gebruik: zonder opties = nieuwe bestanden uploaden, -Test = alleen de verbinding testen.
-param([switch]$Test, [string]$Map = '')
+param([switch]$Test, [switch]$Nu, [string]$Map = '')
 
 # ===== Instellingen =====
 # Map waar de dag-exports uit CasPos komen. Pas alleen deze regel aan als het een andere map is.
@@ -2853,11 +2852,12 @@ if ($Test) {
   exit 0
 }
 
-if (-not (Test-Path -LiteralPath $Map)) { exit 0 }
+if (-not (Test-Path -LiteralPath $Map)) { if ($Nu) { Schrijf ('De map ' + $Map + ' bestaat niet.') }; exit 0 }
+$Lijst = @(Zoek); if ($Nu) { Schrijf ('Nu versturen: ' + $Lijst.Count + ' dag-export(s) in ' + $Map) }
 $Verzonden = Join-Path $Map 'Verzonden'
 $NietGelukt = Join-Path $Map 'Niet gelukt'
-foreach ($f in @(Zoek)) {
-  if ($f.LastWriteTime -gt (Get-Date).AddMinutes(-2)) { continue }
+foreach ($f in $Lijst) {
+  if (-not $Nu -and $f.LastWriteTime -gt (Get-Date).AddMinutes(-2)) { continue }
   try {
     $h = @{ 'x-sleutel' = $Sleutel; 'x-bestand' = [Uri]::EscapeDataString($f.Name) }
     $r = Invoke-RestMethod -Uri $Url -Method Post -Headers $h -InFile $f.FullName -ContentType 'application/octet-stream' -TimeoutSec 300
@@ -2872,6 +2872,12 @@ foreach ($f in @(Zoek)) {
 }
 exit 0
 `;
+  const nu = `@echo off
+title Besteladvies - nu versturen
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0besteladvies-upload.ps1" -Nu
+echo.
+pause
+`;
   const test = `@echo off
 title Besteladvies - testen
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0besteladvies-upload.ps1" -Test
@@ -2880,11 +2886,11 @@ pause
 `;
   const inst = `@echo off
 title Besteladvies - installeren
-schtasks /Create /TN "Besteladvies upload" /SC HOURLY /ST 06:05 /TR "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \\"%~dp0besteladvies-upload.ps1\\"" /F
+schtasks /Create /TN "Besteladvies upload" /SC MINUTE /MO 5 /TR "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \\"%~dp0besteladvies-upload.ps1\\"" /F
 if errorlevel 1 goto fout
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0besteladvies-upload.ps1"
 echo.
-echo Klaar. De computer kijkt nu elk uur of er een nieuwe dag-export is.
+echo Klaar. De computer kijkt nu elke 5 minuten of er een nieuwe dag-export is.
 echo.
 pause
 exit /b 0
@@ -2917,8 +2923,10 @@ Instellen (eenmalig, ongeveer 5 minuten)
    Pak het daarna uit in C:\\Besteladvies.
 3. Dubbelklik 1-testen.cmd. Je moet zien: "Test gelukt: Koppeling met ... werkt."
    Krijg je een blauw venster "Windows heeft uw pc beschermd"? Kies "Meer informatie" > "Toch uitvoeren".
-4. Dubbelklik 2-installeren.cmd. Vanaf nu draait het elk uur.
+4. Dubbelklik 2-installeren.cmd. Vanaf nu draait het elke 5 minuten.
 5. Controleer in de app onder Beheer > Automatisch uploaden of de uploads binnenkomen.
+
+Meteen versturen? Dubbelklik 4-nu-versturen.cmd.
 
 Goed om te weten
 - De computer moet aan staan en er moet iemand ingelogd zijn.
@@ -2929,7 +2937,7 @@ Goed om te weten
 - Stoppen: dubbelklik 3-stoppen.cmd, of trek de sleutel in de app in.
 - Dit zip-bestand bevat een geheime sleutel. Stuur het niet door naar anderen.
 `;
-  return [['besteladvies-upload.ps1', bom(ps)], ['1-testen.cmd', enc.encode(crlf(test))], ['2-installeren.cmd', enc.encode(crlf(inst))], ['3-stoppen.cmd', enc.encode(crlf(weg))], ['LEESMIJ.txt', bom(lees)]];
+  return [['besteladvies-upload.ps1', bom(ps)], ['1-testen.cmd', enc.encode(crlf(test))], ['2-installeren.cmd', enc.encode(crlf(inst))], ['3-stoppen.cmd', enc.encode(crlf(weg))], ['4-nu-versturen.cmd', enc.encode(crlf(nu))], ['LEESMIJ.txt', bom(lees)]];
 }
 function maakZip(files) {
   const T = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; T[n] = c >>> 0; }
