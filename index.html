@@ -516,6 +516,7 @@ body.kort .card .adv{padding:2px 8px}
 body.kort .card .adv b{font-size:18px}
 body.kort .card .adv span{display:none}
 .taakrij{flex-wrap:wrap}.taakrij .btn{margin-left:auto;flex:none}
+details.kwsoorten{margin:4px 0}details.kwsoorten summary{font-size:13px;color:var(--oranje);font-weight:700}
 </style>
 </head>
 <body>
@@ -583,6 +584,7 @@ C.lines = items => {
 };
 C.detectPdf = pages => {
   const t = pages.slice(0, 9).flat().map(i => i.s).join(' ');
+  if (/VOORKOOPLIJST/i.test(t)) return 'voorkoop';
   if (/looptijd/i.test(t) && /CAP/.test(t)) return 'actie';
   if (/Folderplanning week/i.test(t)) return 'folder';
   if (/ART\.NR/.test(t) && /VERP\./.test(t)) return 'kw';
@@ -764,6 +766,57 @@ C.parseFolder = pages => {
   return { week, van, tm, thema, items };
 };
 C.folderNaarActie = (f, id) => ({ id, week: f.week, van: f.van, tm: f.tm, folder: true, items: f.items.flatMap(it => it.nrs.filter(n => /^\d{6}$/.test(n)).map(nr => ({ nr, naam: it.naam, eh: '', van: it.streep[0] || 0, voor: it.prijs[0] || 0, cap: it.prijs.length === 1 && !/STUKS/i.test(it.mech || '') ? it.prijs[0] : 0, opm: (() => { const st = (it.mech || '').match(/(\d+)\s*STUKS/i); return st && it.prijs.length === 1 ? `${st[1]} voor ${String(it.prijs[0].toFixed(2)).replace('.', ',')}` : it.mech || ''; })(), folder: true, dag: null }))) });
+/* ---------- 1.23: voorkooplijst Van Tol ---------- */
+C.mooiNaam = s => { s = String(s || '').replace(/\s+/g, ' ').trim().toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); };
+C.parseVoorkoop = pages => {
+  let week = null, uit = null, tot = null, x0 = 130, sec = 'folder', mech = ''; const arts = []; let cur = null;
+  const dmy = t => { const m = String(t).match(/(\d{2})\.(\d{2})\.(\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
+  for (const pg of pages) for (const ln of C.lines(pg)) {
+    const txt = ln.txt; const it = ln.it;
+    const om = it.find(i => /^Omschrijving$/i.test(i.s.trim())); if (om) { x0 = om.x; continue; }
+    if (/PAGINA|ARTNR\.|^EAN\b|klantnummer|^klant:/i.test(txt)) continue;
+    { const m = txt.match(/VOORKOOPLIJST:?\s*FOLDER\s*(\d{1,2})/i); if (m) { week = +m[1]; continue; } }
+    if (/^Uitlevering/i.test(txt)) { uit = dmy(txt); continue; }
+    if (/^Uiterste/i.test(txt)) { tot = dmy(txt); continue; }
+    if (/^Bestellen/i.test(txt)) continue;
+    const verp = it.find(i => i.x >= x0 + 190 && i.x < x0 + 245 && /^\d+\s+[A-Z]{2}$/.test(i.s.trim()));
+    if (verp) {
+      const naam = it.filter(i => i.x >= x0 - 8 && i.x < x0 + 150).map(i => i.s.trim()).join(' ');
+      const merk = (it.find(i => i.x >= x0 + 150 && i.x < x0 + 190) || {}).s || '';
+      cur = { naam, merk: merk.trim(), verp: verp.s.trim(), ean: '', nr: '', cvan: null, cvoor: null, sec, mech }; arts.push(cur); continue;
+    }
+    if (it[0].x < x0 - 30 && !/^\d{8,14}$/.test(it[0].s.trim())) {
+      if (/^Artikelen die op alle/i.test(txt)) { sec = 'folder'; mech = ''; }
+      else if (/^Artikelen die alleen/i.test(txt)) { sec = 'instore'; mech = ''; }
+      else if (/^Instore\b/i.test(txt)) { sec = 'instore'; mech = ''; }
+      else if (!/^overige afnemers/i.test(txt)) mech = txt.replace(/\s*zie info\s*$/i, '').trim();
+      continue;
+    }
+    if (!cur) continue;
+    for (const i of it) {
+      const s = i.s.trim();
+      if (i.x < x0 - 30 && /^\d{8,14}$/.test(s)) { if (!cur.ean) cur.ean = s; continue; }
+      if (i.x >= x0 - 8 && i.x < x0 + 40) { if (/^\d{2,7}$/.test(s)) { if (!cur.nr) cur.nr = s.padStart(6, '0'); } else if (!/^\(/.test(s) && !/^[\d.,]+$/.test(s)) cur.naam += ' ' + s; continue; }
+      if (i.x >= x0 + 40 && i.x < x0 + 95 && /^\d+,\d{2}$/.test(s) && cur.cvan === null) { cur.cvan = C.num(s); continue; }
+      if (i.x >= x0 + 95 && i.x < x0 + 150 && /^\d+,\d{2}$/.test(s) && cur.cvoor === null) { cur.cvoor = C.num(s); continue; }
+    }
+  }
+  if (!week || !arts.length) return null;
+  let y = uit ? +uit.slice(0, 4) : C.isoWeek(C.today()).y; if (uit && week < C.isoWeek(uit).w - 20) y++;
+  const van = C.mondayOf(y, week);
+  const groepen = [];
+  for (const a of arts) { const g = groepen[groepen.length - 1]; if (g && g.sec === a.sec && g.mech === a.mech && g.merk === a.merk && g.cvoor === a.cvoor) g.arts.push(a); else groepen.push({ sec: a.sec, mech: a.mech, merk: a.merk, cvoor: a.cvoor, arts: [a] }); }
+  const STOP = /^(\d.*|gr\.?|ml\.?|ltr\.?|l|cl\.?|kg|st\.?|x|st|stuks|\+|&|en|de|het|met)$/i;
+  const woorden = n => n.toLowerCase().replace(/[^a-zà-ÿ0-9&+%\/ .-]/g, ' ').split(/[\s\/+.]+/).map(w => w.replace(/\.$/, '')).filter(w => w.length >= 3 && !STOP.test(w));
+  const items = groepen.map((g, i) => {
+    let naam;
+    if (g.arts.length === 1) naam = C.mooiNaam(g.arts[0].naam);
+    else { const ws = g.arts.map(a => woorden(a.naam)); const gem = ws[0].find(w => ws.every(x => x.includes(w))); const tel = {}; ws.forEach(x => [...new Set(x)].forEach(w => tel[w] = (tel[w] || 0) + 1)); const vaak = Object.keys(tel).sort((a, b) => tel[b] - tel[a])[0]; naam = gem ? `${C.mooiNaam(gem)} · ${g.arts.length} soorten` : vaak && tel[vaak] * 2 >= g.arts.length && g.arts.length > 3 ? `${C.mooiNaam(vaak)} e.a. · ${g.arts.length} soorten` : g.arts.slice(0, g.arts.length === 3 ? 3 : 2).map((a, j) => { const w = woorden(a.naam).slice(0, 2).join(' ') || a.naam; return j ? w : C.mooiNaam(w); }).join(' / ') + (g.arts.length > 3 ? ` +${g.arts.length - 2}` : ''); }
+    const nrs = [...new Set(g.arts.flatMap(a => [a.nr, a.ean]).filter(Boolean))];
+    return { id: 'v' + (i + 1), naam, variant: g.arts.length > 1 ? g.arts.map(a => C.mooiNaam(a.naam)).join(', ') : '', merk: g.merk, nrs, inhoud: g.arts[0].verp, streep: [...new Set(g.arts.map(a => a.cvan).filter(x => x && x !== g.cvoor))], prijs: g.cvoor ? [g.cvoor] : [], mech: g.mech, bijz: '', pag: '', soort: 'kw', instore: g.sec === 'instore', bron: 'voorkoop', arts: g.arts.map(a => ({ naam: C.mooiNaam(a.naam), nr: a.nr, ean: a.ean, cvan: a.cvan, cvoor: a.cvoor, verp: a.verp })) };
+  });
+  return { week, van, tm: C.add(van, 6), thema: '', items, bron: 'voorkoop', uitlevering: uit, besteltot: tot };
+};
 C.parseLijst = pages => {
   const out = []; const gezien = new Set();
   for (const pg of pages) for (const ln of C.lines(pg)) {
@@ -1136,7 +1189,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.22';
+const VERSIE = '1.23';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -1607,7 +1660,7 @@ async function start() {
   await sync(!had);
   if (document.body.classList.contains('inlog')) return;
   if (!M) { rebuild(); render(); }
-  tourAlsNodig();
+  tourAlsNodig(); setTimeout(kwAutoHaal, 4000);
 }
 function startTab() { const s = (S.pref && S.pref.start) || 'home'; return s === 'home' || (BESTEL_OD.includes(s) && mag('o_' + s)) || (s === 'overig' && mag('o_overig')) ? s : 'home'; }
 function shell() {
@@ -2549,6 +2602,7 @@ async function uploads(files) {
       } else if (/\.pdf$/i.test(f.name)) {
         L(`… ${f.name} lezen`);
         const pages = await C.pdfPages(await pdfjs(), buf.slice(0)); const soort = C.detectPdf(pages);
+        if (soort === 'voorkoop') { const r = await kwPdfLezen(buf, f.name); L(r.tekst); continue; }
         if (soort === 'folder') { const fp = C.parseFolder(await C.pdfVlakken(await pdfjs(), buf)); bewaarFolder(fp, f.name); L(`✓ Folderplanning week ${fp.week}: ${fp.items.filter(i => i.soort === 'kw').length} KW-acties, ${fp.items.filter(i => i.soort !== 'kw').length} vers/diepvries/brood`, 'ok'); n++; continue; }
         if (soort === 'vers' || soort === 'kw') {
           const b = soort === 'vers' ? C.parseVers(pages) : C.parseKw(pages);
@@ -3554,7 +3608,8 @@ function kwVorige(it, wk) {
   }
   return null;
 }
-async function folderOphalen(jaar, week) {
+async function folderOphalen(jaar, week) { return (await kwHaalOp(jaar, week)).wk; }
+async function folderOphalenOud(jaar, week) {
   if (DEMO) throw new Error('In de testversie kun je de pdf zelf kiezen');
   const r = await fetch(`${SB_URL}/functions/v1/folder?jaar=${jaar}&week=${week}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } });
   if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } if (r.status === 404 && !/staat nog niet/.test(t)) t = 'De functie "folder" staat nog niet in Supabase'; throw new Error(t); }
@@ -3582,9 +3637,9 @@ function kwItemKaart(wk, p, it, kan) {
   const f = p.folder; const st = kwStatus(p, it.id); const pk = st && st.plek || ''; const no = (p.notitie || {})[it.id] || '';
   const ver = it.soort === 'kw' ? kwVerwacht(it, f, pk) : null; const vg = it.soort === 'kw' ? kwVorige(it, wk) : null;
   const vt = ver && ver.geen ? (vg && vg.verk ? `Verwacht ±${C.fmt(Math.round(vg.verk * (pk ? plekF(pk) : 1) / Math.max(0.1, plekF(vg.plek) || 1)))} st (zoals vorige keer)` : 'Geen verkoop bekend van deze artikelnummers') : ver ? `Verwacht ±${C.fmt(Math.round(ver.st))} st${ver.he ? ` (${C.fmt(Math.ceil(ver.he))} HE)` : ''}` : '';
-  return `<div class="card kwit ${it.soort !== 'kw' ? 'kwvers' : ''} ${st ? 'kwklaar' : ''}"><div class="nm">${esc(it.naam)}${it.extra ? ' <span class="lbl uit">Extra</span>' : ''}${kan ? ` <button class="lbl info kwsrt" data-ks="${it.id}">${(KW_SOORT.find(x => x[0] === it.soort) || ['', 'KW'])[1]} ▾</button>` : ''}</div>
-    <div class="small">${[it.variant, it.inhoud].filter(Boolean).map(esc).join(' · ')}</div>
-    <div class="small"><b>${it.prijs.length ? '€ ' + it.prijs.map(x => x.toFixed(2).replace('.', ',')).join(' – ') : ''}${it.mech ? ' ' + esc(it.mech) : ''}</b>${it.bijz ? ' · ' + esc(it.bijz) : ''} · pag ${esc((it.pag || '').split(' ')[0])}${it.groot ? ' · grote plek' : it.klein ? ' · kleine plek' : ''}</div>
+  return `<div class="card kwit ${it.soort !== 'kw' ? 'kwvers' : ''} ${st ? 'kwklaar' : ''}"><div class="nm">${esc(it.naam)}${it.extra ? ' <span class="lbl uit">Extra</span>' : ''}${kan && it.bron !== 'voorkoop' ? ` <button class="lbl info kwsrt" data-ks="${it.id}">${(KW_SOORT.find(x => x[0] === it.soort) || ['', 'KW'])[1]} ▾</button>` : ''}</div>
+    ${it.bron === 'voorkoop' ? `<div class="small">${esc([it.merk, it.inhoud].filter(Boolean).join(' · '))}</div>${(it.arts || []).length > 1 ? `<details class="kwsoorten"><summary>${it.arts.length} soorten</summary>${it.arts.map(a => `<div class="small">${esc(a.naam)} · ${esc(a.nr)}${a.cvoor ? ' · € ' + a.cvoor.toFixed(2).replace('.', ',') : ''}</div>`).join('')}${kan ? `<button class="link" data-kspl="${it.id}">✂️ Soorten los sorteren</button>` : ''}</details>` : ''}` : `<div class="small">${[it.variant, it.inhoud].filter(Boolean).map(esc).join(' · ')}</div>`}
+    <div class="small"><b>${it.prijs.length ? '€ ' + it.prijs.map(x => x.toFixed(2).replace('.', ',')).join(' – ') : ''}${it.mech ? ' ' + esc(it.mech) : ''}</b>${it.streep && it.streep.length && it.bron === 'voorkoop' ? ` <s class="small">€ ${Math.max(...it.streep).toFixed(2).replace('.', ',')}</s>` : ''}${it.bijz ? ' · ' + esc(it.bijz) : ''}${it.pag ? ' · pag ' + esc((it.pag || '').split(' ')[0]) : ''}${it.groot ? ' · grote plek' : it.klein ? ' · kleine plek' : ''}</div>
     ${vt ? `<div class="small">${vt}</div>` : ''}${vg && vg.plek ? `<div class="small">Vorige keer wk ${vg.week}: ${esc(vg.plek)}${vg.verk !== null ? ` · ${C.fmt(Math.round(vg.verk))} verkocht` : ''}</div>` : ''}
     ${no ? `<div class="kwnot">📝 ${esc(no)}</div>` : ''}
     ${kan ? `<div class="kwchips">${kwPlekken().map(x => `<button class="${pk === x.naam ? 'aan' : ''}" data-kz="${it.id}" data-kzp="${esc(x.naam)}">${esc(x.naam)}</button>`).join('')}<button class="${no ? 'aan' : ''}" data-knt="${it.id}">📝</button></div>` : pk ? `<div class="small">📍 ${esc(pk)}</div>` : ''}
@@ -3601,18 +3656,21 @@ function renderKwActies() {
   ${f ? `<div class="seg kwseg"><button class="${stap === 'sort' ? 'on' : ''}" data-kst="sort">1 · Sorteren</button><button class="${stap === 'in' ? 'on' : ''}" data-kst="in">2 · Indelen</button></div>${stap === 'in' && kwPlekken().some(y => y.tafel && S.tafels[y.tafel] && !S.tafels[y.tafel].weg) ? `<button class="btn kwpdfknop" id="kwPdf1">👁️ Pdf bekijken${ui.kwKop ? ' · ' + esc(ui.kwKop) : ''}</button>` : ''}` : ''}</div>`;
   if (!f) h += `<div class="empty">Nog geen folderplanning. ${kan ? 'Tik op "Week ophalen" of kies de pdf hieronder.' : 'De beheerder zet hem klaar.'}</div>`;
   else if (stap === 'sort') {
-    const toonAlles = !!ui.kwAlles; const alle = f.items.filter(i => toonAlles || i.soort === 'kw'); const kwL = f.items.filter(i => i.soort === 'kw');
+    const toonAlles = !!ui.kwAlles; const alle = f.items.filter(i => toonAlles || i.soort === 'kw'); const kwL = f.items.filter(i => i.soort === 'kw' && !i.instore); const anderN = f.items.filter(i => i.soort !== 'kw').length;
     const klaarN = kwL.filter(i => kwStatus(p, i.id)).length; const items = ui.kwOpen ? alle.filter(i => !kwStatus(p, i.id)) : alle;
     h += `<div class="blk"><h2 style="margin:0">Week ${f.week}${f.thema ? ' · ' + esc(f.thema) : ''}</h2><p class="small">${f.van ? `${C.fmtDag(f.van)} t/m ${C.fmtDag(f.tm)} · ` : ''}<b class="${klaarN < kwL.length ? 'oranje' : 'groen'}">${kwL.length - klaarN ? `${kwL.length - klaarN} van ${kwL.length} nog sorteren` : `✓ alle ${kwL.length} gesorteerd`}</b></p>
     <p class="small">Tik bij elke actie op de kop waar hij komt, of 📝 voor een notitie zoals "In het vak". Daarna ga je naar <b>2 · Indelen</b>.</p>
-    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm ${ui.kwOpen ? '' : 'sec'}" id="kwOpen">${ui.kwOpen ? '✓ ' : ''}Alleen nog te doen</button><button class="btn sm sec" id="kwAlles">${toonAlles ? 'Alleen KW' : `+ vers, diepvries, brood (${f.items.length - kwL.length})`}</button><button class="btn sm sec" id="kwDeel">📤 Delen</button></div></div>`;
-    h += items.map(it => kwItemKaart(wk, p, it, kan)).join('') || '<div class="empty">✓ Alles gesorteerd. Ga naar 2 · Indelen.</div>';
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm ${ui.kwOpen ? '' : 'sec'}" id="kwOpen">${ui.kwOpen ? '✓ ' : ''}Alleen nog te doen</button>${anderN ? `<button class="btn sm sec" id="kwAlles">${toonAlles ? 'Alleen KW' : `+ vers, diepvries, brood (${anderN})`}</button>` : ''}<button class="btn sm sec" id="kwDeel">📤 Delen</button></div></div>`;
+    const fl = items.filter(i => !i.instore), ins = items.filter(i => i.instore);
+    if (f.bron === 'voorkoop') h += `<h3 class="meerkop">📰 Folder (${fl.length})</h3>`;
+    h += fl.map(it => kwItemKaart(wk, p, it, kan)).join('') || '<div class="empty">✓ Alle folder-acties gesorteerd. Ga naar 2 · Indelen.</div>';
+    if (ins.length) h += `<h3 class="meerkop">🏷️ Instore (${ins.length})</h3><p class="small" style="margin:0 16px">Sorteren mag, hoeft niet. Wat je niet sorteert blijft hier staan.</p>` + ins.map(it => kwItemKaart(wk, p, it, kan)).join('');
   } else {
     const pls = kwPlekken();
     if (!ui.kwKop || !pls.some(x => x.naam === ui.kwKop)) {
       h += `<div class="kwkoppen">${pls.map(x => { const t = x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg ? S.tafels[x.tafel] : null; const l = f.items.filter(i => (p.plek || {})[i.id] === x.naam); const ind = t ? indelingVan(wk, x.tafel) : { items: [] }; const open = l.filter(i => !(ind.items || []).some(y => y.kw === i.id && (y.cellen || []).length)).length;
         return `<button class="tafelkaart" data-kkop="${esc(x.naam)}"><b>${esc(x.naam)}</b>${t ? tafelTekening(t, ind, true) : '<span class="small">Nog geen tekening</span>'}<span class="small">${l.length} acties${t && open ? ` · <b class="oranje">${open} nog plaatsen</b>` : l.length && t ? ' · ✓ geplaatst' : ''}</span></button>`; }).join('')}</div>`;
-      const notL = f.items.filter(i => !kwStatus(p, i.id) || kwStatus(p, i.id).notitie).filter(i => i.soort === 'kw');
+      const notL = f.items.filter(i => !kwStatus(p, i.id) || kwStatus(p, i.id).notitie).filter(i => i.soort === 'kw' && !(i.instore && !kwStatus(p, i.id)));
       const groep = {}; notL.forEach(i => { const n = (p.notitie || {})[i.id] || 'Nog sorteren'; (groep[n] = groep[n] || []).push(i); });
       h += Object.keys(groep).sort((a, b) => a === 'Nog sorteren' ? 1 : b === 'Nog sorteren' ? -1 : a < b ? -1 : 1).map(n => `<div class="blk"><h2 style="margin:0 0 6px">${n === 'Nog sorteren' ? '⏳ Nog sorteren' : '📝 ' + esc(n)} <span class="small">(${groep[n].length})</span></h2><div class="small">${groep[n].map(i => esc(i.naam)).join(' · ')}</div></div>`).join('');
       h += `<div class="blk"><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm sec" id="kwDeel">📤 Delen</button></div></div>`;
@@ -3635,7 +3693,7 @@ function renderKwActies() {
   v.querySelectorAll('[data-kw]').forEach(b => b.onclick = () => { ui.kwWeek = b.dataset.kw; ui.kwSel = null; render(); });
   v.querySelectorAll('[data-kst]').forEach(b => b.onclick = () => { ui.kwStap = b.dataset.kst; ui.kwKop = null; ui.kwSel = null; render(); window.scrollTo(0, 0); });
   v.querySelectorAll('[data-haal]').forEach(hb => hb.onclick = async () => { const [y, w] = hb.dataset.haal.split('|').map(Number); hb.disabled = true; hb.innerHTML = '<b>Ophalen…</b>'; try { ui.kwWeek = await folderOphalen(y, w); toast('✓ Folderplanning opgehaald'); log('acties', `Folderplanning week ${w} opgehaald`); } catch (e) { toast(e.message, 5000); } render(); });
-  const pi = $('#kwPdf'); if (pi) pi.onchange = async e => { const fl = e.target.files[0]; e.target.value = ''; if (!fl) return; try { const buf = await fl.arrayBuffer(); const fp = C.parseFolder(await C.pdfVlakken(await pdfjs(), buf)); ui.kwWeek = bewaarFolder(fp, fl.name); toast(`✓ Week ${fp.week}: ${fp.items.filter(i => i.soort === 'kw').length} KW-acties`); log('acties', `Folderplanning week ${fp.week} geüpload`); } catch (x) { toast('Niet gelukt: ' + x.message, 5000); } render(); };
+  const pi = $('#kwPdf'); if (pi) pi.onchange = async e => { const fl = e.target.files[0]; e.target.value = ''; if (!fl) return; try { const buf = await fl.arrayBuffer(); const r = await kwPdfLezen(buf, fl.name); ui.kwWeek = r.wk; toast(r.tekst, 4000); log('acties', r.tekst.replace('✓ ', '') + ' (geüpload)'); } catch (x) { toast('Niet gelukt: ' + x.message, 5000); } render(); };
   const pl = $('#kwPl'); if (pl) pl.onclick = kwPlekkenBeheer;
   if (!f) return;
   const deel = $('#kwDeel'); if (deel) deel.onclick = () => kwDelen(wk);
@@ -3645,6 +3703,7 @@ function renderKwActies() {
   v.querySelectorAll('[data-ks]').forEach(b => b.onclick = () => kwSoortKies(wk, b.dataset.ks));
   v.querySelectorAll('[data-kz]').forEach(b => b.onclick = () => { const id = b.dataset.kz, pk = b.dataset.kzp; kwZetPlek(wk, id, (p.plek || {})[id] === pk ? '' : pk); render(true); });
   v.querySelectorAll('[data-knt]').forEach(b => b.onclick = () => kwNotitieKies(wk, b.dataset.knt));
+  v.querySelectorAll('[data-kspl]').forEach(b => b.onclick = () => kwSplits(wk, b.dataset.kspl));
   v.querySelectorAll('[data-kkop]').forEach(b => b.onclick = () => { ui.kwKop = b.dataset.kkop; ui.kwSel = null; render(); window.scrollTo(0, 0); });
   const kt = $('#kwTerug'); if (kt) kt.onclick = () => { ui.kwKop = null; ui.kwSel = null; render(); window.scrollTo(0, 0); };
   const mt = $('#kwMaakT'); if (mt) mt.onclick = () => kwPlekBewerk(ui.kwKop);
@@ -3718,7 +3777,7 @@ function kwSoortKies(wk, id) {
     const b = e.target.closest('[data-ks2]'); if (!b) return; o.remove(); p.soort = Object.assign({}, p.soort || {}); if (b.dataset.ks2 === it.soort0) delete p.soort[id]; else p.soort[id] = b.dataset.ks2; kwPas(p); kwPlanOpslaan(wk); render(true);
   });
 }
-function kwTegel() { const nu = weekSleutel(C.today()); const w = Object.keys(S.kwplan || {}).sort().find(x => x >= nu); if (!w) return 'Nog geen folderplanning'; kwPas(S.kwplan[w]); const f = S.kwplan[w].folder; const kw = f.items.filter(i => i.soort === 'kw'); kwNormPlan(S.kwplan[w]); const ing = kw.filter(i => kwStatus(S.kwplan[w], i.id)).length; return `<b class="${ing < kw.length ? 'oranje' : ''}">Week ${f.week}: ${ing} van ${kw.length} gesorteerd</b>`; }
+function kwTegel() { const nu = weekSleutel(C.today()); const w = Object.keys(S.kwplan || {}).sort().find(x => x >= nu); if (!w) return 'Nog geen folderplanning'; kwPas(S.kwplan[w]); const f = S.kwplan[w].folder; const kw = f.items.filter(i => i.soort === 'kw' && !i.instore); kwNormPlan(S.kwplan[w]); const ing = kw.filter(i => kwStatus(S.kwplan[w], i.id)).length; return `<b class="${ing < kw.length ? 'oranje' : ''}">Week ${f.week}: ${ing} van ${kw.length} gesorteerd</b>`; }
 /* ---------- 1.16: plekken tekenen ---------- */
 function kwPlekVanTafel(tid) { return kwPlekken().find(p => p.tafel === tid); }
 function kwTekenItem(wk, it, plekNaam, tid, cel) {
@@ -3862,11 +3921,55 @@ function kwPrint(wk, pls, bc) {
 }
 async function kwAutoHaal() {
   if (DEMO || OEFEN || !mag('o_kw') || !magKwPlan() || !navigator.onLine) return; const vandaag = C.today();
-  for (let n = 1; n <= 5; n++) {
-    const d = C.add(C.monday(vandaag), 7 * n - 7); const x = C.isoWeek(d); const k = weekSleutel(d); const oud = S.kwplan[k]; if (oud && (((oud.folder || {}).versie || 1) >= 2 || Object.keys(oud.plek || {}).length)) continue; if (!oud && n === 1) continue;
+  for (let n = 1; n <= 6; n++) {
+    const d = C.add(C.monday(vandaag), 7 * n - 7); const x = C.isoWeek(d); const k = weekSleutel(d); const oud = S.kwplan[k]; if (oud && oud.folder && oud.folder.bron === 'voorkoop') continue; if (!oud && n === 1) continue;
     const lk = `cba-kwhaal-${W}-${k}`; if (ls.get(lk) === vandaag) continue; ls.set(lk, vandaag);
-    try { const wk = await folderOphalen(x.y, x.w); toast(`📣 Folderplanning week ${x.w} automatisch opgehaald`, 4000); log('acties', `Folderplanning week ${x.w} automatisch opgehaald`); if (ui.tab === 'home' || ui.tab === 'kwacties') render(true); } catch (e) { }
+    try { const oudF = oud && oud.folder; const r = await kwHaalOp(x.y, x.w, !!oudF); const wat = r.soort === 'voorkoop' ? 'Voorkooplijst' : 'Folderplanning'; toast(`📣 ${wat} week ${x.w} automatisch opgehaald`, 4000); log('acties', `${wat} week ${x.w} automatisch opgehaald`); if (ui.tab === 'home' || ui.tab === 'kwacties') render(true); } catch (e) { }
   }
+}
+/* ---------- 1.23: voorkooplijst ---------- */
+function kwNrsSet(it) { return new Set((it.nrs || []).map(n => /^\d{1,7}$/.test(n) ? n.padStart(6, '0') : n)); }
+function bewaarVoorkoop(vk, bron) {
+  if (!vk || !vk.week || !vk.items.length) throw new Error('Geen voorkooplijst herkend');
+  vk.versie = 3; const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
+  const plek = {}, notitie = {}, klaar = {};
+  if (of && of.items) {
+    const nieuw = vk.items.map(i => ({ i, s: kwNrsSet(i) }));
+    for (const o of of.items) { const os = kwNrsSet(o); const hit = nieuw.find(n => [...os].some(x => n.s.has(x))); if (!hit) continue; const id = hit.i.id; if ((oud.plek || {})[o.id] && !plek[id]) plek[id] = oud.plek[o.id]; if ((oud.notitie || {})[o.id] && !notitie[id]) notitie[id] = oud.notitie[o.id]; if ((oud.klaar || {})[o.id]) klaar[id] = oud.klaar[o.id]; if (!hit.i.pag && o.pag) hit.i.pag = o.pag; }
+    if (of.bron !== 'voorkoop' && of.thema) vk.thema = of.thema;
+  }
+  const plan = Object.assign({}, oud, { folder: vk, plek, notitie, klaar, soort: {}, bron: bron || '', geladen: new Date().toISOString() }); delete plan.week;
+  write('kw_acties', [{ week: wk, data: plan }]); S.kwplan[wk] = Object.assign({ week: wk }, plan);
+  if (of && of.items && of.items.length) for (const x of kwPlekken()) { if (!x.tafel) continue; const ind = indelingVan(wk, x.tafel); if (!(ind.items || []).some(y => y.kw)) continue; const map = {}; for (const o of of.items) { const os = kwNrsSet(o); const hit = vk.items.find(n => [...kwNrsSet(n)].some(z => os.has(z))); if (hit) map[o.id] = hit.id; } const ni = JSON.parse(JSON.stringify(ind)); ni.items = (ni.items || []).map(y => y.kw ? Object.assign(y, { kw: map[y.kw] || y.kw }) : y); slaIndelingOp(wk, x.tafel, ni, true); }
+  rebuild(); return wk;
+}
+function folderBijVoorkoop(f) {
+  const wk = folderWeek(f); const p = S.kwplan[wk]; if (!p || !p.folder || p.folder.bron !== 'voorkoop') return null;
+  for (const it of p.folder.items) { if (it.pag) continue; const s = kwNrsSet(it); const o = f.items.find(x => [...kwNrsSet(x)].some(z => s.has(z))); if (o && o.pag) it.pag = o.pag; }
+  if (f.thema) p.folder.thema = f.thema; kwPlanOpslaan(wk); return wk;
+}
+async function kwPdfLezen(buf, naam) {
+  const pages = await C.pdfPages(await pdfjs(), buf.slice(0)); const soort = C.detectPdf(pages);
+  if (soort === 'voorkoop') { const vk = C.parseVoorkoop(pages); const wk = bewaarVoorkoop(vk, naam); return { wk, tekst: `✓ Voorkooplijst week ${vk.week}: ${vk.items.filter(i => !i.instore).length} folder-acties, ${vk.items.filter(i => i.instore).length} instore` }; }
+  const fp = C.parseFolder(await C.pdfVlakken(await pdfjs(), buf)); const al = folderBijVoorkoop(fp); if (al) return { wk: al, tekst: `✓ Folder week ${fp.week} gebruikt voor paginanummers (de acties komen uit de voorkooplijst)` };
+  const wk = bewaarFolder(fp, naam); return { wk, tekst: `✓ Week ${fp.week}: ${fp.items.filter(i => i.soort === 'kw').length} KW-acties` };
+}
+async function kwHaalOp(jaar, week, alleenVk) {
+  if (DEMO) throw new Error('In de testversie kun je de pdf zelf kiezen');
+  const haal = async soort => { const r = await fetch(`${SB_URL}/functions/v1/folder?jaar=${jaar}&week=${week}${soort ? '&soort=' + soort : ''}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } if (r.status === 404 && !/staat nog niet/.test(t)) t = 'De functie "folder" staat nog niet in Supabase'; const e = new Error(t); e.status = r.status; throw e; } return r.arrayBuffer(); };
+  let vkFout = null;
+  try { const buf = await haal('voorkoop'); const pages = await C.pdfPages(await pdfjs(), buf.slice(0)); if (C.detectPdf(pages) === 'voorkoop') { const vk = C.parseVoorkoop(pages); if (!vk || weekSleutel(vk.van) !== weekSleutel(C.mondayOf(jaar, week))) throw new Error(`Voorkooplijst week ${week} staat nog niet online`); return { wk: bewaarVoorkoop(vk, 'opgehaald'), soort: 'voorkoop' }; } } catch (e) { vkFout = e; }
+  if (alleenVk) throw vkFout || new Error('Geen voorkooplijst');
+  const k = weekSleutel(C.mondayOf(jaar, week)); const p = S.kwplan[k]; if (p && p.folder && p.folder.bron === 'voorkoop') return { wk: k, soort: 'voorkoop' };
+  const buf = await haal(''); const fp = C.parseFolder(await C.pdfVlakken(await pdfjs(), buf)); return { wk: bewaarFolder(fp, 'opgehaald'), soort: 'folder' };
+}
+function kwSplits(wk, id) {
+  const p = S.kwplan[wk]; const i = p.folder.items.findIndex(x => x.id === id); const it = p.folder.items[i]; if (!it || !(it.arts || []).length) return;
+  const los = it.arts.map((a, j) => Object.assign({}, it, { id: it.id + '-' + (j + 1), naam: a.naam, variant: '', nrs: [a.nr, a.ean].filter(Boolean), prijs: a.cvoor ? [a.cvoor] : it.prijs, streep: a.cvan && a.cvan !== a.cvoor ? [a.cvan] : [], arts: [a] }));
+  p.folder.items.splice(i, 1, ...los);
+  for (const k of ['plek', 'notitie']) if ((p[k] || {})[id]) { p[k] = Object.assign({}, p[k]); los.forEach(l => p[k][l.id] = p[k][id]); delete p[k][id]; }
+  for (const x of kwPlekken()) { if (!x.tafel) continue; const ind = indelingVan(wk, x.tafel); if ((ind.items || []).some(y => y.kw === id)) { const ni = JSON.parse(JSON.stringify(ind)); ni.items = ni.items.filter(y => y.kw !== id); slaIndelingOp(wk, x.tafel, ni, true); } }
+  kwPlanOpslaan(wk); toast(`${los.length} soorten staan nu los`); render(true);
 }
 /* ---------- 1.14: bluetooth-scanner ---------- */
 let telHook = null, scanHook = null, scannerGezien = false;
