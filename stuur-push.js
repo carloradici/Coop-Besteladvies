@@ -1,7 +1,7 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
 // Wordt door de korte stuur-push in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
 // Soorten: test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
-export const FUNCTIE_VERSIE = '1.17';
+export const FUNCTIE_VERSIE = '1.27';
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };
 const ONDERDELEN = [['agf', 'AGF'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries'], ['kw', 'KW']];
 const STD_OPEN = [['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['', '']];
@@ -43,15 +43,21 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date(), haal 
     return { status: 200, versie: FUNCTIE_VERSIE, ...verstuurd };
   }
 
+  const sessieMw = async () => {
+    if (!token || !body.winkel) return null; const { data: u } = await sb.auth.getUser(token); const user = u && u.user; if (!user) return null;
+    const { data: se } = await sb.from('sessies').select('medewerker_id,tot').eq('uid', user.id).eq('winkel_id', body.winkel); const sessie = (se || []).find(x => new Date(x.tot) > nu); if (!sessie) return null;
+    const { data: m } = await sb.from('medewerkers').select('rol,rechten,actief').eq('id', sessie.medewerker_id); const mw = m && m[0]; return mw && mw.actief !== false ? mw : null;
+  };
+  if (soort === 'taak') {
+    if (!(await sessieMw())) return { status: 403, fout: 'Niet ingelogd' };
+    const { data: mws } = await sb.from('medewerkers').select('id,naam,email').eq('winkel_id', body.winkel); const namen = String(body.voor || '').split(',');
+    const ids = new Set((mws || []).filter(m => namen.includes(m.naam)).flatMap(m => ['mw:' + m.id].concat(m.email ? ['mail:' + m.email] : [])));
+    const doel = (abos || []).filter(a => a.winkel_id === body.winkel && wil(a, 'taak') && a.endpoint !== body.endpoint && (body.voor === 'iedereen' || !body.voor || ids.has(a.wie)));
+    await stuur(doel, { titel: String(body.titel || 'Nieuwe taak').slice(0, 80), tekst: String(body.tekst || '').slice(0, 200), tag: 'taak' });
+    return { status: 200, ...verstuurd };
+  }
   if (soort === 'boek') {
-    if (!token || !body.winkel) return { status: 401, fout: 'Niet ingelogd' };
-    const { data: u } = await sb.auth.getUser(token);
-    const user = u && u.user; if (!user) return { status: 401, fout: 'Niet ingelogd' };
-    let ok = false;
-    const { data: se } = await sb.from('sessies').select('medewerker_id,tot').eq('uid', user.id).eq('winkel_id', body.winkel);
-    const sessie = (se || []).find(x => new Date(x.tot) > nu);
-    if (sessie) { const { data: m } = await sb.from('medewerkers').select('rol,rechten,actief').eq('id', sessie.medewerker_id); const mw = m && m[0]; ok = !!mw && mw.actief !== false && (mw.rol === 'beheerder' || !!(mw.rechten && mw.rechten.upload)); }
-    if (!ok) return { status: 403, fout: 'Geen recht' };
+    const mw = await sessieMw(); if (!mw || !(mw.rol === 'beheerder' || (mw.rechten && mw.rechten.upload))) return { status: 403, fout: 'Geen recht' };
     const naam = body.bron === 'kw' ? 'KW' : 'Vers';
     const tekst = `${body.nieuw || 0} nieuw, ${body.uit || 0} uit assortiment${body.uit ? ' – schap aanpassen' : ''}.`;
     await stuur((abos || []).filter(a => a.winkel_id === body.winkel && wil(a, 'boek')), { titel: `Nieuw bestelboek ${naam}`, tekst, tag: 'boek-' + body.bron });
@@ -85,6 +91,8 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date(), haal 
           if (mis.includes(gister)) { await stuur(wa.filter(a => a.rol === 'beheer' && wil(a, 'export')), { titel: mis.length > 1 ? `${mis.length} dag-exports ontbreken` : 'Dag-export ontbreekt', tekst: mis.length > 1 ? `Nog niet geüpload: ${mis.slice(-5).map(fmtDag).join(', ')}${mis.length > 5 ? ' en meer' : ''}.` : `De verkoop van ${fmtDag(gister)} is nog niet geüpload.`, tag: 'export' }); gedaan.push(W.slice(0, 4) + ':export'); }
         }
       }
+      { const { data: us } = await sb.from('upload_sleutels').select('actief,laatst,aangemaakt').eq('winkel_id', W); const u = us && us[0];
+        if (u && u.actief && nu - new Date(u.laatst || u.aangemaakt) > 24 * 3600e3 && await eenmalig(`pcstil:${W}:${dag}`)) { await stuur(wa.filter(a => a.rol === 'beheer' && wil(a, 'pcstil')), { titel: 'Pc stuurt geen dag-exports', tekst: 'Al meer dan 24 uur is er niets binnengekomen. Staat de pc aan en is er iemand ingelogd?', tag: 'pcstil' }); gedaan.push(W.slice(0, 4) + ':pcstil'); } }
       if (tijd >= t.inout && await eenmalig(`inout:${W}:${dag}`)) {
         const { data: io } = await sb.from('inout').select('*').eq('winkel_id', W);
         const actief = (io || []).filter(x => x.ingekocht > 0 && (!x.eind || x.eind >= dag));
