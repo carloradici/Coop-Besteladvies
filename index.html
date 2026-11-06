@@ -538,6 +538,7 @@ b.groen{color:#2e7d32}
 input[type=search]::-webkit-search-cancel-button{display:none}
 span.rood{color:#e53935}span.groen{color:#2e7d32}
 .voorkoop{color:var(--oranje);margin-top:4px}.weekov .kv{margin-top:8px}
+.collo{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--oranjeLicht);color:var(--oranjeD);font-weight:700;font-size:14px}.collo .small{color:inherit;font-weight:500}.collo .btn{margin-top:8px;display:block}
 </style>
 </head>
 <body>
@@ -606,6 +607,7 @@ C.lines = items => {
 C.detectPdf = pages => {
   const t = pages.slice(0, 9).flat().map(i => i.s).join(' ');
   if (/VOORKOOPLIJST/i.test(t)) return 'voorkoop';
+  if (/Collo inhoud/i.test(t)) return 'collo';
   if (/looptijd/i.test(t) && /CAP/.test(t)) return 'actie';
   if (/Folderplanning week/i.test(t)) return 'folder';
   if (/ART\.NR/.test(t) && /VERP\./.test(t)) return 'kw';
@@ -838,6 +840,7 @@ C.parseVoorkoop = pages => {
   });
   return { week, van, tm: C.add(van, 6), thema: '', items, bron: 'voorkoop', uitlevering: uit, besteltot: tot };
 };
+C.parseCollo = pages => { const uit = {}; for (const pg of pages) for (const ln of C.lines(pg)) { const m = ln.txt.match(/^\s*(\d{6})\s+(.+?)\s+(\d+)\s*x\s*([\d.,]+\s*\w*)\s*$/i); if (m) uit[m[1]] = { n: +m[3], inh: m[4].trim(), naam: m[2].trim() }; else { const e = ln.txt.match(/^\s*(\d{6})\s+(.+?)\s+([\d.,]+\s*(?:kg|gr|st|stuks))\s*$/i); if (e) uit[e[1]] = { n: 1, inh: e[3].trim(), naam: e[2].trim() }; } } return uit; };
 C.parseLijst = pages => {
   const out = []; const gezien = new Set();
   for (const pg of pages) for (const ln of C.lines(pg)) {
@@ -1210,7 +1213,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.27';
+const VERSIE = '1.28';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -1636,7 +1639,7 @@ function ingelogd(g) {
   eigenaar = berekenEigenaar(); rol = eigenaar ? 'admin' : 'winkel';
   if (!DEMO) return start();
   S.pref = Object.assign({}, (ls.get('cba-pref-' + wieSleutel()) || {})); pasPrefToe();
-  shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig(); setTimeout(weerHist, 2500); setTimeout(kwAutoHaal, 4000); setTimeout(pdfOpruimen, 8000);
+  shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig(); setTimeout(weerHist, 2500); setTimeout(kwAutoHaal, 4000); setTimeout(versAutoHaal, 6000); setTimeout(pdfOpruimen, 8000);
 }
 async function faceInstellen() {
   if (DEMO) return toast('Face ID werkt alleen in de echte app');
@@ -1680,7 +1683,7 @@ async function start() {
   await sync(!had);
   if (document.body.classList.contains('inlog')) return;
   if (!M) { rebuild(); render(); }
-  tourAlsNodig(); setTimeout(kwAutoHaal, 4000); setTimeout(pdfOpruimen, 8000);
+  tourAlsNodig(); setTimeout(kwAutoHaal, 4000); setTimeout(versAutoHaal, 6000); setTimeout(pdfOpruimen, 8000);
 }
 function startTab() { const s = (S.pref && S.pref.start) || 'home'; return s === 'home' || (BESTEL_OD.includes(s) && mag('o_' + s)) || (s === 'overig' && mag('o_overig')) ? s : 'home'; }
 function shell() {
@@ -2380,7 +2383,7 @@ function kaart(a, bd, laatste) {
   const dgv = bd && !isB ? dlArt(a, bd) : null;
   return `<div class="card ${dgv && dgv.ts < nuTs() ? 'dlvoorbij' : ''} ${a.uit || san ? 'uit' : ''} ${niet ? 'niet' : ''} ${laatste ? 'laatste' : ''} ${isB ? 'isbesteld' : ''} ${ui.open && ui.open.has(a.key) ? 'open' : ''}" data-k="${a.key}">
   <div class="hd" data-meer="1"><div class="nm" ${a.eigen && mag('saneren') ? 'data-eig="' + esc(a.nr) + '"' : ''}>${a.foto ? `<img class="duimfoto" src="${a.foto}" alt="">` : ''}${esc(a.naam)}${a.eigen && mag('saneren') ? ' <span class="small">✎</span>' : ''}</div><div class="adv ${ad.adv ? '' : 'nul'}"><small>Advies</small><b>${advTxt}</b><span>${advSub}</span></div></div>
-  <div class="meta">${a.eigen ? esc(a.artNr || 'zonder nummer') + ' · ' + esc(LEV_NAAM[a.lev] || '') : a.nr} · ${heTxt}</div>
+  <div class="meta">${a.eigen ? esc(a.artNr || 'zonder nummer') + ' · ' + esc(LEV_NAAM[a.lev] || '') : a.nr} · ${heTxt}</div>${!a.uit && !niet ? colloHtml(a, ad, rB) : ''}
   ${labels.length ? `<div class="lbls">${labels.join('')}</div>` : ''}
   ${notitieHtml('a:' + a.key)}
   ${onder}
@@ -2394,6 +2397,7 @@ async function onKaartKlik(e) {
   const card = e.target.closest('.card'); if (!card) return; const key = card.dataset.k; const a = M.art[key]; const { cur } = besteldag(onderdeelVan(a));
   const eg = e.target.closest('[data-eig]'); if (eg) return eigenBewerk(S.eigen[eg.dataset.eig], a.od);
   if (e.target.closest('[data-meer]')) { ui.open = ui.open || new Set(); ui.open.has(key) ? ui.open.delete(key) : ui.open.add(key); card.classList.toggle('open', ui.open.has(key)); const tm = card.querySelector('.tikmeer'); if (tm) tm.textContent = ui.open.has(key) ? '▴ tik op de naam voor minder' : '▾ tik op de naam voor meer'; return; }
+  if (e.target.dataset.collo !== undefined) { const inp = card.querySelector('[data-in="b"]'); inp.value = e.target.dataset.collo; card._okHoog = +inp.value; return opslaan(card, 'b', inp.value); }
   if (e.target.dataset.neem !== undefined) { const inp = card.querySelector('[data-in="b"]'); inp.value = inp.dataset.adv; return opslaan(card, 'b', inp.value); }
   if (e.target.dataset.not !== undefined) return notitieBewerk('a:' + key, a.naam);
   if (e.target.dataset.min !== undefined) return minBewerk(a);
@@ -2650,13 +2654,8 @@ async function uploads(files) {
           S.boeken[soort] = row;
           if (cmp.nieuw.length || cmp.uit.length) pushBoek(soort, cmp.nieuw.length, cmp.uit.length);
           L(`✓ Bestelboek ${soort === 'vers' ? 'Vers' : 'KW'}: ${b.artikelen.length} artikelen · ${cmp.nieuw.length} nieuw · ${cmp.uit.length} uit assortiment${prijs.length ? ` · ${prijs.length} prijswijzigingen` : ''}`, 'ok'); n++;
-        } else if (soort === 'actie') {
-          const a = C.parseActie(pages); if (!a.week || !a.items.length) throw new Error('Geen acties gevonden');
-          let y = +a.van.slice(0, 4); if (a.week < 10 && a.van.slice(5, 7) === '12') y++;
-          const row = { id: `${y}-${String(a.week).padStart(2, '0')}`, week: a.week, van: a.van, tm: a.tm, items: a.items, bestand: f.name, geupload: new Date().toISOString() };
-          if (!DEMO) await upW('acties', [row]); pdfBewaar(row.id, 'actie', buf);
-          S.acties = S.acties.filter(x => x.id !== row.id).concat([row]).sort((p, q) => p.van < q.van ? -1 : 1);
-          L(`✓ Acties week ${a.week}: ${a.items.length} artikelen (${a.items.filter(i => i.folder).length} folder, ${a.items.filter(i => !i.folder).length} instore)`, 'ok'); n++;
+        } else if (soort === 'actie') { const a = await bewaarActie(pages, f.name, buf); L(`✓ Acties week ${a.week}: ${a.items.length} artikelen (${a.items.filter(i => i.folder).length} folder, ${a.items.filter(i => !i.folder).length} instore)`, 'ok'); n++;
+        } else if (soort === 'collo') { const c = C.parseCollo(pages); const nn = Object.keys(c).length; if (!nn) throw new Error('Geen collo-artikelen gevonden'); const w = JSON.parse(JSON.stringify(S.inst || {})); w.collo = { datum: C.today(), items: c }; await saveInst(w); L(`✓ Collo-lijst: ${nn} AGF-artikelen`, 'ok'); n++;
         } else throw new Error('Onbekende pdf – geen bestelboek of actie-pdf');
       } else throw new Error('Bestandstype niet ondersteund');
     } catch (e) { L(`✗ ${f.name}: ${e.message}`, 'err'); }
@@ -4035,7 +4034,7 @@ function versItemKaart(wk, it, kan) {
 function versSorteren(wk) {
   const kan = mag('tafels'); const l = versActies(wk); const s = versStatus(wk); const p = versPlan(wk);
   const open = ui.versOpen ? l.filter(i => !(p.plek || {})[i.nr] && !(p.notitie || {})[i.nr]) : l;
-  let h = `<div class="blk"><h2>Week ${+wk.split('-')[1]} · vers-acties</h2><p class="small">${s.totaal ? (s.gesorteerd === s.totaal ? '<b class="groen">✓ alles gesorteerd</b>' : `${s.gesorteerd} van ${s.totaal} gesorteerd`) : 'Nog geen actie-pdf van Versunie voor deze week. Upload hem via Beheer → Bestanden uploaden.'}</p>
+  let h = `<div class="blk"><h2>Week ${+wk.split('-')[1]} · vers-acties</h2><p class="small">${s.totaal ? (s.gesorteerd === s.totaal ? '<b class="groen">✓ alles gesorteerd</b>' : `${s.gesorteerd} van ${s.totaal} gesorteerd`) : `Nog geen vers-bestellijst voor deze week.${DEMO ? '' : ` <button class="btn sm" id="vsHaal">+ Week ${+wk.split('-')[1]} ophalen</button>`}`}</p>
   ${s.totaal ? `<p class="small">Tik bij elke actie op de koeltafel waar hij komt, of op 📝 voor een notitie. Daarna ga je naar <b>2 · Indelen</b>.</p>` : ''}<div class="row" style="flex-wrap:wrap;gap:8px">${s.totaal ? `<button class="btn sm sec" id="vsOpen">${ui.versOpen ? 'Alles tonen' : 'Alleen nog te doen'}</button>` : ''}<button class="btn sm sec" id="pdfBk">📄 Bekijken</button></div></div>`;
   { const a = (S.acties || []).find(x => x.id === wk); if (a && a.van) h += terugblikHtml(a.van, a.tm || C.add(a.van, 6), l.filter(i => (p.plek || {})[i.nr]).map(i => [i.naam, [versKey(i.nr)].filter(Boolean)])); }
   if (s.totaal && !koelTafels().length) h += `<div class="empty">Maak eerst een koeltafel aan bij <b>2 · Indelen</b>.</div>`;
@@ -4047,6 +4046,7 @@ function versSorteerEvents(v, wk) {
   v.querySelectorAll('[data-vz]').forEach(b => b.onclick = () => z(b.dataset.vz, p => { const nr = b.dataset.vz; if (p.plek[nr] === b.dataset.vzt) delete p.plek[nr]; else { p.plek[nr] = b.dataset.vzt; delete p.notitie[nr]; } }));
   v.querySelectorAll('[data-vnt]').forEach(b => b.onclick = () => { const nr = b.dataset.vnt; const it = versActies(wk).find(x => x.nr === nr) || {}; notitieKeuze(it.naam || nr, (versPlan(wk).notitie || {})[nr] || '', ['In het schap', 'Niet besteld'], t => z(nr, p => { if (t) { p.notitie[nr] = t; delete p.plek[nr]; } else delete p.notitie[nr]; })); });
   const o = $('#vsOpen'); if (o) o.onclick = () => { ui.versOpen = !ui.versOpen; render(true); };
+  const hl = $('#vsHaal'); if (hl) hl.onclick = async () => { hl.disabled = true; hl.textContent = 'Ophalen…'; try { const [y, w] = wk.split('-').map(Number); const a = await versHaalOp(y, w); toast(`✓ Vers-acties week ${a.week}: ${a.items.length} acties`); render(); } catch (e) { toast(e.message, 5000); hl.disabled = false; hl.textContent = '+ Opnieuw proberen'; } };
 }
 function versNogPlaatsen(wk, t) { const p = versPlan(wk); const op = versOpTafel(wk, t.id); return versActies(wk).filter(i => (p.plek || {})[i.nr] === t.id && !op.has(i.nr)); }
 function versPlaats(wk, t, nr) {
@@ -4178,6 +4178,34 @@ function controleSheet(od, cur) {
   ov.onclick = e => { const c = e.target.closest('[data-cok]'); if (c) { ok.add(c.dataset.cok); const q = ov.querySelector('#ctlQ'); q.value = ''; q.focus(); teken(); } const g = e.target.closest('[data-cga]'); if (g) { ov.remove(); naarArtikel(M.art[g.dataset.cga]); } };
   teken(); setTimeout(() => ov.querySelector('#ctlQ').focus(), 50);
 }
+/* ---------- 1.28: vers-bestellijst ophalen + volle collo ---------- */
+async function bewaarActie(pages, naam, buf) {
+  const a = C.parseActie(pages); if (!a.week || !a.items.length) throw new Error('Geen acties gevonden');
+  let y = +a.van.slice(0, 4); if (a.week < 10 && a.van.slice(5, 7) === '12') y++;
+  const row = { id: `${y}-${String(a.week).padStart(2, '0')}`, week: a.week, van: a.van, tm: a.tm, items: a.items, bestand: naam, geupload: new Date().toISOString() };
+  if (!DEMO) await upW('acties', [row]); pdfBewaar(row.id, 'actie', buf);
+  S.acties = S.acties.filter(x => x.id !== row.id).concat([row]).sort((p, q) => p.van < q.van ? -1 : 1); rebuild(); return Object.assign(a, { id: row.id });
+}
+async function versHaalOp(jaar, week) {
+  if (DEMO) throw new Error('In de testversie kun je de pdf zelf kiezen');
+  const r = await fetch(`${SB_URL}/functions/v1/folder?jaar=${jaar}&week=${week}&soort=vers`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } });
+  if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } throw new Error(t); }
+  const buf = await r.arrayBuffer(); const pages = await C.pdfPages(await pdfjs(), buf.slice(0)); if (C.detectPdf(pages) !== 'actie') throw new Error('Geen vers-bestellijst');
+  const a = await bewaarActie(pages, 'opgehaald', buf); if (a.week !== +week) throw new Error(`Vers-bestellijst week ${week} staat nog niet online`); return a;
+}
+async function versAutoHaal() {
+  if (DEMO || OEFEN || !navigator.onLine || !(mag('upload') || mag('tafels'))) return; const lk = 'cba-versauto-' + W; if (ls.get(lk) === C.today()) return; ls.set(lk, C.today());
+  for (let n = 0; n <= 3; n++) { const d = C.add(C.monday(C.today()), 7 * n); const iw = C.isoWeek(d); const id = weekSleutel(d); if ((S.acties || []).some(x => x.id === id)) continue;
+    try { await versHaalOp(iw.y, iw.w); toast(`📣 Vers-acties week ${iw.w} automatisch opgehaald`, 4000); log('acties', `Vers-bestellijst week ${iw.w} automatisch opgehaald`); render(true); } catch (e) { } }
+}
+function colloVan(a) { const c = (S.inst || {}).collo; const x = c && c.items && a && a.nr && c.items[a.nr]; if (!x) return null; const st = a.perHE && a.he > 0 ? a.he : 1; return Object.assign({ eenh: Math.max(1, Math.round(x.n / st)) }, x); }
+function colloHtml(a, ad, rB) {
+  const c = colloVan(a); if (!c) return ''; const u = a.perHE ? ' HE' : ''; const adv = ad.adv || 0;
+  let t = `💰 Volle collo = ${c.n} × ${esc(c.inh)} → korting`;
+  if (adv > 0 && adv < c.eenh) { const nd = Array.isArray(ad.days) ? ad.days.length : +ad.days || 0; const dpd = nd ? ad.need / nd : 0; const dg = dpd > 0 ? Math.floor((ad.stock || 0) / dpd) : 0; t += `<br><span class="small">Advies ${C.fmt(adv)}${u}. ${dg >= 2 ? `Er ligt nog voor ±${dg} dagen: liever wachten en in één keer ${c.eenh}${u} bestellen?` : `Nu nodig. Volle collo (${c.eenh}${u}) geeft korting, maar ${C.fmt(c.eenh - adv)}${u} meer over.`}</span>`; }
+  else if (adv > c.eenh && adv % c.eenh) t += `<br><span class="small">Afronden naar ${Math.ceil(adv / c.eenh) * c.eenh}${u} = ${Math.ceil(adv / c.eenh)} volle collo.</span>`;
+  return `<div class="collo">${t}${rB ? `<button class="btn sm" data-collo="${Math.max(1, Math.ceil(adv / c.eenh)) * c.eenh}">Volle collo</button>` : ''}</div>`;
+}
 /* ---------- 1.14: bluetooth-scanner ---------- */
 let telHook = null, scanHook = null, scannerGezien = false;
 let piepCtx = null;
@@ -4264,7 +4292,7 @@ function renderLeverancier() {
   if (!dag) h += '<div class="empty">Geen besteldagen in de komende week.</div>';
   for (const lev of Object.keys(groep)) {
     const l = groep[lev]; if (!l.length) continue;
-    h += `<div class="blk"><h2>${LEV_NAAM[lev]} <span class="small">· ${l.length} artikelen</span></h2><div class="list">${l.map(x => `<div class="it"><span style="flex:1"><b>${esc(x.a.eigen ? x.a.artNr || '–' : x.a.nr)}</b> ${esc(x.a.naam)}<br><span class="small">${odNaam(x.od)} · levering ${C.fmtDag(x.lv.L)}${x.ingevuld ? '' : ' · advies'}</span></span><b style="font-size:18px">${C.fmt(x.n)} ${x.a.perHE ? 'HE' : ''}</b>${x.besteld ? ' <span title="besteld">✓</span>' : ''}</div>`).join('')}</div>
+    h += `<div class="blk"><h2>${LEV_NAAM[lev]} <span class="small">· ${l.length} artikelen</span></h2><div class="list">${l.map(x => `<div class="it"><span style="flex:1"><b>${esc(x.a.eigen ? x.a.artNr || '–' : x.a.nr)}</b> ${esc(x.a.naam)}<br><span class="small">${odNaam(x.od)} · levering ${C.fmtDag(x.lv.L)}${x.ingevuld ? '' : ' · advies'}${(() => { const c = colloVan(x.a); return c && x.n % c.eenh === 0 ? ' · <b class="oranje">volle collo</b>' : ''; })()}</span></span><b style="font-size:18px">${C.fmt(x.n)} ${x.a.perHE ? 'HE' : ''}</b>${x.besteld ? ' <span title="besteld">✓</span>' : ''}</div>`).join('')}</div>
     <div class="row" style="margin-top:10px"><button class="btn sm sec" data-ldeel="${lev}" style="flex:1">Delen</button><button class="btn sm sec" data-lprint="${lev}" style="flex:1">👁️ Pdf</button></div></div>`;
   }
   if (dag && !Object.values(groep).some(l => l.length)) h += '<div class="empty">Niets te bestellen op deze dag.</div>';
