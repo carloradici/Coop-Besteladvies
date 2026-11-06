@@ -1213,7 +1213,7 @@ if (typeof module !== 'undefined') module.exports = C;
 <script>/* Coop Besteladvies – app */
 (function () {
 'use strict';
-const VERSIE = '1.28';
+const VERSIE = '1.29';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -2519,7 +2519,7 @@ function renderBeheer() {
   const schemaRij = (bron, r, i) => `<div class="f"><label>Bestellen <select data-sch="${bron}" data-i="${i}" data-f="b">${C.DAGNAAM.map((d, j) => `<option value="${j}" ${j === r.b ? 'selected' : ''}>${d}</option>`).join('')}</select></label><label>levering <select data-sch="${bron}" data-i="${i}" data-f="l">${C.DAGNAAM.map((d, j) => `<option value="${j}" ${j === r.l ? 'selected' : ''}>${d}</option>`).join('')}</select></label><button class="btn sm sec" data-schdel="${bron}" data-i="${i}">×</button></div>`;
   v.innerHTML = `${kU ? `
   <div class="blk" data-sec="upload"><h2>Bestanden uploaden</h2><p class="small">Kies één of meer bestanden tegelijk: dag-exports uit CasPos (.xls), bestelboek Vers of KW (.pdf) en de actie-pdf. De app herkent zelf wat het is.</p>
-  <label class="btn" style="display:block;text-align:center">Bestanden kiezen<input type="file" id="up" multiple accept=".xls,.xlsx,.pdf" class="hide"></label><div class="log hide" id="upLog"></div></div>
+  <label class="btn" style="display:block;text-align:center">Bestanden kiezen<input type="file" id="up" multiple accept=".xls,.xlsx,.pdf" class="hide"></label><button class="btn sec" id="upLink" style="width:100%;margin-top:8px">🔗 Link plakken</button><div class="log hide" id="upLog"></div></div>
   <div class="blk" data-sec="upload"><h2>Dag-exports laatste 8 weken</h2>${(() => { const m = ontbrekend(); return m.length ? `<p class="small rood">⚠️ ${ontbrekendTekst(m)}</p>` : '<p class="small groen">✓ Geen dagen ontbreken</p>'; })()}${kalenderHtml()}</div>
   <div class="blk" data-sec="upload"><h2>Status</h2><div class="kv">
   <span>Verkoopdagen</span><b>${dagen.length ? `${dagen.length} dagen · ${C.fmtDag(dagen[0])} t/m ${C.fmtDag(last)}` : 'nog geen'}</b>
@@ -2566,6 +2566,7 @@ function renderBeheer() {
   ${controle115()}
   <div class="blk" data-sec="controle"><h2>Besteleenheid controleren (${chk.length})</h2><p class="small">Bij deze artikelen is de besteleenheid uit de naam afgeleid. Pas aan als het niet klopt.</p><div class="list">${chk.map(a => `<div class="it" style="flex-wrap:wrap"><span style="flex:1 1 200px">${esc(a.naam)} <span class="small">${a.nr} · ${a.eh}</span></span><label class="small">per HE <input type="checkbox" data-he="${a.key}" data-f="perHE" ${a.perHE ? 'checked' : ''}></label><input type="number" step="0.1" data-he="${a.key}" data-f="he" value="${a.he}" style="width:80px"><button class="btn sm sec" data-heok="${a.key}">Klopt</button></div>`).join('') || '<div class="small">Niets te controleren.</div>'}</div></div>` : ''}`;
   // events
+  const ul = $('#upLink'); if (ul) ul.onclick = linkPlakken;
   const upI = $('#up'); if (upI) upI.onchange = e => { if (OEFEN) return toast('Uploaden kan niet tijdens oefenen'); uploads([...e.target.files]); };
   v.querySelectorAll('[data-delac]').forEach(b => b.onclick = async () => { if (!await bevestig('Weet je het zeker?', 'Deze actieweek wordt verwijderd.', 'Verwijderen', 'Annuleren')) return; await adminDo(async () => { if (!DEMO) await remove('acties', `id=eq.${b.dataset.delac}&winkel_id=eq.${W}`); S.acties = S.acties.filter(a => a.id !== b.dataset.delac); }); });
   v.querySelectorAll('[data-deldag]').forEach(b => b.onclick = async () => { if (!await bevestig('Weet je het zeker?', 'De dag-export van ' + C.fmtDag(b.dataset.deldag) + ' wordt verwijderd.', 'Verwijderen', 'Annuleren')) return; await adminDo(async () => { const d = b.dataset.deldag; if (!DEMO) await remove('dagverkoop', `dag=eq.${d}&winkel_id=eq.${W}`); delete S.dagen[d]; delete S.dagMeta[d]; await idel('d:' + W + ':' + d); }); });
@@ -4205,6 +4206,25 @@ function colloHtml(a, ad, rB) {
   if (adv > 0 && adv < c.eenh) { const nd = Array.isArray(ad.days) ? ad.days.length : +ad.days || 0; const dpd = nd ? ad.need / nd : 0; const dg = dpd > 0 ? Math.floor((ad.stock || 0) / dpd) : 0; t += `<br><span class="small">Advies ${C.fmt(adv)}${u}. ${dg >= 2 ? `Er ligt nog voor ±${dg} dagen: liever wachten en in één keer ${c.eenh}${u} bestellen?` : `Nu nodig. Volle collo (${c.eenh}${u}) geeft korting, maar ${C.fmt(c.eenh - adv)}${u} meer over.`}</span>`; }
   else if (adv > c.eenh && adv % c.eenh) t += `<br><span class="small">Afronden naar ${Math.ceil(adv / c.eenh) * c.eenh}${u} = ${Math.ceil(adv / c.eenh)} volle collo.</span>`;
   return `<div class="collo">${t}${rB ? `<button class="btn sm" data-collo="${Math.max(1, Math.ceil(adv / c.eenh)) * c.eenh}">Volle collo</button>` : ''}</div>`;
+}
+/* ---------- 1.29: link plakken ---------- */
+function linkPlakken() {
+  if (OEFEN) return toast('Uploaden kan niet tijdens oefenen');
+  const ov = sheet(`<h2 style="margin:0">🔗 Link plakken</h2><p class="small">Kopieer in Safari of je mail de link naar een pdf of Excel van Reto, bijvoorbeeld de collo-lijst of een folderplanning, en plak hem hieronder.</p><textarea id="lkU" rows="3" class="notitieveld" placeholder="https://static.reto.media/…"></textarea><button class="btn sec" id="lkP" style="width:100%;margin-top:8px">📋 Plakken uit klembord</button><button class="btn" id="lkG" style="width:100%;margin-top:8px">Ophalen en verwerken</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`);
+  const veld = ov.querySelector('#lkU');
+  ov.querySelector('#lkP').onclick = async () => { try { veld.value = (await navigator.clipboard.readText()).trim(); } catch (e) { toast('Plakken lukt niet automatisch. Houd het veld ingedrukt en kies Plak.', 4000); veld.focus(); } };
+  ov.querySelector('#lkG').onclick = async () => {
+    const l = ((veld.value.match(/https:\/\/\S+/) || [])[0] || '').replace(/[)>\]"']+$/, ''); if (!l) return toast('Plak eerst een link die met https:// begint');
+    const b = ov.querySelector('#lkG'); b.disabled = true; b.textContent = 'Ophalen…';
+    try {
+      if (DEMO) throw new Error('In de testversie kun je de pdf zelf kiezen');
+      const r = await fetch(`${SB_URL}/functions/v1/folder?url=${encodeURIComponent(l)}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } });
+      if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } throw new Error(t); }
+      const naam = decodeURIComponent(l.split('?')[0].split('/').pop() || 'bestand.pdf'); const f = new File([await r.arrayBuffer()], naam, { type: r.headers.get('content-type') || 'application/pdf' });
+      ov.remove(); log('upload', 'Via link: ' + naam); uploads([f]);
+    } catch (e) { toast(e.message, 5000); b.disabled = false; b.textContent = 'Ophalen en verwerken'; }
+  };
+  setTimeout(() => veld.focus(), 50);
 }
 /* ---------- 1.14: bluetooth-scanner ---------- */
 let telHook = null, scanHook = null, scannerGezien = false;

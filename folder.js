@@ -1,6 +1,6 @@
 // Coop Besteladvies – folderplanning ophalen (Supabase Edge Function "folder").
 // De telefoon mag de pdf niet rechtstreeks laden (andere website); deze functie haalt hem op en geeft hem door.
-export const FUNCTIE_VERSIE = '1.28';
+export const FUNCTIE_VERSIE = '1.29';
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type', 'Access-Control-Allow-Methods': 'GET, OPTIONS' };
 export function urls(jaar, week, soort) {
   const w = String(week).padStart(2, '0'); const uit = [];
@@ -17,11 +17,16 @@ export async function haal(jaar, week, f = fetch, soort = '') {
   }
   return { status: 404, fout: `${soort === 'voorkoop' ? 'Voorkooplijst' : soort === 'vers' ? 'Vers-bestellijst' : 'Folderplanning'} week ${week} staat nog niet online` };
 }
+export const magLink = l => { try { const u = new URL(l); return u.protocol === 'https:' && (u.hostname === 'static.reto.media' || (/\.cloudfront\.net$/.test(u.hostname) && /mailcenter_reto/i.test(u.pathname))); } catch (e) { return false; } };
+export async function haalLink(l, f = fetch) {
+  if (!magLink(l)) return { status: 400, fout: 'Deze link wordt niet ondersteund. Alleen links van Reto (static.reto.media of de Reto-mail).' };
+  try { const r = await f(l); if (!r.ok) return { status: 404, fout: 'Bestand niet gevonden (' + r.status + ')' }; const b = new Uint8Array(await r.arrayBuffer()); if (b.length > 20 * 1024 * 1024) return { status: 413, fout: 'Bestand is te groot' }; return { status: 200, pdf: b, url: l, type: r.headers.get('content-type') || '' }; } catch (e) { return { status: 502, fout: 'Ophalen mislukt' }; }
+}
 export function start() {
   Deno.serve(async req => {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
-    const u = new URL(req.url); const r = await haal(u.searchParams.get('jaar'), u.searchParams.get('week'), fetch, ['voorkoop', 'vers'].includes(u.searchParams.get('soort')) ? u.searchParams.get('soort') : '');
-    if (r.pdf) return new Response(r.pdf, { headers: Object.assign({ 'Content-Type': 'application/pdf', 'X-Bron': r.url }, CORS) });
+    const u = new URL(req.url); const r = u.searchParams.get('url') ? await haalLink(u.searchParams.get('url')) : await haal(u.searchParams.get('jaar'), u.searchParams.get('week'), fetch, ['voorkoop', 'vers'].includes(u.searchParams.get('soort')) ? u.searchParams.get('soort') : '');
+    if (r.pdf) return new Response(r.pdf, { headers: Object.assign({ 'Content-Type': r.type || 'application/pdf', 'X-Bron': r.url }, CORS) });
     return new Response(JSON.stringify({ fout: r.fout }), { status: r.status, headers: Object.assign({ 'Content-Type': 'application/json; charset=utf-8' }, CORS) });
   });
 }
