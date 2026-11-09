@@ -505,7 +505,7 @@ C.dagFactor = (M, d) => {
 };
 C.verwacht = (M, key, d) => {
   const ref = d <= M.vandaag ? d : M.vandaag;
-  let b = C.basis(M, key, C.wd(d), ref); if (b === null) b = 0;
+  let b = M.bo && M.bo[key] && M.bo[key][C.wd(d)] != null ? M.bo[key][C.wd(d)] : C.basis(M, key, C.wd(d), ref); if (b === null) b = 0;
   let f = b * C.dagFactor(M, d);
   const p = C.actieOp(M, key, d);
   if (p) f *= C.actieUplift(M, key, p) * (p.plekF > 0 ? p.plekF : 1);
@@ -554,7 +554,7 @@ C.advies = (M, key, lv, voorraad, bestellingen) => {
   const buf = (M.st.buffer[a ? a.bron : 'vers'] || 0) / 100; need *= 1 + buf;
   const leegN = M.leegN ? M.leegN[key] || 0 : 0; let leegBoost = 0; if (leegN >= 2) { leegBoost = Math.min(0.25, 0.075 * leegN); need *= 1 + leegBoost; }
   let derv = 0, dervKorting = 0;
-  if (M.derv && M.derv[key] > 0) { derv = M.derv[key]; const sk = M.keys[key]; let v28 = 0; if (sk) for (let i = Math.max(0, M.N - 28); i < M.N; i++) v28 += sk.v[i]; const ratio = derv / (v28 + derv); if (ratio > 0.05) { dervKorting = Math.min(0.25, ratio * 0.5); need *= 1 - dervKorting; } }
+  if (M.derv && M.derv[key] > 0 && !(M.bo && M.bo[key])) { derv = M.derv[key]; const sk = M.keys[key]; let v28 = 0; if (sk) for (let i = Math.max(0, M.N - 28); i < M.N; i++) v28 += sk.v[i]; const ratio = derv / (v28 + derv); if (ratio > 0.05) { dervKorting = Math.min(0.25, ratio * 0.5); need *= 1 - dervKorting; } }
   let stock = null;
   if (voorraad && voorraad.dag && C.diff(voorraad.dag, M.vandaag) <= 7) {
     stock = voorraad.aantal;
@@ -564,7 +564,7 @@ C.advies = (M, key, lv, voorraad, bestellingen) => {
   const min = M.min && M.min[key] > 0 ? +M.min[key] : 0;
   const netto = stock !== null ? Math.max(0, need + min - Math.max(0, stock)) : Math.max(need, min);
   const x = netto / he;
-  const adv = x < 0.3 ? 0 : (a && a.perHE ? Math.max(1, Math.round(x)) : Math.max(1, Math.round(x)));
+  let adv = x < 0.3 ? 0 : Math.max(1, Math.round(x)); const boMin = M.boMin ? M.boMin(key, lv) : 0; if (boMin > adv) adv = boMin;
   return { need, stock, netto, adv, he, min, derv, dervKorting, perHE: !!(a && a.perHE), days, kg: !!(M.keys[key] && M.keys[key].kg), weer, houdb, leegN, leegBoost, start: (!M.keys[key] || M.keys[key].first < 0) && !!M.startBasis && need > 0 };
 };
 // weekoverzicht: laatste 3 volle weken + lopende week + Gd

@@ -526,3 +526,4 @@ input[type=search]::-webkit-search-cancel-button{display:none}
 span.rood{color:#e53935}span.groen{color:#2e7d32}
 .voorkoop{color:var(--oranje);margin-top:4px}.weekov .kv{margin-top:8px}
 .collo{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--oranjeLicht);color:var(--oranjeD);font-weight:700;font-size:14px}.collo .small{color:inherit;font-weight:500}.collo .btn{margin-top:8px;display:block}
+.bo{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--kaart2,rgba(241,125,4,.08));font-size:14px}.bowarn{margin-top:6px;padding:6px 8px;border-radius:8px;background:#fde7e7;color:#a11;font-weight:700}

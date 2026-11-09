@@ -83,6 +83,7 @@ function belItemsBasis() {
   const pr = prijsLijst().length; if (pr) out.push({ ic: '🏷️', t: `${pr} schapkaartje${pr === 1 ? '' : 's'} vervangen`, sub: 'Prijs gewijzigd in het bestelboek', ga: 'assort' });
   const lv = leverRegels(C.today()); const lvOpen = lv.filter(x => !x.chk).length; if (lvOpen) out.push({ ic: '📦', t: 'Levering van vandaag controleren', sub: `Nog ${lvOpen} van ${lv.length} af te vinken`, ga: 'levering' });
   const tt = tafelTelling(); if (tt.ombouw && tt.open) out.push({ ic: '🗂️', t: 'Actietafels ombouwen', sub: `${tt.klaar} van ${tt.totaal} klaar`, ga: 'tafels' });
+  out.push(...boBel());
   return out;
 }
 function belTel() { const el = $('#belN'); if (!el) return; let n = 0; try { n = belItems().filter(belInfo).length; } catch (e) { } el.textContent = n > 9 ? '9+' : n; el.classList.toggle('hide', !n); }

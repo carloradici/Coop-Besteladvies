@@ -232,6 +232,7 @@ function meerItems() {
     ['data', 'bUp', '📤', 'Bestanden uploaden', 'Dag-exports, bestelboeken en acties', 'upload uploaden bestand export kassa caspos excel pdf bestelboek dag-export', kU, () => naarBeheer('upload')],
     ['data', 'bAuto', '📡', 'Automatisch uploaden', 'Dag-export elke dag vanzelf vanaf een computer', 'automatisch computer script sleutel elke dag', kU, () => naarBeheer('auto')],
     ['data', 'bCtl', '🔍', 'Controleren', 'Niet gekoppelde artikelen en besteleenheden', 'controleren niet gekoppeld koppelen eenheid', kU || kI, () => naarBeheer('controle')],
+    ['data', 'bBo', '🥐', 'Brood Opzet koppelen', 'Klaargezet, over en voorraad van bake-off', 'brood opzet broodopzet bake off afbakken koppelen croissant derving voorraad', kI, () => naarBeheer('brood')],
     ['data', 'bWeg', '🗑️', 'Uploads verwijderen', 'Als je een verkeerd bestand hebt geüpload', 'verwijderen fout verkeerd bestand', kU, () => naarBeheer('verwijderen')],
     ['winkel', 'mSync', '☁️', 'Gegevens opnieuw laden', '', 'verversen opnieuw laden sync synchroniseren', true, () => { if (DEMO || OEFEN) toast(OEFEN ? 'Niet tijdens oefenen' : 'Testversie: geen server'); else sync(true); }],
     ['winkel', 'mWi', '🏪', 'Winkel en koppelcode', 'Toestellen koppelen, winkelgegevens', 'koppelcode toestel telefoon koppelen winkel plaats', kT, () => ga('winkel')],

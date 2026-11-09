@@ -169,7 +169,7 @@ function ingelogd(g) {
   eigenaar = berekenEigenaar(); rol = eigenaar ? 'admin' : 'winkel';
   if (!DEMO) return start();
   S.pref = Object.assign({}, (ls.get('cba-pref-' + wieSleutel()) || {})); pasPrefToe();
-  shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig(); setTimeout(weerHist, 2500); setTimeout(kwAutoHaal, 4000); setTimeout(versAutoHaal, 6000); setTimeout(pdfOpruimen, 8000);
+  shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig(); setTimeout(weerHist, 2500); setTimeout(kwAutoHaal, 4000); setTimeout(versAutoHaal, 6000); setTimeout(pdfOpruimen, 8000); setTimeout(boHaal, 3000);
 }
 async function faceInstellen() {
   if (DEMO) return toast('Face ID werkt alleen in de echte app');
@@ -197,7 +197,7 @@ document.addEventListener('visibilitychange', () => {
 function startDemo(r) {
   const d = window.DEMO_DATA;
   Object.assign(S, { dagen: d.dagen, kassa: d.kassa, boeken: d.boeken, acties: d.acties, agenda: d.agenda, inst: d.inst, medewerkers: DEMO_MW, winkel: { code: 'K7MX4PQ2', tot: C.add(C.today(), 30) + 'T12:00:00Z', toestellen: 2, naam: 'Coop Vogelenzang', plaats: 'Vogelenzang' }, assort: d.assort || {}, notities: {}, act: [] });
-  S.dagMeta = {}; Object.keys(d.dagen).forEach(k => S.dagMeta[k] = 'demo');
+  S.dagMeta = {}; Object.keys(d.dagen).forEach(k => S.dagMeta[k] = 'demo'); S.bo = d.bo ? (o => Object.assign({}, d.bo, { nu: C.add(d.bo.nu, o), t: Date.now(), dagen: Object.fromEntries(Object.entries(d.bo.dagen).map(([k, v]) => [C.add(k, o), v])) }))(C.diff(d.bo.nu, C.today())) : null;
   W = 'demo'; WINKEL = { id: 'demo', naam: 'Coop Vogelenzang', plaats: 'Vogelenzang', rol: r === 'admin' ? 'beheer' : 'toestel' }; winkels = [WINKEL];
   sess = { email: r === 'admin' ? 'carlo@coopvogelenzang.nl' : '', kind: r === 'admin' ? 'email' : 'anon' };
   rebuild(); IN.keuze = r === 'admin' ? 'd1' : null; inlogScherm();
@@ -208,6 +208,7 @@ async function start() {
   const had = await loadCache();
   eigenaar = berekenEigenaar(); rol = eigenaar ? 'admin' : 'winkel';
   S.pref = ls.get('cba-pref-' + wieSleutel()) || S.pref || {}; pasPrefToe();
+  S.bo = await iget('bo:' + W) || null;
   if (had) { rebuild(); ui.tab = startTab(); render(); }
   else $('#view').innerHTML = '<div class="empty">Gegevens laden…</div>';
   await sync(!had);

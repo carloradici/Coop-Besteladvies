@@ -101,6 +101,7 @@ function renderLijst(od, soft) {
   else { const last = M.dagLijst[M.dagLijst.length - 1]; const oud = C.diff(last, C.today()); if (oud > 2 && (isBeheer() || mag('upload'))) html += `<div class="banner warn"><h3>Verkoop t/m ${C.fmtDag(last)}</h3><div class="sub">De laatste dag-export is ${oud} dagen oud. Het advies is minder nauwkeurig.</div></div>`; }
   const t = (() => { let n = 0, u = 0; if (boek) { n = (boek.nieuw || []).filter(nr => M.art[bron + ':' + nr] && onderdeelVan(M.art[bron + ':' + nr]) === od).length; u = (boek.uit || []).filter(a => !S.schapOk.has(bron + ':' + a.nr) && M.art[bron + ':' + a.nr] && onderdeelVan(M.art[bron + ':' + a.nr]) === od).length; } for (const k in S.assort) { const r = S.assort[k], a = M.art[k]; if (!a || onderdeelVan(a) !== od || r.schap_ok) continue; if (r.status === 'gesaneerd') u++; if (r.status === 'in' && r.opgenomen) n++; } return { n, u }; })();
   if (t.n || t.u) html += `<div class="banner"><h3><span>Assortiment gewijzigd</span><button class="btn sm sec" id="assT">Bekijk</button></h3><div class="sub">${t.n} nieuw · ${t.u} schap opnieuw indelen</div></div>`;
+  if (cur && !leeg) html += boBanner(alleArts, cur);
   const arts = alleArts.filter(a => zichtbaar(a, cur));
   html += `<div id="lst"></div>`;
   if (cur && !leeg && st.nodig && mag('afvinken')) html += `<div class="klaarblok"><button class="btn klaarknop" id="klaarB">${st.open ? 'Klaar, alles besteld ✓' : '✓ Alles besteld'}</button><p class="small">${st.open ? `Vinkt de ${st.open} open artikelen in één keer af.` : 'Goed bezig 👍'}</p></div>`;
@@ -187,7 +188,7 @@ function kaart(a, bd, laatste) {
   const dgv = bd && !isB ? dlArt(a, bd) : null;
   return `<div class="card ${dgv && dgv.ts < nuTs() ? 'dlvoorbij' : ''} ${a.uit || san ? 'uit' : ''} ${niet ? 'niet' : ''} ${laatste ? 'laatste' : ''} ${isB ? 'isbesteld' : ''} ${ui.open && ui.open.has(a.key) ? 'open' : ''}" data-k="${a.key}">
   <div class="hd" data-meer="1"><div class="nm" ${a.eigen && mag('saneren') ? 'data-eig="' + esc(a.nr) + '"' : ''}>${a.foto ? `<img class="duimfoto" src="${a.foto}" alt="">` : ''}${esc(a.naam)}${a.eigen && mag('saneren') ? ' <span class="small">✎</span>' : ''}</div><div class="adv ${ad.adv ? '' : 'nul'}"><small>Advies</small><b>${advTxt}</b><span>${advSub}</span></div></div>
-  <div class="meta">${a.eigen ? esc(a.artNr || 'zonder nummer') + ' · ' + esc(LEV_NAAM[a.lev] || '') : a.nr} · ${heTxt}</div>${!a.uit && !niet ? colloHtml(a, ad, rB) : ''}
+  <div class="meta">${a.eigen ? esc(a.artNr || 'zonder nummer') + ' · ' + esc(LEV_NAAM[a.lev] || '') : a.nr} · ${heTxt}</div>${!a.uit && !niet ? colloHtml(a, ad, rB) + boHtml(a, bd, be, ad) : ''}
   ${labels.length ? `<div class="lbls">${labels.join('')}</div>` : ''}
   ${notitieHtml('a:' + a.key)}
   ${onder}

@@ -28,7 +28,7 @@ function naModel() {
   };
   M.weerFactor = weerModel();
 }
-function vrVan(key) { const v = S.voorraad[key]; if (v && v.dag && C.diff(v.dag, C.today()) <= 7) return v; return restant(key) || v; }
+function vrVan(key) { const v = S.voorraad[key]; const bo = boVr(key); if (bo && !(v && v.dag && v.dag >= bo.dag)) return bo; if (v && v.dag && C.diff(v.dag, C.today()) <= 7) return v; return restant(key) || v; }
 function restant(key) {
   const l = M.actieArt && M.actieArt[key]; if (!l) return null; const vandaag = C.today(); const a = M.art[key]; if (!a) return null; const he = a.perHE && a.he > 0 ? a.he : 1;
   const p = l.filter(x => x.zon < vandaag && x.zon >= C.add(vandaag, -10)).sort((x, y) => x.zon < y.zon ? 1 : -1)[0]; if (!p) return null;

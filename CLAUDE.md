@@ -32,9 +32,10 @@ Web-app (PWA) van Coop Vogelenzang die per artikel een bestel-advies geeft (vers
 | app-plekken.js | plekken tekenen |
 | app-voorkoop.js | voorkooplijst, actieplanning vers, terugblik, back-up, vers-bestellijst, link plakken, bluetooth-scanner |
 | app-overig.js | hoe goed was het advies, per leverancier, zoeken, derving, prijswijzigingen, leverdag-check, actietafels |
+| app-brood.js | koppeling met Brood Opzet: ophalen (boHaal), advies per weekdag (M.bo), voorraad, waarschuwing "komt niet uit", koppelscherm |
 | app-start.js | opstarten |
 
-Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js` (vaste naam, Supabase heeft alleen een stub die ze importeert).
+Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js` (vaste naam, Supabase heeft alleen een stub die ze importeert). Brood Opzet-gegevens komen van de Edge Function `brood-export` in het Brood Opzet-project (bestand `brood-export.js` in repo Broodkarren); adres + koppelcode staan in `S.inst.bo`.
 
 ## Nieuwe versie (1.31, 1.32 …)
 1. `app-basis.js`: `const VERSIE = 'x.y'`.

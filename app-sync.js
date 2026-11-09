@@ -142,7 +142,7 @@ function rebuild() {
   M.min = S.min || {};
   M.derv = {}; const grens = C.add(C.today(), -28); for (const r of Object.values(S.derving || {})) if (r.dag >= grens && r.soort === 'weg') M.derv[r.bron + ':' + r.nr] = (M.derv[r.bron + ':' + r.nr] || 0) + (+r.aantal || 0);
   M.dervSchat = schatDerving();
-  naModel();
+  naModel(); boModel();
 }
 function schatDerving() {
   const out = {}; const sg = new Set(((S.inst || {}).dervSchat) || []); if (!sg.size || !M.dagLijst.length) return out;
