@@ -36,7 +36,7 @@ Web-app (PWA) van Coop Vogelenzang die per artikel een bestel-advies geeft (vers
 | app-route.js | looproute: paden per onderdeel (ROUTE_STD), pad per artikel, leren bij bestellen (routeTik), route-scherm; opgeslagen in voorkeuren wie='route' |
 | app-start.js | opstarten |
 
-Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js` (vaste naam, Supabase heeft alleen een stub die ze importeert). Brood Opzet-gegevens komen van de Edge Function `brood-export` in het Brood Opzet-project (bestand `brood-export.js` in repo Broodkarren); adres + koppelcode staan in `S.inst.bo`.
+Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js`, `verkoop-export.js` (kassaverkoop per PLU voor Brood Opzet, koppelcode in de stub) (vaste naam, Supabase heeft alleen een stub die ze importeert). Brood Opzet-gegevens komen van de Edge Function `brood-export` in het Brood Opzet-project (bestand `brood-export.js` in repo Broodkarren); adres + koppelcode staan in `S.inst.bo`.
 
 ## Nieuwe versie (1.31, 1.32 …)
 1. `app-basis.js`: `const VERSIE = 'x.y'`.

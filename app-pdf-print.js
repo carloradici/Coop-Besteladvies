@@ -90,7 +90,7 @@ function lijstKopTekst(od, boekTxt) {
   let t = dl ? `Bestellen vóór ${dag(dl.dag)} ${dl.t}` : `Bestellen ${dag(cur.besteldag)}`; t += ` · levering ${C.DAGEN[C.wd(cur.L)]}`;
   if (dl && dl.dag === C.today()) { const rest = minuten(dl.t) - minuten(nuHHMM()); t += rest < 0 ? ' <span class="aftel rood">⏰ deadline voorbij</span>' : ` <span class="aftel ${rest < 60 ? 'rood' : ''}">⏰ nog ${rest >= 60 ? Math.floor(rest / 60) + ' u ' : ''}${rest % 60} min</span>`; }
   const bw = +((String(boekTxt).match(/week (\d+)/) || [])[1] || 0); const oud = bw && ((C.isoWeek(C.today()).w - bw + 53) % 53) >= 2;
-  return t + `<br><small class="boekregel">${esc(boekTxt)}${oud ? ' · ⚠️ oud, upload een nieuw bestelboek' : ''}</small>`;
+  return t + (oud ? `<br><small class="boekregel">⚠️ ${esc(boekTxt)} is oud, upload een nieuw bestelboek</small>` : '');
 }
 let flitsT = null;
 function opgeslagenFlits() {

@@ -1,4 +1,4 @@
-const VERSIE = '1.34';
+const VERSIE = '1.35';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
@@ -88,6 +88,6 @@ let rol = 'winkel';
 let online = navigator.onLine;
 let outbox = [];
 const ui = Object.assign({ tab: 'home', fOpen: false, bd: {}, q: '', groep: '', fAdv: false, fActie: false, fAlles: false }, ls.get('cba-ui') || {});
-ui.q = ''; ui.tab = 'home'; const saveUi = () => ls.set('cba-ui', { fAdv: ui.fAdv, fActie: ui.fActie, fAlles: ui.fAlles, fOpen: ui.fOpen });
+ui.q = ''; ui.tab = 'home'; const saveUi = () => ls.set('cba-ui', { fAdv: ui.fAdv, fActie: ui.fActie, fAlles: ui.fAlles, fOpen: ui.fOpen, telAlle: ui.telAlle });
 
 function toast(t, ms = 2600) { const el = document.createElement('div'); el.className = 'toast'; el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), ms); }

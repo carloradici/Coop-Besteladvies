@@ -1,4 +1,4 @@
-const V = 'cba-1.34';
+const V = 'cba-1.35';
 const APP = ['style.css', 'rekenkern.js', 'app-basis.js', 'app-sync.js', 'app-login.js', 'app-home.js', 'app-deadlines.js', 'app-beheer.js', 'app-uploaden.js', 'app-pdf-print.js', 'app-extra.js', 'app-advies.js', 'app-acties.js', 'app-plekken.js', 'app-voorkoop.js', 'app-overig.js', 'app-brood.js', 'app-route.js', 'app-start.js'].map(f => './' + f + '?b=' + V.split('-')[1]);
 const SHELL = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', ...APP];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
