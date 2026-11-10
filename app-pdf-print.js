@@ -216,6 +216,7 @@ function meerItems() {
     ['mij', 'mPin', '🔑', kanFace() ? 'Pincode en Face ID' : 'Pincode wijzigen', 'Je eigen pincode', 'pincode wachtwoord code inloggen face id', !!mw, pinWijzigen],
     ['mij', 'mWis', '👤', 'Wisselen of vergrendelen', `Nu: ${esc(mijnNaam())}`, 'wisselen andere medewerker uitloggen vergrendelen naam', !!mw, () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); }],
     ['bestellen', 'mLev', '🚚', 'Bestellijst per leverancier', 'Om over te typen in de terminal of door te bellen', 'leverancier terminal versunie van tol lijst bellen pdf printen', mag('bestellen') || mag('afvinken'), () => ga('leverancier')],
+    ['bestellen', 'mRoute', '🚶', 'Looproute', 'Bestellijst in de volgorde waarin je door de winkel loopt', 'looproute route pad paden volgorde lopen winkel stelling bestelvolgorde', mag('bestellen') || mag('afvinken'), () => ga('route')],
     ['bestellen', 'mLc', '📦', 'Leverdag-check', 'Afvinken bij het uitpakken, ontbrekende artikelen doorgeven', 'levering controle uitpakken ontbreekt niet geleverd', true, () => ga('levering')],
     ['bestellen', 'mWo', '📊', 'Weekoverzicht', 'Vorige week in het kort', 'week overzicht samenvatting vorige week', true, () => { const ov = sheet(weekOverzichtHtml(true) + '<button class="btn sec" data-x style="width:100%">Sluiten</button>'); weekOverzichtEvents(ov); }],
     ['bestellen', 'mHg', '🎯', 'Hoe goed was het advies', 'Advies, besteld, verkocht en derving per week', 'derving weggooien resultaat hoe goed advies controle', mag('bestellen'), () => ga('hoegoed')],

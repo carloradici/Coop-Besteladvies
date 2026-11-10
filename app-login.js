@@ -208,7 +208,7 @@ async function start() {
   const had = await loadCache();
   eigenaar = berekenEigenaar(); rol = eigenaar ? 'admin' : 'winkel';
   S.pref = ls.get('cba-pref-' + wieSleutel()) || S.pref || {}; pasPrefToe();
-  S.bo = await iget('bo:' + W) || null;
+  S.bo = await iget('bo:' + W) || null; S.route = ls.get('cba-route') || null;
   if (had) { rebuild(); ui.tab = startTab(); render(); }
   else $('#view').innerHTML = '<div class="empty">Gegevens laden…</div>';
   await sync(!had);

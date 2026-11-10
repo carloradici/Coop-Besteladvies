@@ -68,6 +68,7 @@ async function sync(full) {
     S.schapOk = new Set(so.filter(r => r.ok !== false).map(r => r.bron + ':' + r.nr)); S.inout = {}; io.forEach(r => S.inout[r.ean] = r);
     S.assort = {}; ass.forEach(r => S.assort[r.bron + ':' + r.nr] = r);
     S.notities = {}; nts.forEach(r => { if (r.tekst) S.notities[r.sleutel] = r; });
+    try { const ro = await rest(wq('voorkeuren?wie=eq.route')); if (ro[0] && ro[0].data) { S.route = ro[0].data; ls.set('cba-route', S.route); } } catch (e) { }
     try { const pr = await rest(wq(`voorkeuren?wie=eq.${encodeURIComponent(wieSleutel())}`)); if (pr[0] && pr[0].data) { S.pref = pr[0].data; ls.set('cba-pref', S.pref); pasPrefToe(); } } catch (e) { }
     applyOutboxLocal();
     await saveCache(); online = true; setSync();

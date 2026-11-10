@@ -29,6 +29,7 @@ function lijstArtikelen(od) {
   const lijst = Object.values(M.art).filter(a => (a.eigen ? a.od === od : b && a.bron === bron && onderdeelVan(a) === od) && !(a.uit && S.schapOk.has(a.key)));
   const rang = groepRang(od); const eerst = {}; lijst.forEach(a => { const g = groepVan(a); const i = a.i ?? 1e9; if (eerst[g] === undefined || i < eerst[g]) eerst[g] = i; });
   const gr = a => { const g = groepVan(a); return g in rang ? rang[g] : 1000 + eerst[g] / 1e9; };
+  if (routeAan(od)) { const r = new Map(lijst.map(a => [a, routeRang(a, gr(a))])); return lijst.sort((x, y) => r.get(x) - r.get(y)); }
   return lijst.sort((x, y) => gr(x) - gr(y) || (x.i ?? 1e9) - (y.i ?? 1e9));
 }
 function groepVan(a) { return a.groep || a.afd || ''; }
@@ -117,11 +118,11 @@ function renderLijst(od, soft) {
   const at = $('#assT'); if (at) at.onclick = () => ga('assort');
   const kb = $('#klaarB'); if (kb) kb.onclick = () => allesBesteld(od, cur);
   $('#scanB').onclick = () => scanStart(od);
-  const lst = $('#lst'); let pos = 0, lastG = null;
+  const lst = $('#lst'); let pos = 0, lastG = null, lastP = -1; const ra = routeAan(od);
   const tel = {}; arts.forEach(a => { const g = groepVan(a); tel[g] = (tel[g] || 0) + 1; });
   const chunk = () => {
     const end = Math.min(arts.length, pos + 40); let h = '';
-    for (; pos < end; pos++) { const a = arts[pos]; const g = groepVan(a); if (g !== lastG) { const dg = cur ? dlArt(a, cur) : null; const dv = dg && dg.ts < nuTs(); h += `<div class="grp ${dv ? 'dlvoorbij' : ''}"><span>${esc(g || 'Overig')}${dg ? `<em class="dltag">⏰ ${dv ? 'deadline voorbij' : dlKort(dg)}</em>` : ''}</span><small>${tel[g]} artikel${tel[g] === 1 ? '' : 'en'}</small></div>`; lastG = g; } const laatste = pos + 1 >= arts.length || groepVan(arts[pos + 1]) !== g; h += kaart(a, cur, laatste); }
+    for (; pos < end; pos++) { const a = arts[pos]; const g = groepVan(a); if (ra) { const p = routePad(a); if (p !== lastP) { h += `<div class="padkop">🚶 ${p ? 'Pad ' + p : 'Nog geen pad'}</div>`; lastP = p; lastG = null; } } if (g !== lastG) { const dg = cur ? dlArt(a, cur) : null; const dv = dg && dg.ts < nuTs(); h += `<div class="grp ${dv ? 'dlvoorbij' : ''}"><span>${esc(g || 'Overig')}${dg ? `<em class="dltag">⏰ ${dv ? 'deadline voorbij' : dlKort(dg)}</em>` : ''}</span><small>${tel[g]} artikel${tel[g] === 1 ? '' : 'en'}</small></div>`; lastG = g; } const laatste = pos + 1 >= arts.length || groepVan(arts[pos + 1]) !== g; h += kaart(a, cur, laatste); }
     lst.insertAdjacentHTML('beforeend', h);
     if (pos < arts.length) { const s = document.createElement('div'); s.className = 'more'; lst.appendChild(s); lazy && lazy.disconnect(); lazy = new IntersectionObserver(en => { if (en[0].isIntersecting) { lazy.disconnect(); s.remove(); chunk(); } }, { rootMargin: '800px' }); lazy.observe(s); }
   };
@@ -193,7 +194,7 @@ function kaart(a, bd, laatste) {
   ${notitieHtml('a:' + a.key)}
   ${onder}
   <div class="tikmeer">${ui.open && ui.open.has(a.key) ? '▴ tik op de naam voor minder' : '▾ tik op de naam voor meer'}</div>
-  <div class="kaartmeer"><div class="meta">${a.merk ? esc(a.merk) + ' · ' : ''}${a.cons ? 'prijs ' + C.eur(a.cons) : ''}${mag('inkoop') && a.ink ? ' · inkoop ' + C.eur(a.ink) : ''}${a.bst && !a.eigen ? ' · bestelnr ' + esc(a.bst) : ''}</div>
+  <div class="kaartmeer"><div class="meta">${routeChip(a)}${a.merk ? esc(a.merk) + ' · ' : ''}${a.cons ? 'prijs ' + C.eur(a.cons) : ''}${mag('inkoop') && a.ink ? ' · inkoop ' + C.eur(a.ink) : ''}${a.bst && !a.eigen ? ' · bestelnr ' + esc(a.bst) : ''}</div>
   ${k ? tbl : '<div class="hint">Nog geen verkoop van dit artikel.</div>'}
   ${!(a.uit || san || niet) ? `<div class="why">${why}</div>${rB ? `<button class="minlink" data-min="1">Min. schap: ${M.min[a.key] ? C.fmt(M.min[a.key]) + ' ' + u : 'niet ingesteld'} ✎</button>` : ''}` : ''}
   <div class="kaartvoet"><button class="link" data-not="1">📝 Notitie</button>${mag('tellen') && !a.uit ? '<button class="link" data-derv="1">🗑️ Derving</button><button class="link" data-leeg="1">🚫 Schap leeg</button>' : ''}${assKnop}</div></div></div>`;
@@ -201,6 +202,7 @@ function kaart(a, bd, laatste) {
 async function onKaartKlik(e) {
   const card = e.target.closest('.card'); if (!card) return; const key = card.dataset.k; const a = M.art[key]; const { cur } = besteldag(onderdeelVan(a));
   const eg = e.target.closest('[data-eig]'); if (eg) return eigenBewerk(S.eigen[eg.dataset.eig], a.od);
+  if (e.target.closest('[data-pad]')) return routeKiesPad(a);
   if (e.target.closest('[data-meer]')) { ui.open = ui.open || new Set(); ui.open.has(key) ? ui.open.delete(key) : ui.open.add(key); card.classList.toggle('open', ui.open.has(key)); const tm = card.querySelector('.tikmeer'); if (tm) tm.textContent = ui.open.has(key) ? '▴ tik op de naam voor minder' : '▾ tik op de naam voor meer'; return; }
   if (e.target.dataset.collo !== undefined) { const inp = card.querySelector('[data-in="b"]'); inp.value = e.target.dataset.collo; card._okHoog = +inp.value; return opslaan(card, 'b', inp.value); }
   if (e.target.dataset.neem !== undefined) { const inp = card.querySelector('[data-in="b"]'); inp.value = inp.dataset.adv; return opslaan(card, 'b', inp.value); }
@@ -225,7 +227,7 @@ async function onKaartKlik(e) {
     const be = S.bestel[key + '|' + cur.besteldag]; const was = !!(be && be.besteld); const nu = !was;
     const adv0 = C.advies(M, key, cur, vrVan(key), bestellingenVan(key)).adv;
     const zet = v => write('bestellingen', [{ bron: a.bron, nr: a.nr, besteldag: cur.besteldag, lever: cur.L, besteld: v, besteld_door: v ? mijnNaam() : null, besteld_om: v ? new Date().toISOString() : null, advies: adv0 }]);
-    zet(nu); if (nu) { log('besteld', `Besteld: ${a.naam}${be && be.aantal ? ' (' + be.aantal + ')' : ''}`); ongedaan('Besteld afgevinkt', () => zet(false)); }
+    zet(nu); if (nu) { routeTik(a, cur); log('besteld', `Besteld: ${a.naam}${be && be.aantal ? ' (' + be.aantal + ')' : ''}`); ongedaan('Besteld afgevinkt', () => zet(false)); }
     if (ui.fOpen && nu) { card.style.transition = 'opacity .3s'; card.style.opacity = '0'; setTimeout(() => render(true), 300); } else ververs(card, a, cur);
     werkVoortgang(onderdeelVan(a), cur); return;
   }
@@ -248,7 +250,7 @@ async function opslaan(card, s, val, getypt) {
       card._vraagt = false; if (ok) card._okHoog = n;
       if (!ok) { const i = card.querySelector('[data-in="b"]'); i.value = vorig && vorig.aantal !== null && vorig.aantal !== undefined ? vorig.aantal : ''; return; }
     }
-    write('bestellingen', [{ bron: a.bron, nr: a.nr, besteldag: cur.besteldag, lever: cur.L, aantal: n, door: mijnNaam(), advies: ad.adv }]);
+    write('bestellingen', [{ bron: a.bron, nr: a.nr, besteldag: cur.besteldag, lever: cur.L, aantal: n, door: mijnNaam(), advies: ad.adv }]); routeTik(a, cur);
     if (getypt && Math.abs(n - ad.adv) >= Math.max(ad.adv * 0.5, a.perHE ? 2 : 4) && !(vorig && vorig.reden)) setTimeout(() => toonReden(card, a, cur), 400);
     clearTimeout(card._lb); card._lb = setTimeout(() => log('bestelling', `Bestelling ${a.naam}: ${n}`), 1500);
   }
