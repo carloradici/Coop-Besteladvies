@@ -15,7 +15,10 @@ const boNorm = t => String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').tr
 function boArts() { return Object.values(M.art).filter(a => ['brood', 'diep'].includes(onderdeelVan(a))); }
 function boAutoKoppel() {
   const b = boInst(), kp = Object.assign({}, b.koppel || {}); let n = 0;
-  for (const s of (S.bo || {}).soorten || []) { if (kp[s.id] !== undefined) continue; const l = boArts().filter(a => boNorm(a.naam) === boNorm(s.naam)); if (l.length === 1) { kp[s.id] = l[0].key; n++; } }
+  const bb = boBoek().filter(x => x.key);
+  for (const s of (S.bo || {}).soorten || []) { if (kp[s.id] !== undefined) continue; let l = boArts().filter(a => boNorm(a.naam) === boNorm(s.naam)).map(a => a.key);
+    if (l.length !== 1) { const w = boNorm(s.naam).split(' ').filter(x => x.length > 1).map(boStam); l = w.length ? bb.filter(x => w.every(y => boNorm(x.naam).includes(y))).map(x => x.key) : []; }
+    if (l.length === 1) { kp[s.id] = l[0]; n++; } }
   if (n && mag('instellingen') && !DEMO) saveInst(Object.assign({}, S.inst, { bo: Object.assign({}, b, { koppel: kp }) }));
 }
 function boModel() {
@@ -71,7 +74,7 @@ function boBel() {
 function boBeheerHtml() {
   if (!mag('instellingen')) return ''; const b = boInst(), d = S.bo, kp = b.koppel || {};
   const st = d ? `✓ Opgehaald ${new Date(d.t).toLocaleString('nl-NL', { weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${(d.soorten || []).length} soorten bake-off` : b.url ? 'Nog niet opgehaald' : 'Nog niet gekoppeld';
-  const rij = s => { const a = kp[s.id] && M.art[kp[s.id]]; return `<button class="it boKop" data-bok="${esc(s.id)}"><span style="flex:1;min-width:0"><b>${esc(s.naam)}</b><br><span class="small ${a ? '' : kp[s.id] === '' ? '' : 'rood'}">${a ? '→ ' + esc(a.naam) + ' · ' + a.nr : kp[s.id] === '' ? 'Niet koppelen' : 'Nog niet gekoppeld – tik om te kiezen'}</span></span><span class="pijl">›</span></button>`; };
+  const rij = s => { const a = kp[s.id] && M.art[kp[s.id]]; return `<button class="it boKop" data-bok="${esc(s.id)}"><span style="flex:1;min-width:0"><b>${esc(s.naam)}</b><br><span class="small ${a ? '' : kp[s.id] === '' ? '' : 'rood'}">${a ? '→ ' + esc(a.naam) + ' · ' + boNrTxt(a) : kp[s.id] === '' ? 'Niet koppelen' : 'Nog niet gekoppeld – tik om te kiezen'}</span></span><span class="pijl">›</span></button>`; };
   return `<div class="blk" data-sec="brood"><h2>🥐 Brood Opzet koppelen</h2><p class="small">Haalt elk uur op wat er per bake-off-soort is klaargezet, wat er over was en de voorraad. Het advies en de waarschuwing "komt niet uit" gebruiken dit.</p>
   <div class="form"><div class="f"><label>Adres</label><input id="boUrl" type="url" placeholder="https://….supabase.co/functions/v1/…" value="${esc(b.url || '')}"></div><div class="f"><label>Koppelcode</label><input id="boCode" value="${esc(b.code || '')}" autocomplete="off"></div></div>
   <button class="btn" id="boTest" style="width:100%">Opslaan en ophalen</button><p class="small" id="boSt">${st}</p></div>
@@ -87,18 +90,34 @@ function boBeheerEvents(v) {
   v.querySelectorAll('[data-bok]').forEach(b => b.onclick = () => boKies(b.dataset.bok));
 }
 const boStam = w => w.replace(/(jes|tjes|en|s)$/, '');
+const boNrs = a => [a.nr, a.bst, a.artNr, a.ean].map(x => String(x || ''));
+const boNrTxt = a => a.eigen ? (a.bst || '–') + ' · eigen' : a.nr;
 function boZoek(q, l) {
-  q = q.trim(); if (/^\d{3,}$/.test(q)) return l.filter(a => String(a.nr).includes(q)).sort((x, y) => String(x.nr).indexOf(q) - String(y.nr).indexOf(q));
+  q = q.trim(); if (/^\d{3,}$/.test(q)) return l.filter(a => boNrs(a).some(x => x.includes(q)));
   const w = boNorm(q).split(' ').filter(x => x.length > 1).map(boStam); if (!w.length) return [];
   const ns = l.map(a => boNorm(a.naam)), gw = w.map(x => 1 / (1 + ns.filter(n => n.includes(x)).length));
   return l.map((a, i) => [a, w.reduce((t, x, j) => t + (ns[i].includes(x) ? 1 + gw[j] : 0), 0)]).filter(x => x[1] > 0).sort((x, y) => y[1] - x[1] || x[0].naam.localeCompare(y[0].naam)).map(x => x[0]);
 }
+function boBoek() {
+  const d = S.bo || {}, idx = {}, uit = {}; Object.values(M.art).forEach(a => (a.eigen ? [a.bst, a.artNr] : a.bron === 'vers' ? [a.nr] : []).forEach(n => { if (n && !idx[n]) idx[n] = a; }));
+  const eig = {}; (d.eigen || []).forEach(e => eig[e.art] = e);
+  for (const b of d.boeken || []) for (const nr of b.arts) { const a = idx[nr]; (uit[nr] ??= { nr, naam: a ? a.naam : (eig[nr] || {}).naam || nr, key: a ? a.key : null, boek: [], e: eig[nr] }).boek.push(b.naam); }
+  for (const e of d.eigen || []) if (!uit[e.art]) { const a = idx[e.art]; uit[e.art] = { nr: e.art, naam: a ? a.naam : e.naam, key: a ? a.key : null, boek: ['eigen artikel'], e }; }
+  return Object.values(uit);
+}
 function boKies(sid) {
-  const s = ((S.bo || {}).soorten || []).find(x => x.id === sid); if (!s) return; const l = Object.values(M.art).filter(a => !a.eigen || a.od);
-  const lijst = q => { const r = boZoek(q || s.naam, l).slice(0, q ? 25 : 10); return (q ? '' : '<p class="small">Suggesties:</p>') + (r.map(a => `<button class="it" data-bka="${esc(a.key)}"><span style="flex:1">${esc(a.naam)}<br><span class="small">${a.nr} · ${odNaam(onderdeelVan(a))}</span></span></button>`).join('') || '<p class="small">Niets gevonden. Typ een ander woord of het artikelnummer.</p>'); };
-  const ov = sheet(`<h2 style="margin:0">${esc(s.naam)}</h2><p class="small">Zoek op naam of artikelnummer in het hele bestelboek.</p><input type="search" id="bkQ" placeholder="🔍 Naam of nummer" style="width:100%"><div class="list" id="bkL">${lijst('')}</div><button class="btn sec" data-bka="" style="width:100%;margin-top:8px">Niet koppelen</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`, (e, o) => {
-    const b = e.target.closest('[data-bka]'); if (!b) return; const w = Object.assign({}, S.inst); w.bo = Object.assign({}, boInst()); w.bo.koppel = Object.assign({}, w.bo.koppel || {}, { [sid]: b.dataset.bka }); o.remove();
-    if (DEMO) { S.inst = w; rebuild(); render(); } else saveInst(w);
+  const s = ((S.bo || {}).soorten || []).find(x => x.id === sid); if (!s) return; const l = Object.values(M.art), bb = boBoek();
+  const lijst = q => {
+    const rb = boZoek(q || s.naam, bb).slice(0, 10), keys = new Set(rb.map(x => x.key)), r = boZoek(q || s.naam, l).filter(a => !keys.has(a.key)).slice(0, q ? 25 : 10);
+    const hb = rb.map(x => `<button class="it" ${x.key ? `data-bka="${esc(x.key)}"` : `data-bkn="${esc(x.nr)}"`}><span style="flex:1">${esc(x.naam)}<br><span class="small">${x.nr} · 📒 ${esc(x.boek.join(', '))}${x.key ? '' : ' · ➕ wordt aangemaakt'}</span></span></button>`).join('');
+    return (hb ? `<p class="small"><b>📒 Uit je Brood Opzet-bestelboek</b></p>${hb}` : '') + (r.length ? `<p class="small"><b>${q ? 'Hele bestelboek' : 'Suggesties uit het bestelboek'}</b></p>` + r.map(a => `<button class="it" data-bka="${esc(a.key)}"><span style="flex:1">${esc(a.naam)}<br><span class="small">${boNrTxt(a)} · ${odNaam(onderdeelVan(a))}</span></span></button>`).join('') : '') || '<p class="small">Niets gevonden. Typ een ander woord of het artikelnummer.</p>';
+  };
+  const koppel = (key, o) => { const w = Object.assign({}, S.inst); w.bo = Object.assign({}, boInst()); w.bo.koppel = Object.assign({}, w.bo.koppel || {}, { [sid]: key }); o.remove(); if (DEMO) { S.inst = w; rebuild(); render(); } else saveInst(w); };
+  const ov = sheet(`<h2 style="margin:0">${esc(s.naam)}</h2><p class="small">Zoek op naam of artikelnummer. Bovenaan staat wat in je Brood Opzet-bestelboek staat.</p><input type="search" id="bkQ" placeholder="🔍 Naam of nummer" style="width:100%"><div class="list" id="bkL">${lijst('')}</div><button class="btn sec" data-bka="" style="width:100%;margin-top:8px">Niet koppelen</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`, (e, o) => {
+    const n = e.target.closest('[data-bkn]'); if (n) { const x = bb.find(y => y.nr === n.dataset.bkn); const id = 'E' + Date.now().toString(36).toUpperCase();
+      const data = { naam: x.naam, nr: x.nr, ean: '', groep: (x.e && x.e.groep) || 'Bake-off', od: 'brood', lev: 'versunie', perHE: !!s.perDoos, he: s.perDoos || 1, ehNaam: s.perDoos ? ((x.e && x.e.eh) || 'DS').toUpperCase().slice(0, 2) : '', prijs: 0, volgen: false };
+      if (DEMO) S.eigen[id] = Object.assign({ id }, data); else write('eigen_artikelen', [{ id, data, door: mijnNaam() }]); log('eigen', `Artikel toegevoegd uit Brood Opzet: ${x.naam}`); rebuild(); return koppel('eigen:' + id, o); }
+    const b = e.target.closest('[data-bka]'); if (b) koppel(b.dataset.bka, o);
   });
   const q = ov.querySelector('#bkQ'); q.oninput = () => { ov.querySelector('#bkL').innerHTML = lijst(q.value); };
 }

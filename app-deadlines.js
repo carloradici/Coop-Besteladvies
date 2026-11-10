@@ -35,7 +35,7 @@ function lijstArtikelen(od) {
 function groepVan(a) { return a.groep || a.afd || ''; }
 function zichtbaar(a, bd) {
   const st = assStatus(a); const r = S.assort[a.key]; const label = C.actieLabel(M, a.key);
-  if (ui.q) { const q = ui.q.toLowerCase(); if (!(a.nr.includes(q) || (a.bst || '') === q || zoekScore(ui.q, a.naam + ' ' + (a.merk || '')) > 0)) return false; }
+  if (ui.q) { const q = ui.q.toLowerCase(); if (!(a.nr.includes(q) || (a.eigen ? (a.bst || '').includes(q) : (a.bst || '') === q) || zoekScore(ui.q, a.naam + ' ' + (a.merk || '')) > 0)) return false; }
   if (ui.groep && groepVan(a) !== ui.groep) return false;
   if (ui.fActie && !(label && label.some(l => l.t !== 'vorige'))) return false;
   if (!ui.fAlles && !ui.q && !ui.fActie) { const tonen = st === 'in' || a.uit || (st === 'gesaneerd' && !(r && r.schap_ok)); if (!tonen) return false; }
