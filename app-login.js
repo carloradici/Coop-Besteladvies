@@ -6,7 +6,7 @@ function logoSrc() { return /^vogelenzang$/i.test(plaatsNu()) ? LOGO : LOGO_KAAL
 const ONDERDELEN = [['agf', 'AGF', '🥬'], ['vers', 'Vers', '🧀'], ['brood', 'Brood', '🥖'], ['diep', 'Diepvries', '🧊'], ['kw', 'KW', '🥫'], ['overig', 'Overig', '📦']];
 const BESTEL_OD = ['agf', 'vers', 'brood', 'diep', 'kw'];
 const odNaam = k => (ONDERDELEN.find(o => o[0] === k) || [k, k])[1];
-const RECHTEN = [['Onderdelen zien', [['o_agf', 'AGF'], ['o_vers', 'Vers'], ['o_brood', 'Brood'], ['o_diep', 'Diepvries'], ['o_kw', 'KW'], ['o_overig', 'Overig']]], ['Doen', [['tellen', 'Voorraad tellen'], ['bestellen', 'Bestelling aanpassen'], ['afvinken', 'Besteld afvinken'], ['schap', 'Schap aangepast afvinken'], ['saneren', 'Saneren en opnemen in assortiment'], ['heleboek', 'Hele bestelboek bekijken'], ['inout', 'In/out: ingekocht invullen']]], ['Beheer', [['inkoop', 'Inkoopprijzen zien'], ['upload', 'Bestanden uploaden'], ['instellingen', 'Instellingen, besteldagen en feestdagen'], ['team', 'Medewerkers en koppelcode'], ['tafels', 'Actietafels indelen']]]];
+const RECHTEN = [['Afdelingen zien', [['o_agf', 'AGF'], ['o_vers', 'Vers'], ['o_brood', 'Brood'], ['o_diep', 'Diepvries'], ['o_kw', 'KW'], ['o_overig', 'Overig']]], ['Doen', [['tellen', 'Voorraad tellen'], ['bestellen', 'Bestelling aanpassen'], ['afvinken', 'Besteld afvinken'], ['schap', 'Schap aangepast afvinken'], ['saneren', 'Saneren en opnemen in assortiment'], ['heleboek', 'Hele bestelboek bekijken'], ['inout', 'In/out: ingekocht invullen']]], ['Beheer', [['inkoop', 'Inkoopprijzen zien'], ['upload', 'Bestanden uploaden'], ['instellingen', 'Instellingen, besteldagen en feestdagen'], ['team', 'Medewerkers en koppelcode'], ['tafels', 'Actietafels indelen']]]];
 RECHTEN.push(['Weergave', [['beginner', 'Beginnersmodus: alleen bestellen en tellen']]]);
 const ALLE_R = RECHTEN.flatMap(g => g[1].map(r => r[0])).filter(r => r !== 'beginner');
 const PRESET = { medewerker: ['o_agf', 'o_vers', 'o_brood', 'o_diep', 'o_kw', 'o_overig', 'tellen', 'afvinken', 'schap'] };
@@ -197,6 +197,7 @@ document.addEventListener('visibilitychange', () => {
 function startDemo(r) {
   const d = window.DEMO_DATA;
   Object.assign(S, { dagen: d.dagen, kassa: d.kassa, boeken: d.boeken, acties: d.acties, agenda: d.agenda, inst: d.inst, medewerkers: DEMO_MW, winkel: { code: 'K7MX4PQ2', tot: C.add(C.today(), 30) + 'T12:00:00Z', toestellen: 2, naam: 'Coop Vogelenzang', plaats: 'Vogelenzang' }, assort: d.assort || {}, notities: {}, act: [] });
+  ['eigen', 'route', 'kwplan', 'versplan', 'tafels', 'indeling'].forEach(k => { if (d[k]) S[k] = d[k]; });
   S.dagMeta = {}; Object.keys(d.dagen).forEach(k => S.dagMeta[k] = 'demo'); S.bo = d.bo ? (o => Object.assign({}, d.bo, { nu: C.add(d.bo.nu, o), t: Date.now(), dagen: Object.fromEntries(Object.entries(d.bo.dagen).map(([k, v]) => [C.add(k, o), v])) }))(C.diff(d.bo.nu, C.today())) : null;
   W = 'demo'; WINKEL = { id: 'demo', naam: 'Coop Vogelenzang', plaats: 'Vogelenzang', rol: r === 'admin' ? 'beheer' : 'toestel' }; winkels = [WINKEL];
   sess = { email: r === 'admin' ? 'carlo@coopvogelenzang.nl' : '', kind: r === 'admin' ? 'email' : 'anon' };
@@ -221,11 +222,11 @@ function shell() {
   document.body.classList.remove('inlog', 'vast'); $('#kop').classList.remove('hide'); $('nav.tabs').classList.remove('hide');
   if (!$('#view')) $('#app').innerHTML = '<div id="view"></div>';
   document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => navKlik(b.dataset.t)); const hb = $('#hulpB'); if (hb) hb.onclick = hulp;
- $('#belB').onclick = belSheet; $('#terugB').onclick = () => { if (ui.tab === 'meer' && ui.meerG) { ui.meerG = null; return render(); } if (ui.tab === 'tafels' && ui.tafel) { ui.tafel = null; return render(); } if (ui.tab === 'acties') return ga('plekken'); if (ui.tab === 'beheer') { ui.meerG = BSUB_GROEP[ui.bsub] || 'data'; ui.bsub = null; return ga('meer'); } ga(MEER_SUB.includes(ui.tab) ? (ui.tab === 'mwedit' ? 'medewerkers' : 'meer') : 'home'); };
+ $('#belB').onclick = () => ga('taken'); $('#terugB').onclick = () => { if (ui.tab === 'meer' && ui.meerG) { ui.meerG = KANTOOR_G.includes(ui.meerG) ? 'kantoor' : null; return render(); } if (ui.tab === 'tafels' && ui.tafel) { ui.tafel = null; return render(); } if (ui.tab === 'acties') return ga('plekken'); if (ui.tab === 'beheer') { ui.meerG = BSUB_GROEP[ui.bsub] || 'data'; ui.bsub = null; return ga('meer'); } ga(MEER_SUB.includes(ui.tab) ? (ui.tab === 'mwedit' ? 'medewerkers' : 'meer') : 'home'); };
   $('#wieB').onclick = () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); };
   $('.koplogo').src = logoSrc(); setSync(); oefenBalk();
 }
-const MEER_SUB = ['medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer', 'uitleg', 'hoegoed', 'leverancier', 'levering'];
+const MEER_SUB = ['rapport', 'gebruik', 'route', 'medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer', 'uitleg', 'hoegoed', 'leverancier', 'levering'];
 const SCROLL = {}; let scrollSleutel = '';
 function schermSleutel() { return [ui.tab, ui.bsub || '', ui.meerG || '', ui.tafel || '', ui.kwKop || '', ui.kwStap || '', ui.versStap || ''].join('|'); }
 function zoekKruis(root) { (root || document).querySelectorAll('input[type=search]:not([data-kr])').forEach(i => { i.dataset.kr = 1; const w = document.createElement('span'); w.className = 'zwrap'; const cs = getComputedStyle(i); w.style.flex = cs.flex; if (i.style.width) w.style.width = i.style.width; i.parentNode.insertBefore(w, i); w.appendChild(i); i.style.width = '100%'; const k = document.createElement('button'); k.type = 'button'; k.className = 'zkruis'; k.textContent = '✕'; k.setAttribute('aria-label', 'Wissen'); k.onclick = () => { i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); i.focus(); }; w.appendChild(k); w.classList.toggle('vol', !!i.value); }); }

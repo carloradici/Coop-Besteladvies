@@ -34,6 +34,7 @@ Web-app (PWA) van Coop Vogelenzang die per artikel een bestel-advies geeft (vers
 | app-overig.js | hoe goed was het advies, per leverancier, zoeken, derving, prijswijzigingen, leverdag-check, actietafels |
 | app-brood.js | koppeling met Brood Opzet: ophalen (boHaal), advies per weekdag (M.bo), voorraad, waarschuwing "komt niet uit", koppelscherm |
 | app-route.js | looproute: paden per onderdeel (ROUTE_STD), pad per artikel, leren bij bestellen (routeTik), route-scherm; opgeslagen in voorkeuren wie='route' |
+| app-kantoor.js | werkvloer/kantoor (kantoorMag), Start hier, Kantoor-kaart op Home, Rapporten, testpakket, teller 'Wat wordt gebruikt' |
 | app-start.js | opstarten |
 
 Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js`, `verkoop-export.js` (kassaverkoop per PLU voor Brood Opzet, koppelcode in de stub) (vaste naam, Supabase heeft alleen een stub die ze importeert). Brood Opzet-gegevens komen van de Edge Function `brood-export` in het Brood Opzet-project (bestand `brood-export.js` in repo Broodkarren); adres + koppelcode staan in `S.inst.bo`.
@@ -48,6 +49,8 @@ Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js`, `verkoop-export.js
 - Grote versie: volledige Playwright-test, ook een ronde als medewerker; testversie in Claude bijwerken.
 - Kleine fix: snelle controle (app laadt zonder fouten, het aangepaste scherm werkt).
 - Testen lokaal: `python3 -m http.server`, dan `http://localhost:8000/` (laadt niet via file://). Demo: zet vóór het laden `window.DEMO_DATA={dagen:{},kassa:{},boeken:{},acties:[],agenda:[],inst:{},assort:{}}` (of de data van de testversie), kies beheerder of medewerker, pincode 1234.
+- Proefronde nieuwe medewerker: `_proef.js`-aanpak (zonder uitleg taken uitvoeren, tikken tellen; elke taak max 3 tikken navigatie).
+- Echte gegevens: Carlo kan via Meer → Kantoor → Winkel en app → Testpakket een JSON maken; die is direct bruikbaar als `DEMO_DATA`.
 - Rapporteer alleen de uitkomst.
 
 ## Opleveren

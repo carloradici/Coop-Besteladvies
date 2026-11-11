@@ -89,7 +89,7 @@ function renderLijst(od, soft) {
   const bdSleutel = cur ? `b:${od}:${cur.besteldag}` : '';
   if (!ui.modus) ui.modus = ui.fOpen ? 'todo' : ui.fAdv ? 'advies' : ui.fActie ? 'acties' : 'alles';
   const zetModus = m => { ui.modus = m; ui.fOpen = m === 'todo'; ui.fAdv = m === 'advies'; ui.fActie = m === 'acties'; ui.groep = ''; saveUi(); };
-  if (beginner()) ui.modus = 'todo';
+  if (beginner() || !mag('bestellen')) { if (!window.__E2E_ALLES) ui.modus = 'todo'; }
   zetModus(ui.modus);
   const ci = cur ? lijst.indexOf(cur) : -1;
   const st = cur ? voortgang(od, cur, cur.besteldag < C.today()) : null; const klaar = st ? st.nodig - st.open : 0;
@@ -102,7 +102,8 @@ function renderLijst(od, soft) {
   ${cur && !leeg ? telVraagHtml(od, cur) : ''}
   ${cur ? notitieHtml(bdSleutel) : ''}
   <div class="row zoekrij"><input type="search" id="q" placeholder="🔍 Zoek naam of nummer" value="${esc(ui.q)}"><button class="btn sm sec scanknop" id="scanB" aria-label="Scannen">📷 Scan</button></div>
-  ${beginner() ? '' : `<div class="segment licht modus">${[['todo', 'Te doen'], ['alles', 'Alles']].map(([k, l]) => `<button class="${ui.modus === k ? 'aan' : ''}" data-mod="${k}">${l}</button>`).join('')}${ui.modus === 'advies' || ui.modus === 'acties' ? `<button class="aan" data-mod="alles">${ui.modus === 'advies' ? 'Met advies' : 'Acties'} ✕</button>` : ''}</div>`}
+  ${cur && !leeg && st.nodig && !st.open && !kantoorMag() && !ui.q ? `<div class="blk klaarblok"><div style="font-size:56px">✅</div><h2>Klaar! ${esc(odNaam(od))} is besteld.</h2><p class="small">${st.nodig} artikelen. Goed bezig!</p><button class="btn" id="klaarHome" style="width:100%">Terug naar Home</button></div>` : ''}
+  ${beginner() || !mag('bestellen') ? '' : `<div class="segment licht modus">${[['todo', 'Te doen'], ['alles', 'Alles']].map(([k, l]) => `<button class="${ui.modus === k ? 'aan' : ''}" data-mod="${k}">${l}</button>`).join('')}${ui.modus === 'advies' || ui.modus === 'acties' ? `<button class="aan" data-mod="alles">${ui.modus === 'advies' ? 'Met advies' : 'Acties'} ✕</button>` : ''}</div>`}
   <button class="link meeropties" id="lijstMenu">⋯ Meer opties${ui.fAlles ? ' · hele boek aan' : ''}</button></div>`;
   if (leeg) html += `<div class="blk leegblok"><h2>Nog geen bestelboek of verkoopcijfers</h2><p class="small">${!boek ? `Het bestelboek van ${bron === 'vers' ? 'Versunie' : 'Van Tol'} ontbreekt. ` : ''}${!M.dagLijst.length ? 'Er zijn nog geen dag-exports uit CasPos. ' : ''}${mag('upload') ? 'Upload ze via Beheer, daarna zie je hier het advies.' : 'De beheerder zet dit klaar. Daarna zie je hier het advies.'}</p>${mag('upload') ? '<button class="btn" id="naarBeheer" style="width:100%">Naar Beheer</button>' : ''}</div>`;
   else { const last = M.dagLijst[M.dagLijst.length - 1]; const oud = C.diff(last, C.today()); if (oud > 2 && (isBeheer() || mag('upload'))) html += `<div class="banner warn"><h3>Verkoop t/m ${C.fmtDag(last)}</h3><div class="sub">De laatste dag-export is ${oud} dagen oud. Het advies is minder nauwkeurig.</div></div>`; }
@@ -125,6 +126,7 @@ function renderLijst(od, soft) {
   const at = $('#assT'); if (at) at.onclick = () => ga('assort');
   const kb = $('#klaarB'); if (kb) kb.onclick = () => allesBesteld(od, cur);
   $('#scanB').onclick = () => scanStart(od);
+  const kh = $('#klaarHome'); if (kh) kh.onclick = () => ga('home');
   const lst = $('#lst'); let pos = 0, lastG = null, lastP = -1; const ra = routeAan(od);
   const tel = {}; arts.forEach(a => { const g = groepToon(a); tel[g] = (tel[g] || 0) + 1; });
   const nulKop = () => `<button class="grp nulkop" data-nul="1"><span>Zonder advies (${ui.toonNul ? arts.length - nulVan : arts.nulN})</span><small>${ui.toonNul ? '▴ verbergen' : '▾ tonen'}</small></button>`;
@@ -190,7 +192,7 @@ function kaart(a, bd, laatste) {
   const assKnop = kanSan ? (san ? '<button class="link" data-ass="terug">Terugzetten in assortiment</button>' : niet ? '<button class="link" data-ass="op">+ Opnemen in assortiment</button>' : a.uit ? '' : '<button class="link rood" data-ass="san">Saneren</button>') : '';
   const besteldTxt = isB ? `✓ Besteld · ${esc(ini(be.besteld_door))} ${hhmm(be.besteld_om)}` : '';
   let onder;
-  if (a.uit || san) onder = `${(a.uit && !S.schapOk.has(a.key)) || (san && !(r && r.schap_ok)) ? (mag('schap') ? `<div style="margin-top:10px"><button class="btn sm" data-schap="1">Schap aangepast</button></div>` : '') : ''}`;
+  if (a.uit || san) onder = `${(a.uit && !S.schapOk.has(a.key)) || (san && !(r && r.schap_ok)) ? (mag('schap') ? `<div style="margin-top:10px"><button class="btn sm" data-schap="1">Schap klaar</button></div>` : '') : ''}`;
   else if (niet) onder = '';
   else onder = `<div class="ctl ${telT ? '' : 'een'}">${telT ? `<div><label>Tel wat er ligt <i>(mag leeg)</i></label><div class="stp ${rT ? '' : 'uit'}"><button data-s="v" data-d="-1" ${rT ? '' : 'disabled'}>−</button><input type="number" inputmode="decimal" data-in="v" value="${vrVandaag}" placeholder="" ${rT ? '' : 'disabled'}><button data-s="v" data-d="1" ${rT ? '' : 'disabled'}>+</button></div></div>` : ''}
   <div><label>Bestellen (${a.perHE ? ehMv(a) : u === 'st' ? 'stuks' : u})</label><div class="stp ${rB ? '' : 'uit'}"><button data-s="b" data-d="-1" ${rB ? '' : 'disabled'}>−</button><input type="number" inputmode="decimal" data-in="b" class="${be && be.aantal !== null && be.aantal !== undefined ? 'zelf' : ''}" value="${be && be.aantal !== null && be.aantal !== undefined ? be.aantal : ''}" placeholder="" data-adv="${ad.adv || 0}" ${rB ? '' : 'disabled'}><button data-s="b" data-d="1" ${rB ? '' : 'disabled'}>+</button></div>${rB && ad.adv && !(be && be.aantal !== null && be.aantal !== undefined) && !isB ? `<button class="neemadv groot" data-neem="1">✓ Bestel ${ad.adv} ${a.perHE ? (ad.adv === 1 ? (EH[ehCode(a)] || ['verpakking'])[0] : ehMv(a)) : u === 'st' ? (ad.adv === 1 ? 'stuk' : 'stuks') : u}</button>` : ''}</div></div>
@@ -229,8 +231,8 @@ async function onKaartKlik(e) {
     render(true); return;
   }
   if (e.target.dataset.schap) {
-    if (assStatus(a) === 'gesaneerd') { const r = S.assort[key]; const t = zetAssort(a, 'gesaneerd', { schap_ok: true, sinds: r.sinds, door: r.door }); ongedaan('Schap aangepast', t); }
-    else { write('schap_ok', [{ bron: a.bron, nr: a.nr, ok: true, door: mijnNaam() }]); ongedaan('Schap aangepast', () => write('schap_ok', [{ bron: a.bron, nr: a.nr, ok: false }])); }
+    if (assStatus(a) === 'gesaneerd') { const r = S.assort[key]; const t = zetAssort(a, 'gesaneerd', { schap_ok: true, sinds: r.sinds, door: r.door }); ongedaan('Schap klaar', t); }
+    else { write('schap_ok', [{ bron: a.bron, nr: a.nr, ok: true, door: mijnNaam() }]); ongedaan('Schap klaar', () => write('schap_ok', [{ bron: a.bron, nr: a.nr, ok: false }])); }
     log('schap', `Schap aangepast: ${a.naam}`); render(true); return;
   }
   if (e.target.closest('[data-besteld]')) {

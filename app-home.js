@@ -1,11 +1,11 @@
 /* ---------- weergave ---------- */
 function render(soft) {
   if (!M) return; const sl = schermSleutel(), zelfde = sl === scrollSleutel, doelY = zelfde ? window.scrollY : (SCROLL[sl] || 0); scrollSleutel = ''; window.__doelY = doelY;
-  renderScherm(soft);
+  renderScherm(soft); telGebruik();
   scrollSleutel = sl; if (!BESTEL_OD.includes(ui.tab)) window.scrollTo(0, Math.min(doelY, document.body.scrollHeight)); SCROLL[sl] = window.scrollY;
 }
 function renderScherm(soft) {
-  const kan = { agf: mag('o_agf'), vers: mag('o_vers'), brood: mag('o_brood'), diep: mag('o_diep'), kw: mag('o_kw'), overig: mag('o_overig'), beheer: mag('upload') || mag('instellingen'), medewerkers: mag('team'), mwedit: mag('team'), winkel: mag('team'), vandaag: mag('team'), export: mag('upload') || mag('bestellen'), hoegoed: mag('bestellen'), leverancier: mag('bestellen') || mag('afvinken'), acties: mag('bestellen') };
+  const kan = { agf: mag('o_agf'), vers: mag('o_vers'), brood: mag('o_brood'), diep: mag('o_diep'), kw: mag('o_kw'), overig: mag('o_overig'), beheer: mag('upload') || mag('instellingen'), medewerkers: mag('team'), mwedit: mag('team'), winkel: mag('team'), vandaag: mag('team'), export: mag('upload') || mag('bestellen'), hoegoed: mag('bestellen'), rapport: kantoorMag(), gebruik: kantoorMag(), leverancier: mag('bestellen') || mag('afvinken'), acties: mag('bestellen') };
   if (ui.tab in kan && !kan[ui.tab]) ui.tab = 'home';
   document.querySelectorAll('nav.tabs button').forEach(b => { b.classList.toggle('on', b.dataset.t === (ui.tab === 'home' ? 'home' : ui.tab === 'taken' ? 'taken' : ui.tab === 'meer' || MEER_SUB.includes(ui.tab) ? 'meer' : '')); if (b.dataset.t === 'tellen') b.classList.toggle('hide', !mag('tellen')); });
   const v = $('#view'); if (!v) return;
@@ -26,6 +26,8 @@ function renderScherm(soft) {
   else if (ui.tab === 'export') renderExport();
   else if (ui.tab === 'uitleg') renderUitleg();
   else if (ui.tab === 'route') renderRoute();
+  else if (ui.tab === 'rapport') renderRapport();
+  else if (ui.tab === 'gebruik') renderGebruik();
   else if (ui.tab === 'hoegoed') renderHoeGoed();
   else if (ui.tab === 'leverancier') renderLeverancier();
   else if (ui.tab === 'levering') renderLevering();
@@ -40,7 +42,7 @@ function kop() {
   const bron = ui.tab === 'kw' ? 'kw' : 'vers'; const b = S.boeken[bron];
   const d = new Date(); const datum = `${C.DAGNAAM[C.wd(C.today())]} ${d.getDate()} ${['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'][d.getMonth()]}`;
   const boekTxt = ui.tab === 'kw' ? (b ? `Bestelboek Van Tol${b.datum ? ' · ' + C.fmtDag(b.datum) : ''}` : 'Bestelboek Van Tol') : (b ? `Bestelboek Versunie · week ${b.week || '?'}` : 'Bestelboek Versunie');
-  let t = { taken: ['Taken', 'Wat er vandaag moet gebeuren'], tafels: ['Actie planning', 'Vers-acties op de koeltafels'], kwacties: ['Actie planning', 'KW-acties op de koppen'], home: [mijnNaam(), datum + (winkels.length > 1 && WINKEL ? ' · ' + WINKEL.naam : '')], agf: ['AGF', boekTxt], vers: ['Vers', boekTxt], brood: ['Brood', boekTxt], diep: ['Diepvries', boekTxt], kw: ['KW', boekTxt], overig: ['Overig', 'Andere leveranciers en in/out. Alleen verwachte verkoop.'], assort: ['Assortiment', 'Nieuw, uit, gesaneerd en opgenomen'], beheer: ['Beheer', ui.bsub ? (BEHEER_SEC.find(x => x[0] === ui.bsub) || [])[2] || '' : 'Kies wat je wilt doen'], meer: ['Meer', `${mijnNaam()} · ${isBeheer() ? 'beheerder' : 'medewerker'}`], medewerkers: ['Medewerkers', 'Namen, pincodes en rechten'], mwedit: ['Rechten', ''], winkel: ['Winkel', (WINKEL && WINKEL.naam) || ''], meldingen: ['Meldingen', 'Pushmeldingen op dit toestel'], appinst: ['App-instellingen', 'Alleen voor jou'], vandaag: ['Wie deed wat', 'Per dag wat er is gedaan'], export: ['Exporteren', 'Naar Excel'], uitleg: ['Uitleg', 'Hoe de app werkt'], hoegoed: ['Hoe goed was het advies', 'Advies, besteld en verkocht per week'], leverancier: ['Per leverancier', 'Wat er besteld moet worden'], levering: ['Leverdag-check', 'Afvinken bij het uitpakken'], acties: ['Actie planning', '3 · Bestellen voor de actieweek'], tafels: ['Actie planning', ui.tafel && S.tafels[ui.tafel] ? 'Vers · week ' + +tafelWeek().split('-')[1] : 'Vers-acties op de koeltafels'] }[ui.tab] || ['', ''];
+  let t = { rapport: ['Rapporten', 'Vorige week, advies en acties'], gebruik: ['Wat wordt gebruikt', 'Hoe vaak elk scherm geopend wordt'], taken: ['Taken', 'Wat er vandaag moet gebeuren'], tafels: ['Actie planning', 'Vers-acties op de koeltafels'], kwacties: ['Actie planning', 'KW-acties op de koppen'], home: [mijnNaam(), datum + (winkels.length > 1 && WINKEL ? ' · ' + WINKEL.naam : '')], agf: ['AGF', boekTxt], vers: ['Vers', boekTxt], brood: ['Brood', boekTxt], diep: ['Diepvries', boekTxt], kw: ['KW', boekTxt], overig: ['Overig', 'Andere leveranciers en in/out. Alleen verwachte verkoop.'], assort: ['Assortiment', 'Nieuw, uit, gesaneerd en opgenomen'], beheer: ['Beheer', ui.bsub ? (BEHEER_SEC.find(x => x[0] === ui.bsub) || [])[2] || '' : 'Kies wat je wilt doen'], meer: ['Meer', `${mijnNaam()} · ${isBeheer() ? 'beheerder' : 'medewerker'}`], medewerkers: ['Medewerkers', 'Namen, pincodes en rechten'], mwedit: ['Rechten', ''], winkel: ['Winkel', (WINKEL && WINKEL.naam) || ''], meldingen: ['Meldingen', 'Pushmeldingen op dit toestel'], appinst: ['App-instellingen', 'Alleen voor jou'], vandaag: ['Wie deed wat', 'Per dag wat er is gedaan'], export: ['Exporteren', 'Naar Excel'], uitleg: ['Uitleg', 'Hoe de app werkt'], hoegoed: ['Hoe goed was het advies', 'Advies, besteld en verkocht per week'], leverancier: ['Overtypen', 'Per leverancier, voor de terminal'], levering: ['Leverdag-check', 'Afvinken bij het uitpakken'], acties: ['Actie planning', '3 · Bestellen voor de actieweek'], tafels: ['Actie planning', ui.tafel && S.tafels[ui.tafel] ? 'Vers · week ' + +tafelWeek().split('-')[1] : 'Vers-acties op de koeltafels'] }[ui.tab] || ['', ''];
   if (ui.tab === 'mwedit') { const m = mwLijst().find(x => x.id === ui.mwId); t[1] = m ? m.naam : ''; }
   if (ui.tab === 'meer' && ui.meerG) { const g = MEER_GROEPEN.find(x => x[0] === ui.meerG); if (g) t = [g[2], g[3]]; }
   $('#kopG').textContent = ui.tab === 'home' ? groet() : ''; $('#kopG').classList.toggle('hide', ui.tab !== 'home');
@@ -92,31 +94,12 @@ function feestdagVoorstel() {
   return '';
 }
 function renderHome() {
-  const v = $('#view'); const ind = homeIndeling().filter(t => tegelZichtbaar(t.k));
-  const tegel = k => {
-    let titel = TEGELS.find(t => t[0] === k)[1], sub = '', on = false, waarsch = false;
-    if (BESTEL_OD.includes(k)) { const s = bestelStatus(k); sub = `<b class="${s.actief ? 'oranje' : ''}">${s.titel}</b><br>${s.sub}`; on = s.actief; }
-    if (k === 'overig') { const io = Object.keys(M.keys).filter(x => x.startsWith('e:') && M.keys[x].info.kl.soort === 'inout'); const meld = io.filter(x => C.overig(M, x, S.inout[x.slice(2)]).melding).length; sub = meld ? `<b class="rood">${meld} in/out-melding${meld === 1 ? '' : 'en'}</b>` : `${Object.keys(M.keys).filter(x => x.startsWith('e:')).length} artikelen`; waarsch = meld > 0; }
-    if (k === 'assort') { const t = assortTelling(); sub = t.nieuw || t.uit || t.san ? `<b class="${t.uit || t.san ? 'rood' : ''}">${t.nieuw} nieuw · ${t.uit + t.san} schap aanpassen</b>` : 'Geen wijzigingen'; waarsch = t.uit + t.san > 0; }
-    if (k === 'tafels') { const t = tafelTelling(); sub = t.totaal ? `<b class="${t.open && t.ombouw ? 'rood' : ''}">${t.klaar} van ${t.totaal} klaar</b><br>week ${t.week}` : (Object.keys(S.tafels || {}).some(id => !S.tafels[id].weg) ? `Week ${t.week} nog niet ingedeeld` : 'Nog geen tafels'); waarsch = !!(t.open && t.ombouw); }
-    if (k === 'kwacties') sub = kwTegel();
-    if (k === 'plekken') { const t = tafelTelling(); const a = versTegel(); const b = mag('o_kw') && Object.keys(S.kwplan || {}).length ? 'KW: ' + kwTegel().replace(/<[^>]+>/g, '') : ''; sub = [a, b].filter(Boolean).join('<br>') || 'Nog niets ingedeeld'; waarsch = !!(t.open && t.ombouw); }
-    if (k === 'beheer') { const last = M.dagLijst[M.dagLijst.length - 1]; const oud = last ? C.diff(last, C.today()) : 99; sub = last ? `Verkoop t/m ${C.fmtDag(last)}` : 'Nog geen verkoop'; if (oud > 1) { sub = `<b class="rood">${sub}</b>`; waarsch = true; } }
-    return `<button class="tegel ${on ? 'actief' : ''} ${waarsch ? 'let' : ''}" data-ga="${k}"><span class="ic">${ICOON[k]}</span><span class="tt">${titel}</span><span class="ts">${sub}</span></button>`;
-  };
-  let h = takenHomeHtml() + weekOverzichtHtml() + homeZoekHtml() + homeUploadHtml() + overdrachtHtml() + deadlineHtml() + feestdagVoorstel() + `<div class="tegels">${ind.filter(t => t.aan).map(t => tegel(t.k)).join('')}</div>`;
-  if (ui.indelen) h += `<div class="blk"><h2>Home indelen</h2><div class="list">${ind.map((t, i) => `<div class="it"><label style="flex:1"><input type="checkbox" data-hk="${t.k}" ${t.aan ? 'checked' : ''}> ${TEGELS.find(x => x[0] === t.k)[1]}</label><button class="btn sm sec" data-hu="${i}" ${i ? '' : 'disabled'}>↑</button><button class="btn sm sec" data-hd="${i}" ${i < ind.length - 1 ? '' : 'disabled'}>↓</button></div>`).join('')}</div><button class="btn" id="indK" style="width:100%;margin-top:10px">Klaar</button></div>`;
-  else if (isBeheer()) h += `<div style="text-align:center;margin:18px 0"><button class="btn sm sec" id="indB">✏️ Home indelen</button></div>`;
-  v.innerHTML = h;
+  const v = $('#view'), ks = kantoorMag(), inTaken = autoTaken().map(x => x.ga), lijsten = BESTEL_OD.filter(od => mag('o_' + od) && !inTaken.includes(od) && lijstArtikelen(od).length);
+  v.innerHTML = takenHomeHtml() + homeZoekHtml() + deadlineHtml() + (lijsten.length ? `<div class="lijstchips"><span class="small">Andere lijsten:</span>${lijsten.map(od => `<button class="chipknop" data-ga="${od}">${esc(odNaam(od))}</button>`).join('')}</div>` : '') + (ks ? kantoorKaart() + feestdagVoorstel() : '');
   v.querySelectorAll('[data-ga]').forEach(b => b.onclick = () => ga(b.dataset.ga));
-  homeEvents(v); homeUploadEvents(v); takenHomeEvents(v); weekOverzichtEvents(v);
+  homeEvents(v); takenHomeEvents(v); const nk = $('#naarKantoor'); if (nk) nk.onclick = naarKantoor;
   v.querySelectorAll('[data-fd]').forEach(b => b.onclick = () => { const d = b.dataset.fd, s = b.dataset.s, bz = M.bijz[d]; const row = { dag: d, naam: bz.naam, soort: s, open: s === 'aangepast' ? (M.st.open[C.wd(d)][0] || '08:00') : null, dicht: s === 'aangepast' ? '16:00' : null }; saveAgenda(row).then(() => { if (s === 'aangepast') toast('Pas de tijden aan onder Beheer → Feestdagen', 4000); }); });
   v.querySelectorAll('[data-fdx]').forEach(b => b.onclick = () => { ls.set('cba-fd-' + W + '-' + b.dataset.fdx, 1); render(); });
-  const ib = $('#indB'); if (ib) ib.onclick = () => { ui.indelen = true; render(); };
-  const ik = $('#indK'); if (ik) ik.onclick = () => { ui.indelen = false; render(); };
-  const opsl = l => { ls.set('cba-home', l); render(); };
-  v.querySelectorAll('[data-hk]').forEach(c => c.onchange = () => { const l = homeIndeling(); l.find(x => x.k === c.dataset.hk).aan = c.checked; opsl(l); });
-  v.querySelectorAll('[data-hu],[data-hd]').forEach(b => b.onclick = () => { const l = homeIndeling().filter(t => tegelZichtbaar(t.k)); const i = +(b.dataset.hu ?? b.dataset.hd); const j = b.dataset.hu !== undefined ? i - 1 : i + 1; [l[i], l[j]] = [l[j], l[i]]; const rest = homeIndeling().filter(t => !l.some(x => x.k === t.k)); opsl(l.concat(rest)); });
 }
 
 /* ---------- onderdelen en assortiment ---------- */
@@ -171,9 +154,9 @@ function renderAssort() {
     h += `<div class="grp"><span>${odNaam(od)}</span><small>${nieuw.length + opg.length} nieuw · ${uit.length + san.length} eruit</small></div><div class="card laatste">`;
     const rij = (a, knop) => `<div class="it"><span>${esc(a.naam)} <span class="small">${a.nr}${a.groep ? ' · ' + esc(a.groep) : ''}</span></span>${knop}</div>`;
     if (nieuw.length) h += `<b style="color:var(--groen)">Nieuw in het bestelboek</b><div class="list">${nieuw.map(a => rij(a, `<button class="btn sm sec" data-open="${od}|${a.nr}">Bekijk</button>`)).join('')}</div>`;
-    if (opg.length) h += `<b style="color:var(--groen);display:block;margin-top:10px">Opgenomen in assortiment – schapplek maken</b><div class="list">${opg.map(a => rij(a, kanSchap ? `<button class="btn sm" data-sok="${a.key}">Schap aangepast</button>` : '')).join('')}</div>`;
-    if (uit.length) h += `<b style="color:var(--rood);display:block;margin-top:10px">Uit het bestelboek – schap opnieuw indelen</b><div class="list">${uit.map(a => rij(a, kanSchap ? `<button class="btn sm" data-ok="${bron}|${a.nr}">Schap aangepast</button>` : '')).join('')}</div>`;
-    if (san.length) h += `<b style="color:var(--rood);display:block;margin-top:10px">Gesaneerd – schap opnieuw indelen</b><div class="list">${san.map(a => { const r = S.assort[a.key]; return rij(a, `<span class="small">${ini(r.door)} ${r.sinds ? C.fmtDag(r.sinds) : ''}</span>${kanSchap ? `<button class="btn sm" data-sok="${a.key}">Schap aangepast</button>` : ''}`); }).join('')}</div>`;
+    if (opg.length) h += `<b style="color:var(--groen);display:block;margin-top:10px">Opgenomen in assortiment – schapplek maken</b><div class="list">${opg.map(a => rij(a, kanSchap ? `<button class="btn sm" data-sok="${a.key}">Schap klaar</button>` : '')).join('')}</div>`;
+    if (uit.length) h += `<b style="color:var(--rood);display:block;margin-top:10px">Uit het bestelboek – schap opnieuw indelen</b><div class="list">${uit.map(a => rij(a, kanSchap ? `<button class="btn sm" data-ok="${bron}|${a.nr}">Schap klaar</button>` : '')).join('')}</div>`;
+    if (san.length) h += `<b style="color:var(--rood);display:block;margin-top:10px">Gesaneerd – schap opnieuw indelen</b><div class="list">${san.map(a => { const r = S.assort[a.key]; return rij(a, `<span class="small">${ini(r.door)} ${r.sinds ? C.fmtDag(r.sinds) : ''}</span>${kanSchap ? `<button class="btn sm" data-sok="${a.key}">Schap klaar</button>` : ''}`); }).join('')}</div>`;
     h += '</div>';
   }
   h += prijsHtml();
@@ -181,9 +164,9 @@ function renderAssort() {
   h += nieuweProducten();
   v.innerHTML = h;
   v.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { const [od, nr] = b.dataset.open.split('|'); ui.tab = od; ui.q = nr; ui.fAlles = true; render(); window.scrollTo(0, 0); });
-  v.querySelectorAll('[data-ok]').forEach(b => b.onclick = () => { const [bron, nr] = b.dataset.ok.split('|'); write('schap_ok', [{ bron, nr, ok: true, door: mijnNaam() }]); log('schap', `Schap aangepast: ${(M.art[bron + ':' + nr] || {}).naam || nr}`); ongedaan('Schap aangepast', () => write('schap_ok', [{ bron, nr, ok: false }])); render(); });
+  v.querySelectorAll('[data-ok]').forEach(b => b.onclick = () => { const [bron, nr] = b.dataset.ok.split('|'); write('schap_ok', [{ bron, nr, ok: true, door: mijnNaam() }]); log('schap', `Schap aangepast: ${(M.art[bron + ':' + nr] || {}).naam || nr}`); ongedaan('Schap klaar', () => write('schap_ok', [{ bron, nr, ok: false }])); render(); });
   prijsEvents(v);
-  v.querySelectorAll('[data-sok]').forEach(b => b.onclick = () => { const a = M.art[b.dataset.sok]; const r = S.assort[a.key]; const terug = zetAssort(a, r.status, { schap_ok: true, opgenomen: r.opgenomen, sinds: r.sinds, door: r.door }); log('schap', `Schap aangepast: ${a.naam}`); ongedaan('Schap aangepast', terug); render(); });
+  v.querySelectorAll('[data-sok]').forEach(b => b.onclick = () => { const a = M.art[b.dataset.sok]; const r = S.assort[a.key]; const terug = zetAssort(a, r.status, { schap_ok: true, opgenomen: r.opgenomen, sinds: r.sinds, door: r.door }); log('schap', `Schap aangepast: ${a.naam}`); ongedaan('Schap klaar', terug); render(); });
 }
 function nieuweProducten() {
   const lijst = Object.values(M.art).filter(a => mag('o_' + onderdeelVan(a)) && (a.nieuw || (S.assort[a.key] && S.assort[a.key].opgenomen && S.assort[a.key].status === 'in')) && M.keys[a.key]);
@@ -385,53 +368,56 @@ const notitieHtml = sleutel => { const n = S.notities[sleutel]; return n ? `<div
 /* ---------- uitleg en rondleiding ---------- */
 function sheet(html, onclick) { const ov = document.createElement('div'); ov.className = 'sheet'; ov.innerHTML = `<div class="sheetIn">${html}</div>`; ov.onclick = e => { if (e.target === ov || e.target.dataset.x !== undefined) ov.remove(); else if (onclick) onclick(e, ov); }; document.body.appendChild(ov); return ov; }
 const HULP = {
-  home: ['Home', 'Bovenaan staat <b>Jouw taken vandaag</b>: tik op een afdeling bij Bestellen of op Tellen. Daaronder zoek je een artikel (een spelfout mag) en staan de tegels per onderdeel. De bel toont meldingen en berichten.'],
-  lijst: ['Bestellen', '<b>Te doen</b> toont wat je nog moet bestellen. Tik op de oranje knop <b>✓ Bestel 2 dozen</b> om het advies over te nemen, of pas het aan met − en +. Vink af met ☐ Besteld of onderaan met <b>Klaar, alles besteld</b>.<br><br>Vraagt de app om te tellen, dan zie je <b>Tel wat er ligt</b>; anders tik je op 🔢 Tellen (open het artikel met de naam). Bij <b>Alles</b> staan artikelen zonder advies ingeklapt onderaan. Onder ⋯ Meer opties: alleen advies, alleen acties, pdf, controle en bericht. 🥐 Bake-off staat bovenaan en rekent met Brood Opzet; ⚠️ betekent dat je niet uitkomt tot de volgende levering.'],
-  overig: ['Overig', 'Artikelen die je niet via de terminal bestelt. Je ziet hoeveel er verkocht is en wat de app verwacht.'],
-  assort: ['Assortiment', 'Wat er nieuw is in het bestelboek, wat eruit gaat en wat gesaneerd is. Tik op <b>Schap aangepast</b> zodra het schap klopt.'],
-  taken: ['Taken', 'Bovenaan wat de app vandaag van je vraagt (bestellen, tellen). Daaronder taken en berichten voor jou: tik op ✓ Gedaan of Gelezen. De beheerder maakt taken met <b>+ Nieuwe taak</b>; iedereen kan een ✉️ bericht sturen.'],
-  meer: ['Meer', 'Alles staat in groepen: tik op een groep. Of zoek bovenaan, bijvoorbeeld "pincode" of "deadline". Een spelfout of ander woord (zoals "personeel") mag.'],
-  'meer:mij': ['Mijn instellingen', 'Weergave (licht/donker, tekstgrootte, korte lijst), meldingen op dit toestel, je pincode of Face ID, en wisselen naar een andere medewerker.'],
-  'meer:bestellen': ['Bestellen', 'Lijst per leverancier om over te typen, de leverdag-check, het weekoverzicht, hoe goed het advies was en exporteren. Beheerders stellen hier ook besteldagen, deadlines en waarschuwingen in.'],
-  'meer:team': ['Medewerkers', 'Medewerkers toevoegen, pincodes resetten, rechten en beginnersmodus, de checklist voor een nieuwe medewerker, wie deed wat, en taken.'],
-  'meer:plekken': ['Actie planning', 'Vers-acties op de koeltafels en KW-acties op de koppen, en de koppen instellen (naam, verkoopfactor, tekening, keuzelijst).'],
-  'meer:data': ['Gegevens uploaden', 'Bestanden uploaden of een link plakken, automatisch uploaden vanaf de pc, controleren wat niet gekoppeld is, en verkeerde uploads verwijderen.'],
-  'meer:winkel': ['Winkel en app', 'Koppelcode voor toestellen, openingstijden en feestdagen, onderdelen, back-up maken of terugzetten, gegevens opnieuw laden en updates.'],
-  'meer:hulp': ['Hulp', 'Uitleg per scherm met woordenlijst, de rondleiding, en Oefenen: alles uitproberen zonder dat er echt iets verandert.'],
-  'beheer:upload': ['Bestanden uploaden', 'Kies dag-exports uit CasPos, bestelboeken, actie-pdf\'s, de voorkooplijst of de collo-lijst; de app herkent zelf wat het is. Met <b>🔗 Link plakken</b> haal je een bestand van Reto op via een gekopieerde link. Onderaan zie je welke dagen er zijn en of bestelboeken ontbreken.'],
-  'beheer:brood': ['Brood Opzet koppelen', 'Besteladvies haalt elk uur uit Brood Opzet op wat er per bake-off-soort is klaargezet, wat er over was en de voorraad in de vriezer. Vul één keer het <b>adres</b> en de <b>koppelcode</b> in en tik op <b>Opslaan en ophalen</b>. Tik daarna op elke soort om het artikel te kiezen: bovenaan staat wat in je Brood Opzet-bestelboek staat (📒), daaronder het hele bestelboek; zoeken kan op naam of artikelnummer. Staat een artikel alleen in Brood Opzet (➕), dan maakt de app het aan als eigen artikel bij Brood. Bij één duidelijke treffer koppelt de app vanzelf. Kies "Niet koppelen" voor soorten die je niet bestelt.'],
-  'beheer:auto': ['Automatisch uploaden', 'Een pc in de winkel stuurt de dag-exports vanzelf door, onzichtbaar, elke 5 minuten. Tik op <b>Nieuw script</b>, pak de zip uit in C:\\Besteladvies en dubbelklik 2-installeren.cmd. Onderaan zie je wat er binnenkwam en wat niet gelukt is.'],
-  'beheer:controle': ['Controleren', '<b>Niet gekoppeld:</b> verkochte artikelen die niet in het bestelboek staan; tik om te koppelen, als eigen artikel toe te voegen of te negeren (meest verkocht bovenaan, zoeken kan). <b>Besteleenheid:</b> tik Klopt of pas aan.'],
-  'beheer:verwijderen': ['Uploads verwijderen', 'Heb je een verkeerd bestand geüpload? Verwijder hier een dag-export, bestelboek of actiebestand. Daarna kun je het goede bestand opnieuw uploaden.'],
-  'beheer:dagen': ['Besteldagen en deadlines', 'Per leverancier op welke dagen je bestelt en wanneer het geleverd wordt, en per productgroep tot hoe laat je kunt bestellen.'],
-  'beheer:advies': ['Advies en waarschuwingen', 'Hoe het advies rekent: buffer, telvragen per besteldag, houdbaarheid per groep, weer, en vanaf wanneer de app waarschuwt als iemand veel meer bestelt dan het advies.'],
+  home: ['Home', 'Bovenaan staat wat je vandaag moet doen: tik erop en de app brengt je erheen. Zoek een artikel met de zoekbalk (een spelfout mag).'],
+  lijst: ['Bestellen', 'Tik op de oranje knop <b>✓ Bestel</b> om het advies over te nemen, of pas het aan met − en +. Vink af met ☐ Besteld; ⚠️ betekent dat je niet uitkomt tot de volgende levering.'],
+  overig: ['Overig', 'Artikelen die je niet via de terminal bestelt, met wat er verkocht is en wat de app verwacht.'],
+  assort: ['Assortiment', 'Wat er nieuw is, uit het bestelboek gaat of gesaneerd is. Tik op <b>Schap klaar</b> zodra het schap klopt.'],
+  taken: ['Taken', 'Wat de app vandaag vraagt, taken en berichten voor jou, meldingen en berichten voor collega\'s. Tik op ✓ Gedaan of Gelezen als het klaar is.'],
+  meer: ['Meer', 'Je instellingen, hulp en uitloggen. Zoek bovenaan als je iets niet vindt (een ander woord of spelfout mag).'],
+  'meer:kantoor': ['Kantoor', 'Alles voor de beheerder: bestellen, medewerkers, actie planning, uploads en de winkel. Bovenaan staat <b>Start hier</b> met wat nog moet gebeuren.'],
+  'meer:mij': ['Mijn app', 'Weergave, meldingen, pincode, wisselen van medewerker, updates en uitloggen.'],
+  'meer:bestellen': ['Bestellen', 'Overtypen, looproute, leverdag-check, rapporten en exporteren. Ook besteldagen, deadlines en waarschuwingen instellen.'],
+  'meer:team': ['Medewerkers', 'Medewerkers toevoegen, rechten en pincodes, wie deed wat, en taken geven.'],
+  'meer:plekken': ['Actie planning', 'Vers-acties op de koeltafels en KW-acties op de koppen. Ook de koppen instellen.'],
+  'meer:data': ['Gegevens uploaden', 'Bestanden uploaden, automatisch uploaden, controleren en koppelen met Brood Opzet.'],
+  'meer:winkel': ['Winkel en app', 'Koppelcode, openingstijden, afdelingen, back-up en het testpakket voor Claude.'],
+  'meer:hulp': ['Hulp', 'Uitleg met woordenlijst, de rondleiding, oefenen zonder dat er iets echt verandert, en wat er gebruikt wordt.'],
+  'beheer:upload': ['Bestanden uploaden', 'Kies dag-exports, bestelboeken, actie-pdf\'s of lijsten; de app herkent zelf wat het is. Met 🔗 Link plakken haal je een bestand op via een link.'],
+  'beheer:auto': ['Automatisch uploaden', 'Een pc in de winkel stuurt de dag-exports vanzelf, elke 5 minuten. Tik op <b>Nieuw script</b>, pak het uit in C:\\Besteladvies en start 2-installeren.cmd.'],
+  'beheer:controle': ['Controleren', 'Artikelen die verkocht worden maar niet in het bestelboek staan: koppel ze of negeer ze. Bij Besteleenheid tik je Klopt of pas je het aan.'],
+  'beheer:verwijderen': ['Uploads verwijderen', 'Verwijder een verkeerd geüpload bestand en upload daarna het goede.'],
+  'beheer:dagen': ['Besteldagen en deadlines', 'Per leverancier wanneer je bestelt en wanneer het komt, en tot hoe laat je kunt bestellen.'],
+  'beheer:advies': ['Advies-instellingen', 'Buffer, even tellen, houdbaarheid, weer en vanaf wanneer de app waarschuwt bij veel bestellen.'],
   'beheer:open': ['Openingstijden', 'Openingstijden per dag en afwijkende dagen zoals feestdagen. Op gesloten dagen rekent de app geen verkoop.'],
-  'beheer:onderdelen': ['Onderdelen', 'Welke productgroep bij welk onderdeel hoort (AGF, Vers, Brood, Diepvries, KW) en in welke volgorde de groepen staan.'],
-  'tafels:sort': ['Actie planning · Vers · 1 Sorteren', 'Alle vers-acties van de week met verwachte verkoop. Tik per actie op de koeltafel waar hij komt, of op 📝 voor een notitie. Met 📄 Bekijken zie je de folderplanning en de terminal bestellijst vers. Bij een voorbije week staat bovenaan de terugblik.'],
-  'tafels:in': ['Actie planning · Vers · 2 Indelen', 'De koeltafels met hoeveel acties er nog geplaatst moeten worden. Tik op een tafel om hem in te delen. Met 👁️ Pdf bekijken krijg je per tafel een staande A4.'],
-  'tafels:tafel': ['Koeltafel indelen', 'Bij <b>Nog plaatsen</b> tik je een actie aan en daarna de vakken. Tik op een vak om te wijzigen, vink af wat klaar staat, en maak een pdf om te printen.'],
-  'kwacties:sort': ['Actie planning · KW · 1 Sorteren', 'Alle folder-acties met verwachting en 🛒 voorkoop-advies. Tik per actie op de kop waar hij komt of op 📝 voor een notitie. Onder Instore staan de overige acties; sorteren mag maar hoeft niet. pag. X opent de folder op die pagina.'],
-  'kwacties:in': ['Actie planning · KW · 2 Indelen', 'Per kop hoeveel acties er nog geplaatst moeten worden. Tik op een kop om de planken in te delen. Met 👁️ Pdf bekijken krijg je elke kop op een staande A4 en een lijst met wat in het vak moet.'],
-  'kwacties:kop': ['Kop indelen', 'Tik bij <b>Nog plaatsen</b> een actie aan en daarna de vakken op de plank. Tik op een geplaatste actie om te wijzigen of te verwijderen.'],
-  acties: ['Actie planning · 3 Bestellen', 'De acties van de komende week met per artikel het advies, zodat je op tijd genoeg bestelt.'],
-  leverancier: ['Per leverancier', 'Alles wat je deze besteldag bestelt, per leverancier, om over te typen in de terminal of door te bellen. "Volle collo" staat erbij als je een hele collo bestelt.'],
-  levering: ['Leverdag-check', 'Vink bij het uitpakken af wat er is geleverd. Wat ontbreekt geef je met één tik door; "Rest klopt" vinkt de rest in één keer af.'],
-  hoegoed: ['Hoe goed was het advies', 'Per week het advies, wat er besteld en verkocht is, en de geschatte derving. Zo zie je waar het advies te hoog of te laag zat.'],
-  vandaag: ['Wie deed wat', 'Per persoon wat er op een dag is gedaan, met tijden. Blader met ‹ › naar andere dagen.'],
-  export: ['Exporteren', 'Maak een Excel-bestand van de bestellijst, de verkoop per artikel of de actieresultaten en deel het.'],
-  medewerkers: ['Medewerkers', 'Voeg medewerkers toe met hun naam; zij kiezen zelf een pincode. Tik op een naam voor rol, rechten, beginnersmodus of pincode resetten. Na toevoegen krijg je de checklist.'],
-  mwedit: ['Rechten', 'Kies bovenaan Vakkenvuller, Afdelingsleider of Beheerder en pas daarna per vinkje aan wat iemand mag. Bij Weergave zet je de beginnersmodus aan: dan ziet iemand alleen bestellen en tellen.'],
-  winkel: ['Winkel', 'Met de koppelcode koppel je een toestel van de winkel. De code is 30 dagen geldig; met Delen stuur je hem door. Een nieuwe code ontkoppelt alle toestellen.'],
-  meldingen: ['Meldingen', 'Kies welke pushmeldingen dit toestel krijgt: deadlines, taken en berichten, uploads en meer. Op de iPhone werkt dit alleen als de app op je beginscherm staat.'],
-  appinst: ['App-instellingen', 'Licht of donker, tekstgrootte, korte lijst (één regel per artikel), verkooptabel altijd tonen en met welke pagina de app opent.'],
-  route: ['Looproute', 'De bestellijst staat in de volgorde waarin je door de winkel loopt, per pad. Zet per onderdeel de groepen in het juiste pad (▲ om te verschuiven, ✕ om weg te halen, + Groep toevoegen). Bij elke bestelling kijkt de app tussen welke artikelen je iets invult of afvinkt en leert zo per artikel waar het staat; na twee keer hetzelfde pad verhuist het. Onder <b>Nog geen pad</b> staan artikelen waarvan de app het pad nog niet weet; je kunt een hele groep in één keer toewijzen. In de lijst tik je bij een artikel (open het met de naam) op 🚶 Pad om het pad zelf te kiezen; dat gaat voor op wat de app leert. <b>Terug naar volgorde bestelboek</b> zet de route uit en wist wat geleerd is.'],
-  uitleg: ['Uitleg', 'Bovenaan de woordenlijst, daaronder uitleg per scherm. Tik op een onderwerp om het te openen.'],
+  'beheer:onderdelen': ['Afdelingen', 'Bij welke afdeling elke productgroep hoort en in welke volgorde de groepen staan.'],
+  'beheer:brood': ['Brood Opzet koppelen', 'Vul één keer het adres en de koppelcode in en tik op Opslaan en ophalen. Tik daarna op elke soort om het artikel te kiezen (📒 = uit je Brood Opzet-bestelboek).'],
+  'tafels:sort': ['Vers-acties · 1 Sorteren', 'Tik per actie op de koeltafel waar hij komt, of op 📝 voor een notitie. Met 📄 Bekijken zie je de folder en de bestellijst.'],
+  'tafels:in': ['Vers-acties · 2 Indelen', 'Tik op een koeltafel om hem in te delen. Met 👁️ Pdf bekijken krijg je per tafel een A4.'],
+  'tafels:tafel': ['Koeltafel indelen', 'Tik een actie aan bij Nog plaatsen en daarna de vakken. Vink af wat klaar staat.'],
+  'kwacties:sort': ['KW-acties · 1 Sorteren', 'Tik per actie op de kop waar hij komt of op 📝 voor een notitie. 🛒 is het voorkoop-advies.'],
+  'kwacties:in': ['KW-acties · 2 Indelen', 'Tik op een kop om de planken in te delen. Met 👁️ Pdf bekijken krijg je elke kop op een A4.'],
+  'kwacties:kop': ['Kop indelen', 'Tik een actie aan bij Nog plaatsen en daarna de vakken op de plank.'],
+  acties: ['Actie planning · 3 Bestellen', 'De acties van de komende week met per artikel het advies.'],
+  leverancier: ['Overtypen', 'Alles wat je bestelt, per leverancier, om over te typen in de terminal. Met 🔍 Controle met terminal vergelijk je wat erin staat.'],
+  levering: ['Leverdag-check', 'Vink bij het uitpakken af wat er is. Wat ontbreekt geef je met één tik door.'],
+  hoegoed: ['Hoe goed was het advies', 'Per week het advies, wat er besteld en verkocht is en de geschatte derving.'],
+  rapport: ['Rapporten', '<b>Vorige week</b> in het kort, <b>Advies</b>: hoe goed het advies was, en <b>Acties</b>: wat er van de acties verkocht is.'],
+  gebruik: ['Wat wordt gebruikt', 'Hoe vaak elk scherm geopend is, op alle toestellen samen. Rood = nog nooit gebruikt: kandidaat om weg te halen.'],
+  vandaag: ['Wie deed wat', 'Per persoon wat er op een dag is gedaan. Blader met ‹ › naar andere dagen.'],
+  export: ['Exporteren', 'Maak een Excel-bestand van de bestellijst, de verkoop of de actieresultaten.'],
+  medewerkers: ['Medewerkers', 'Voeg medewerkers toe; zij kiezen zelf een pincode. Tik op een naam voor rechten of pincode resetten.'],
+  mwedit: ['Rechten', 'Kies Vakkenvuller, Afdelingsleider of Beheerder en pas daarna per vinkje aan. Beginnersmodus: alleen bestellen en tellen.'],
+  winkel: ['Winkel', 'Met de koppelcode koppel je een toestel van de winkel. Een nieuwe code ontkoppelt alle toestellen.'],
+  meldingen: ['Meldingen', 'Kies welke pushmeldingen dit toestel krijgt. Op de iPhone werkt dit alleen als de app op je beginscherm staat.'],
+  appinst: ['App-instellingen', 'Licht of donker, tekstgrootte en korte lijst.'],
+  route: ['Looproute', 'De bestellijst staat per pad in de volgorde waarin je loopt; de app leert bij elke bestelling waar een artikel staat. Pad zelf kiezen: open het artikel en tik op 🚶 Pad.'],
+  uitleg: ['Uitleg', 'Bovenaan de woordenlijst, daaronder uitleg per scherm.'],
   eigen: ['Eigen artikelen', 'Artikelen die niet in het bestelboek staan voeg je zelf toe met "+ Artikel toevoegen" onderaan de lijst. Vul de EAN of PLU in, dan koppelt de app de verkoop uit de dag-export en krijg je een advies zoals bij de rest. Tik op de naam om het aan te passen of te verwijderen. Komt het artikel later in het bestelboek, dan meldt de app dat en neem je het boekartikel over.'],
   scannen: ['Barcode scannen', 'Tik in de lijst op "📷 Scannen" en richt de camera op de barcode van het product of het schapkaartje. De app springt naar het artikel. Lukt scannen niet, typ dan het nummer.'],
   tellen: ['Tellen', 'Met "Tellen" loop je het schap af: je ziet één artikel tegelijk, tikt de voorraad in en gaat met Opslaan naar het volgende. Het advies past zich meteen aan. Met 📷 spring je naar een gescand artikel.'],
   printen: ['Printen', 'Tik in de lijst op Printen. Kies alles, alleen met advies of alleen wat ingevuld is, en of elke groep op een nieuwe pagina moet. De barcodes zijn dezelfde als in het bestelboek, zodat je ze direct kunt scannen. In de kolom Besteld vul je met de hand in.']
 };
-const HULP_ZIJ = new Set(['meer:mij', 'meer:bestellen', 'meer:team', 'meer:plekken', 'meer:data', 'meer:winkel', 'meer:hulp']);
+const HULP_ZIJ = new Set(['meer:kantoor', 'meer:mij', 'meer:bestellen', 'meer:team', 'meer:plekken', 'meer:data', 'meer:winkel', 'meer:hulp']);
 function hulpSleutel() { const t = ui.tab; if (BESTEL_OD.includes(t)) return 'lijst'; if (t === 'beheer') return 'beheer:' + (ui.bsub || 'upload'); if (t === 'meer') return ui.meerG ? 'meer:' + ui.meerG : 'meer'; if (t === 'tafels') return ui.tafel ? 'tafels:tafel' : 'tafels:' + (ui.versStap === 'in' ? 'in' : 'sort'); if (t === 'kwacties') return ui.kwKop ? 'kwacties:kop' : 'kwacties:' + (ui.kwStap === 'in' ? 'in' : 'sort'); return t; }
 function hulp() { const t = HULP[hulpSleutel()] || ['Hulp', 'Nog geen uitleg voor dit scherm.']; sheet(`<h2 style="margin:0">${t[0]}</h2><div class="hulptekst">${t[1]}</div><button class="btn" data-x>Begrepen</button>`); }
 const TOUR = [

@@ -171,9 +171,8 @@ async function taakPush(voor, titel, tekst) { if (DEMO || OEFEN) return; try { a
 const BACKUP_T = { tafels: 'tafels', indeling: 'tafel_indeling', notities: 'notities', eigen: 'eigen_artikelen', overdracht: 'overdracht' };
 function backupMaken() {
   const d = { app: 'Coop Besteladvies', versie: VERSIE, winkel: WINKEL && WINKEL.naam, gemaakt: new Date().toISOString(), inst: S.inst, medewerkers: mwLijst().map(m => ({ naam: m.naam, rol: m.rol, rechten: m.rechten, actief: m.actief })), tafels: S.tafels, indeling: S.indeling, kwplan: S.kwplan, versplan: S.versplan || {}, notities: S.notities, eigen: S.eigen, overdracht: S.overdracht };
-  const naam = `Besteladvies back-up ${C.today()}.json`; const file = new File([JSON.stringify(d)], naam, { type: 'application/json' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: naam }).catch(() => { }); else { const u = URL.createObjectURL(file); const a = document.createElement('a'); a.href = u; a.download = naam; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); }
-  log('beheer', 'Back-up gemaakt'); window.__laatsteBackup = { naam, grootte: file.size };
+  const naam = `Besteladvies back-up ${C.today()}.json`; const grootte = deelJson(naam, d);
+  log('beheer', 'Back-up gemaakt'); window.__laatsteBackup = { naam, grootte };
 }
 function backupTerug() {
   const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json';
@@ -197,7 +196,7 @@ function controleSheet(od, cur) {
   const ov = sheet(`<h2 style="margin:0">🔍 Controle met terminal</h2><p class="small">Typ per regel uit je bestelgeschiedenis het artikelnummer (of de laatste cijfers).</p><input type="search" inputmode="numeric" id="ctlQ" placeholder="Artikelnummer" style="width:100%"><div id="ctlR"></div><h3 id="ctlT"></h3><div class="list" id="ctlO"></div><button class="btn sec" data-x style="width:100%;margin-top:10px">Klaar</button>`);
   const teken = () => {
     const q = ov.querySelector('#ctlQ').value.trim(); const hits = q.length >= 2 ? lijstArtikelen(od).filter(a => String(a.nr).endsWith(q) || String(a.nr) === q).slice(0, 5) : [];
-    ov.querySelector('#ctlR').innerHTML = hits.map(a => { const b = S.bestel[a.key + '|' + cur.besteldag]; return `<div class="it"><span style="flex:1"><b>${esc(a.naam)}</b><br><span class="small">${a.nr} · in de app: <b>${b && (b.besteld || b.aantal) ? C.fmt(aantal(a)) + (a.perHE ? ' HE' : '') : 'niet besteld'}</b></span></span>${b ? `<button class="btn sm" data-cok="${a.key}">✓ klopt</button>` : ''}<button class="btn sm sec" data-cga="${a.key}">Aanpassen</button></div>`; }).join('') || (q.length >= 2 ? '<p class="small">Niet gevonden in deze lijst.</p>' : '');
+    ov.querySelector('#ctlR').innerHTML = hits.map(a => { const b = S.bestel[a.key + '|' + cur.besteldag]; return `<div class="it"><span style="flex:1"><b>${esc(a.naam)}</b><br><span class="small">${a.nr} · in de app: <b>${b && (b.besteld || b.aantal) ? C.fmt(aantal(a)) + (a.perHE ? ' ' + ehMv(a) : '') : 'niet besteld'}</b></span></span>${b ? `<button class="btn sm" data-cok="${a.key}">✓ klopt</button>` : ''}<button class="btn sm sec" data-cga="${a.key}">Aanpassen</button></div>`; }).join('') || (q.length >= 2 ? '<p class="small">Niet gevonden in deze lijst.</p>' : '');
     const rest = lijst.filter(a => !ok.has(a.key)); ov.querySelector('#ctlT').textContent = rest.length ? `Nog niet gecontroleerd (${rest.length})` : '✓ Alles gecontroleerd';
     ov.querySelector('#ctlO').innerHTML = rest.map(a => `<div class="it"><span style="flex:1">${esc(a.naam)} <span class="small">${a.nr} · ${C.fmt(aantal(a))}</span></span></div>`).join('');
   };
@@ -229,7 +228,7 @@ const COLLO_STD = { datum: '2026-11-03', items: Object.fromEntries(Object.entrie
 function colloLijst() { const c = (S.inst || {}).collo; return c && c.items ? c : COLLO_STD; }
 function colloVan(a) { const c = colloLijst(); const x = c && c.items && a && a.nr && c.items[a.nr]; if (!x) return null; const st = a.perHE && a.he > 0 ? a.he : 1; return Object.assign({ eenh: Math.max(1, Math.round(x.n / st)) }, x); }
 function colloHtml(a, ad, rB) {
-  const c = colloVan(a); if (!c) return ''; const u = a.perHE ? ' HE' : ''; const adv = ad.adv || 0;
+  const c = colloVan(a); if (!c) return ''; const u = a.perHE ? ' ' + ehMv(a) : ''; const adv = ad.adv || 0;
   let t = `💰 Volle collo = ${c.n} × ${esc(c.inh)} → korting`;
   if (adv > 0 && adv < c.eenh) { const nd = Array.isArray(ad.days) ? ad.days.length : +ad.days || 0; const dpd = nd ? ad.need / nd : 0; const dg = dpd > 0 ? Math.floor((ad.stock || 0) / dpd) : 0; t += `<br><span class="small">Advies ${C.fmt(adv)}${u}. ${dg >= 2 ? `Er ligt nog voor ±${dg} dagen: liever wachten en in één keer ${c.eenh}${u} bestellen?` : `Nu nodig. Volle collo (${c.eenh}${u}) geeft korting, maar ${C.fmt(c.eenh - adv)}${u} meer over.`}</span>`; }
   else if (adv > c.eenh && adv % c.eenh) t += `<br><span class="small">Afronden naar ${Math.ceil(adv / c.eenh) * c.eenh}${u} = ${Math.ceil(adv / c.eenh)} volle collo.</span>`;
