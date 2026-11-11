@@ -369,7 +369,7 @@ const notitieHtml = sleutel => { const n = S.notities[sleutel]; return n ? `<div
 function sheet(html, onclick) { const ov = document.createElement('div'); ov.className = 'sheet'; ov.innerHTML = `<div class="sheetIn">${html}</div>`; ov.onclick = e => { if (e.target === ov || e.target.dataset.x !== undefined) ov.remove(); else if (onclick) onclick(e, ov); }; document.body.appendChild(ov); return ov; }
 const HULP = {
   home: ['Home', 'Bovenaan staat wat je vandaag moet doen: tik erop en de app brengt je erheen. Zoek een artikel met de zoekbalk (een spelfout mag).'],
-  lijst: ['Bestellen', 'Tik op de oranje knop <b>✓ Bestel</b> om het advies over te nemen, of pas het aan met − en +. Vink af met ☐ Besteld; ⚠️ betekent dat je niet uitkomt tot de volgende levering.'],
+  lijst: ['Bestellen', 'Tik op de oranje knop <b>✓ Bestel</b> om het advies over te nemen, of pas het aan met − en +. Vink af met ☐ Besteld; ⚠️ = je komt niet uit tot de volgende levering, 👀 Even kijken = weinig nodig en voorraad onbekend, kijk zelf.'],
   overig: ['Overig', 'Artikelen die je niet via de terminal bestelt, met wat er verkocht is en wat de app verwacht.'],
   assort: ['Assortiment', 'Wat er nieuw is, uit het bestelboek gaat of gesaneerd is. Tik op <b>Schap klaar</b> zodra het schap klopt.'],
   taken: ['Taken', 'Wat de app vandaag vraagt, taken en berichten voor jou, meldingen en berichten voor collega\'s. Tik op ✓ Gedaan of Gelezen als het klaar is.'],

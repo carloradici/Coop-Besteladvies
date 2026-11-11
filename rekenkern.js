@@ -564,8 +564,9 @@ C.advies = (M, key, lv, voorraad, bestellingen) => {
   const min = M.min && M.min[key] > 0 ? +M.min[key] : 0;
   const netto = stock !== null ? Math.max(0, need + min - Math.max(0, stock)) : Math.max(need, min);
   const x = netto / he;
-  let adv = x < 0.3 ? 0 : Math.max(1, Math.round(x)); const boMin = M.boMin ? M.boMin(key, lv) : 0; if (boMin > adv) adv = boMin;
-  return { need, stock, netto, adv, he, min, derv, dervKorting, perHE: !!(a && a.perHE), days, kg: !!(M.keys[key] && M.keys[key].kg), weer, houdb, leegN, leegBoost, start: (!M.keys[key] || M.keys[key].first < 0) && !!M.startBasis && need > 0 };
+  const zeker = stock !== null && !(voorraad && voorraad.schat), drempel = zeker ? 0.3 : 0.6;
+  let adv = x < drempel ? 0 : Math.max(1, Math.round(x)); const boMin = M.boMin ? M.boMin(key, lv) : 0; if (boMin > adv) adv = boMin;
+  return { need, stock, netto, adv, twijfel: !adv && x >= 0.3, schat: !!(voorraad && voorraad.schat), he, min, derv, dervKorting, perHE: !!(a && a.perHE), days, kg: !!(M.keys[key] && M.keys[key].kg), weer, houdb, leegN, leegBoost, start: (!M.keys[key] || M.keys[key].first < 0) && !!M.startBasis && need > 0 };
 };
 // weekoverzicht: laatste 3 volle weken + lopende week + Gd
 C.weekTabel = (M, key) => {

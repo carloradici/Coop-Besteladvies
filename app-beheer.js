@@ -177,10 +177,12 @@ function telKeuze(od, lv) {
       let v = 0; for (let i = Math.max(0, M.N - 28); i < M.N; i++) v += sr.v[i]; const pw = v / 4; if (!(pw > 0)) continue;
       const vr = S.voorraad[a.key]; const oud = vr && vr.dag ? C.diff(vr.dag, vandaag) : 99; if (oud <= 2) continue;
       const derv = M.derv && M.derv[a.key] ? Math.min(1, M.derv[a.key] / Math.max(1, v)) * 2 : 0;
-      const score = Math.min(oud, 14) / 14 * 2 + Math.log1p(pw) / 2 + derv + (C.actieLabel(M, a.key) ? 0.5 : 0);
+      const he = a.perHE && a.he > 0 ? a.he : 1, onzeker = oud > 7 ? (schatVoorraad(a.key) ? 0.5 : 1) : 0, duur = Math.min(1, he / Math.max(1, pw * 2));
+      const score = Math.min(oud, 14) / 14 * 2 + Math.log1p(pw) / 2 + derv + (C.actieLabel(M, a.key) ? 0.5 : 0) + onzeker + duur + (M.boInfo && M.boInfo[a.key] && !boVr(a.key) ? 3 : 0);
       kand.push([a.key, score]);
     }
-    alle = kand.sort((x, y) => y[1] - x[1]).slice(0, max).map(x => x[0]); ls.set(lsk, { max, alle });
+    const bo = kand.filter(x => M.boInfo && M.boInfo[x[0]] && !boVr(x[0])).sort((x, y) => y[1] - x[1]).slice(0, 15).map(x => x[0]);
+    alle = [...new Set([...bo, ...kand.sort((x, y) => y[1] - x[1]).slice(0, max).map(x => x[0])])]; ls.set(lsk, { max, alle });
   }
   const open = alle.filter(k => { const vr = S.voorraad[k]; return M.art[k] && !(vr && vr.dag === vandaag); });
   return { alle, open };

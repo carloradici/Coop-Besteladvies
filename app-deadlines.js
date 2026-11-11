@@ -111,6 +111,8 @@ function renderLijst(od, soft) {
   if (t.n || t.u) html += `<div class="banner"><h3><span>Assortiment gewijzigd</span><button class="btn sm sec" id="assT">Bekijk</button></h3><div class="sub">${t.n} nieuw · ${t.u} schap opnieuw indelen</div></div>`;
   if (cur && !leeg) html += boBanner(alleArts, cur);
   let arts = alleArts.filter(a => zichtbaar(a, cur)), nulVan = -1;
+  let extraNaam = 'Zonder advies';
+  if (cur && ui.modus === 'todo' && !ui.q && kantoorMag()) { const tw = alleArts.filter(a => !a.uit && assStatus(a) === 'in' && (!ui.groep || groepVan(a) === ui.groep) && !S.bestel[a.key + '|' + cur.besteldag] && C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).twijfel); if (tw.length) { extraNaam = '👀 Even kijken'; nulVan = arts.length; if (ui.toonNul) arts = arts.concat(tw); else arts.nulN = tw.length; } }
   if (cur && ui.modus === 'alles' && !ui.q) { const nul = arts.filter(a => { if (a.uit || assStatus(a) !== 'in') return false; const be = S.bestel[a.key + '|' + cur.besteldag]; return !(be && (be.besteld || (be.aantal != null && be.aantal !== ''))) && !C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).adv; }); if (nul.length > 5) { const z = new Set(nul); arts = arts.filter(a => !z.has(a)); nulVan = arts.length; if (ui.toonNul) arts = arts.concat(nul); else arts.nulN = nul.length; } }
   html += `<div id="lst"></div>`;
   if (cur && !leeg && st.nodig && mag('afvinken')) html += `<div class="klaarblok"><button class="btn klaarknop" id="klaarB">${st.open ? 'Klaar, alles besteld ✓' : '✓ Alles besteld'}</button><p class="small">${st.open ? `Vinkt de ${st.open} open artikelen in één keer af.` : 'Goed bezig 👍'}</p></div>`;
@@ -129,7 +131,7 @@ function renderLijst(od, soft) {
   const kh = $('#klaarHome'); if (kh) kh.onclick = () => ga('home');
   const lst = $('#lst'); let pos = 0, lastG = null, lastP = -1; const ra = routeAan(od);
   const tel = {}; arts.forEach(a => { const g = groepToon(a); tel[g] = (tel[g] || 0) + 1; });
-  const nulKop = () => `<button class="grp nulkop" data-nul="1"><span>Zonder advies (${ui.toonNul ? arts.length - nulVan : arts.nulN})</span><small>${ui.toonNul ? '▴ verbergen' : '▾ tonen'}</small></button>`;
+  const nulKop = () => `<button class="grp nulkop" data-nul="1"><span>${extraNaam} (${ui.toonNul ? arts.length - nulVan : arts.nulN})</span><small>${ui.toonNul ? '▴ verbergen' : '▾ tonen'}</small></button>`;
   const chunk = () => {
     const end = Math.min(arts.length, pos + 40); let h = '';
     for (; pos < end; pos++) { if (pos === nulVan && ui.toonNul) { h += nulKop(); lastG = null; } const a = arts[pos]; const g = groepToon(a); if (ra) { const p = routePad(a); if (p !== lastP) { h += `<div class="padkop">🚶 ${p ? 'Pad ' + p : 'Nog geen pad'}</div>`; lastP = p; lastG = null; } } if (g !== lastG) { const dg = cur ? dlArt(a, cur) : null; const dv = dg && dg.ts < nuTs(); h += `<div class="grp ${dv ? 'dlvoorbij' : ''}"><span>${esc(g || 'Overig')}${dg ? `<em class="dltag">⏰ ${dv ? 'deadline voorbij' : dlKort(dg)}</em>` : ''}</span><small>${tel[g]} artikel${tel[g] === 1 ? '' : 'en'}</small></div>`; lastG = g; } const laatste = pos + 1 >= arts.length || groepToon(arts[pos + 1]) !== g; h += kaart(a, cur, laatste); }
@@ -158,7 +160,7 @@ function kaart(a, bd, laatste) {
   const u = eenheid(a); const rT = mag('tellen'), rB = mag('bestellen'), rA = mag('afvinken'); const isB = !!(be && be.besteld);
   const heTxt = heTekst(a);
   const advTxt = ad.adv ? `${ad.adv}` : '0';
-  const advSub = ad.adv ? (a.perHE ? `${ad.adv === 1 ? (EH[ehCode(a)] || ['verpakking'])[0] : ehMv(a)} · ${C.fmt(ad.adv * a.he)} ${u === 'st' ? 'st' : u}` : (u === 'st' ? (ad.adv === 1 ? 'stuk' : 'stuks') : u)) : 'geen advies';
+  const advSub = ad.adv ? (a.perHE ? `${ad.adv === 1 ? (EH[ehCode(a)] || ['verpakking'])[0] : ehMv(a)} · ${C.fmt(ad.adv * a.he)} ${u === 'st' ? 'st' : u}` : (u === 'st' ? (ad.adv === 1 ? 'stuk' : 'stuks') : u)) : ad.twijfel ? '👀 even kijken' : 'geen advies';
   const comp = S.pref && S.pref.compact; const telT = rT && (ui.telAlle || vrVandaag !== '' || (ui.telK && ui.telK.has(a.key)) || (bd && telKeuze(onderdeelVan(a), bd).alle.includes(a.key)));
   let tbl = `<table class="wk"><tr><th></th>${C.DAGEN.map(d => `<th>${d}</th>`).join('')}<th>wk</th></tr>`;
   for (const [ri, r2] of wt.rows.entries()) { if (comp && ri !== 2) continue; let s = 0, any = false; tbl += `<tr><td class="l">${r2.week}</td>${r2.cells.map(c => { if (c.v !== null) { s += c.v; any = true; } return `<td class="${c.actie ? 'a' : ''} ${c.dag === C.today() ? 'today' : ''}">${c.v === null ? '' : C.fmt(c.v)}</td>`; }).join('')}<td>${any ? C.fmt(s) : ''}</td></tr>`; }
@@ -186,7 +188,9 @@ function kaart(a, bd, laatste) {
   if (ad.leegN) why += ` · ${ad.leegN}× leeg in 4 wk${ad.leegBoost ? ` (advies +${Math.round(ad.leegBoost * 100)}%)` : ''}`;
   if (ad.start) why += ' · nieuw: startadvies op basis van de groep';
   { const rv = vrVan(a.key); if (rv && rv.restant) why += ` · actie-restant wk ${rv.week} ±${C.fmt(rv.aantal)}`; }
+  if (ad.schat) why += ` · ± ${C.fmt(vrVan(a.key).aantal)} in winkel (geschat uit bestellingen en kassa)`;
   if (ad.stock !== null && ad.stock !== undefined) why += ` · voorraad bij levering ±${C.fmt(Math.max(0, ad.stock))}`;
+  if (ad.twijfel) why += ' · minder dan 60% van een doos nodig en voorraad onbekend: even kijken';
   else if (vr && vr.dag) why += ` · laatst geteld ${C.fmtDag(vr.dag)}: ${C.fmt(vr.aantal)}${vr.door ? ' (' + esc(ini(vr.door)) + ')' : ''}`;
   const kanSan = mag('saneren');
   const assKnop = kanSan ? (san ? '<button class="link" data-ass="terug">Terugzetten in assortiment</button>' : niet ? '<button class="link" data-ass="op">+ Opnemen in assortiment</button>' : a.uit ? '' : '<button class="link rood" data-ass="san">Saneren</button>') : '';

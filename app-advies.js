@@ -28,7 +28,16 @@ function naModel() {
   };
   M.weerFactor = weerModel();
 }
-function vrVan(key) { const v = S.voorraad[key]; const bo = boVr(key); if (bo && !(v && v.dag && v.dag >= bo.dag)) return bo; if (v && v.dag && C.diff(v.dag, C.today()) <= 7) return v; return restant(key) || v; }
+function vrVan(key) { const v = S.voorraad[key]; const bo = boVr(key); if (bo && !(v && v.dag && v.dag >= bo.dag)) return bo; if (v && v.dag && C.diff(v.dag, C.today()) <= 7) return v; return restant(key) || schatVoorraad(key) || v; }
+/* 1.37: geschatte voorraad = leveringen via de app min kassaverkoop (vanaf de eerste levering in 21 dagen) */
+function schatVoorraad(key) {
+  const a = M.art[key], sr = M.keys[key], vandaag = C.today(); if (!a || !sr) return null; const he = a.perHE && a.he > 0 ? a.he : 1, lev = {};
+  for (const b of bestellingenVan(key)) { if (!b.lever || b.lever > vandaag || b.lever < C.add(vandaag, -21)) continue; const n = b.aantal != null && b.aantal !== '' ? +b.aantal : b.besteld ? +(b.advies || 0) : 0; if (n > 0) lev[b.lever] = (lev[b.lever] || 0) + n * he; }
+  const g = S.voorraad[key], basis = g && g.dag && g.dag >= C.add(vandaag, -21) ? g : null;
+  const d0 = basis ? C.add(basis.dag, 1) : Object.keys(lev).sort()[0]; if (!d0) return null; let s = basis ? Math.max(0, +basis.aantal || 0) : 0;
+  for (let d = d0; d <= vandaag; d = C.add(d, 1)) { s += lev[d] || 0; const i = C.idx(M, d); if (d < vandaag && i >= 0 && i < M.N && M.heeftData[i]) s = Math.max(0, s - sr.v[i]); }
+  return { aantal: Math.round(s * 10) / 10, dag: vandaag, schat: true };
+}
 function restant(key) {
   const l = M.actieArt && M.actieArt[key]; if (!l) return null; const vandaag = C.today(); const a = M.art[key]; if (!a) return null; const he = a.perHE && a.he > 0 ? a.he : 1;
   const p = l.filter(x => x.zon < vandaag && x.zon >= C.add(vandaag, -10)).sort((x, y) => x.zon < y.zon ? 1 : -1)[0]; if (!p) return null;
