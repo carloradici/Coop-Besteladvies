@@ -31,7 +31,7 @@ async function sync(full) {
     const [inst, agenda, boekMeta, acties, dagMeta, vr, be, so, io, mws, ass, nts, wr, eig, mins, ovd, lvc, drv, pok, tfl, tfi, lg, kwa] = await Promise.all([
       rest(wq('instellingen?select=data')), rest(wq('agenda?select=*')), rest(wq('boeken?select=bron,geupload')), rest(wq('acties?select=*&order=van.asc')),
       getAll(wq(`dagverkoop?select=dag,geupload&dag=gte.${C.add(C.today(), -460)}&order=dag.asc`)),
-      rest(wq(`voorraad?dag=gte.${C.add(C.today(), -8)}`)), rest(wq(`bestellingen?besteldag=gte.${C.add(C.today(), -21)}`)), rest(wq('schap_ok?select=bron,nr,ok')), rest(wq('inout?select=*')),
+      getAll(wq(`voorraad?dag=gte.${C.add(C.today(), -35)}`)), rest(wq(`bestellingen?besteldag=gte.${C.add(C.today(), -21)}`)), rest(wq('schap_ok?select=bron,nr,ok')), rest(wq('inout?select=*')),
       rest(wq('medewerkers?select=id,naam,rol,rechten,actief,heeft_pin,email&order=naam.asc')), getAll(wq('assortiment?select=*')), rest(wq('notities?select=*')), rest(`winkels?id=eq.${W}&select=koppelcode,code_tot,naam,plaats`),
       rest(wq('eigen_artikelen?select=id,data')).catch(() => []), rest(wq('schap_min?select=bron,nr,min')).catch(() => []),
       rest(wq('overdracht?klaar=eq.false&select=*')).catch(() => []), rest(wq(`levercheck?lever=gte.${C.add(C.today(), -35)}&select=*`)).catch(() => []), getAll(wq(`derving?dag=gte.${C.add(C.today(), -60)}&select=*`)).catch(() => []),

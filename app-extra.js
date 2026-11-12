@@ -123,11 +123,13 @@ async function scanStart(od, opVondst) {
   } catch (e) { const m = $('#scM', ov); if (m) m.textContent = /Permission|NotAllowed/i.test(e && (e.name + e.message)) ? 'Geen toegang tot de camera. Typ het nummer hieronder.' : 'Camera lukt niet. Typ het nummer hieronder.'; }
 }
 /* ---------- tel-modus ---------- */
-function telModus(od, arts, vrij) {
+function telDagen() { return +((S.inst || {}).telDagen || 28); }
+function telModus(od, arts, vrij, ronde) {
   if (!arts.length && !vrij) return toast('Geen artikelen om te tellen');
   arts = arts.slice(); let i = 0, val = '', geteld = 0, zoek = arts.length ? null : '';
-  const lk = 'cba-tel-' + od + '-' + arts.length, oud = ls.get(lk), vrij0 = arts.findIndex(a => !(S.voorraad[a.key] && S.voorraad[a.key].dag === C.today()));
-  i = Math.max(vrij0 < 0 ? 0 : vrij0, oud && oud.dag === C.today() && oud.i < arts.length ? oud.i : 0); if (i > 0) toast(`Verder bij ${i + 1} van ${arts.length}`, 2500);
+  const lk = 'cba-tel-' + od + '-' + arts.length, oud = ls.get(lk), td = ronde ? telDagen() : 1, recent = a => { const v = S.voorraad[a.key]; return !!(v && v.dag && C.diff(v.dag, C.today()) < td); }, vrij0 = arts.findIndex(a => !recent(a));
+  const verder = () => { i++; val = ''; if (ronde) while (i < arts.length && recent(arts[i])) i++; teken(); };
+  i = Math.max(vrij0 < 0 ? 0 : vrij0, !ronde && oud && oud.dag === C.today() && oud.i < arts.length ? oud.i : 0); if (ronde && vrij0 < 0) i = arts.length; else if (i > 0) toast(`Verder bij ${i + 1} van ${arts.length}`, 2500);
   const ov = document.createElement('div'); ov.className = 'telmodus'; document.body.appendChild(ov);
   const curVan = a => besteldag(onderdeelVan(a)).cur;
   const opslaan = () => { const a = arts[i]; write('voorraad', [{ bron: a.bron, nr: a.nr, aantal: C.num(val), dag: C.today(), door: mijnNaam() }]); geteld++; };
@@ -148,7 +150,7 @@ function telModus(od, arts, vrij) {
     if (i >= arts.length) { ov.innerHTML = `<div class="telkop"><span></span><button id="tX">Sluiten</button></div><div style="margin:auto;text-align:center"><div style="font-size:64px">✓</div><div class="telnaam">Klaar</div><div class="telsub">${geteld} ${geteld === 1 ? 'artikel' : 'artikelen'} geteld${scannerGezien ? '<br>Scan nog een artikel om verder te tellen.' : ''}</div></div><button class="btn sec" id="tN" style="margin-bottom:8px">🔢 Artikelnummer typen</button><button class="btn" id="tK">Terug naar de lijst</button>`; $('#tX', ov).onclick = $('#tK', ov).onclick = sluit; $('#tN', ov).onclick = () => { zoek = ''; teken(); }; return; }
     const a = arts[i]; const vr = S.voorraad[a.key]; const u = eenheid(a); const cur = curVan(a);
     const ad = cur && val !== '' ? C.advies(M, a.key, cur, { aantal: C.num(val), dag: C.today() }, bestellingenVan(a.key)) : null;
-    ov.innerHTML = `<div class="telkop"><button id="tX">Sluiten</button><span>${i + 1} van ${arts.length}</span><span><button id="tN" aria-label="Artikelnummer typen">🔢</button> <button id="tS">📷</button></span></div><div class="telbalk"><div style="width:${Math.round(i / arts.length * 100)}%"></div></div>
+    ov.innerHTML = `<div class="telkop"><button id="tX">Sluiten</button><span>${i + 1} van ${arts.length}${ronde ? `<small class="telnog">nog ${arts.filter(x => !recent(x)).length} te tellen</small>` : ''}</span><span><button id="tN" aria-label="Artikelnummer typen">🔢</button> <button id="tS">📷</button></span></div><div class="telbalk"><div style="width:${Math.round(i / arts.length * 100)}%"></div></div>
     ${a.merk ? `<div class="telmerk">${esc(a.merk)}</div>` : ''}<div class="telnaam">${esc(a.naam)}</div><div class="telsub">${esc(a.eigen ? a.artNr || '' : a.nr)} · ${esc(groepVan(a))}${vr && vr.dag ? ` · laatst ${C.fmtDag(vr.dag)}: ${C.fmt(vr.aantal)}` : ''}</div>
     <div class="telwaarde">${val === '' ? '<span class="ph">Hoeveel ' + (u === 'kg' ? 'kilo' : 'stuks') + '?</span>' : esc(val)}</div><div class="teladv">${ad ? 'Advies ' + C.fmtDag(cur.besteldag) + ': ' + (ad.adv ? ad.adv + ' ' + ehTxt(a, ad.adv) : 'niets') : ''}</div>
     ${val === '0' ? `<div style="text-align:center"><button class="btn sm sec" id="tLeeg">${S.leeg[a.key + '|' + C.today()] ? '✓ Leeg gemeld' : '🚫 Schap was leeg'}</button></div>` : ''}
@@ -156,10 +158,10 @@ function telModus(od, arts, vrij) {
     <div class="telblok">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-t="${n}">${n}</button>`).join('')}<button data-t=",">,</button><button data-t="0">0</button><button data-t="w">⌫</button></div>
     <div class="telacties"><button id="tV" ${i ? '' : 'disabled'}>‹ Vorige</button><button id="tO">Overslaan</button><button class="hoofd" id="tB">Opslaan ›</button></div>`;
     ov.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { const t = b.dataset.t; if (t === 'w') val = val.slice(0, -1); else if (t === ',') { if (!val.includes(',')) val = (val || '0') + ','; } else if (val.length < 6) val = val === '0' ? t : val + t; teken(); });
-    $('#tX', ov).onclick = sluit; $('#tV', ov).onclick = () => { if (i) { i--; val = ''; teken(); } }; $('#tO', ov).onclick = () => { i++; val = ''; teken(); };
-    const tl = $('#tLeeg', ov); if (tl) tl.onclick = () => { if (!S.leeg[a.key + '|' + C.today()]) { write('leeg', [{ bron: a.bron, nr: a.nr, dag: C.today(), door: mijnNaam(), ts: new Date().toISOString() }]); log('leeg', `Schap leeg: ${a.naam}`); } opslaan(); i++; val = ''; teken(); };
+    $('#tX', ov).onclick = sluit; $('#tV', ov).onclick = () => { if (i) { i--; val = ''; teken(); } }; $('#tO', ov).onclick = verder;
+    const tl = $('#tLeeg', ov); if (tl) tl.onclick = () => { if (!S.leeg[a.key + '|' + C.today()]) { write('leeg', [{ bron: a.bron, nr: a.nr, dag: C.today(), door: mijnNaam(), ts: new Date().toISOString() }]); log('leeg', `Schap leeg: ${a.naam}`); } opslaan(); verder(); };
     $('#tN', ov).onclick = () => { if (val !== '') { opslaan(); toast('✓ ' + a.naam + ': ' + val, 1500); val = ''; } zoek = ''; teken(); };
-    $('#tB', ov).onclick = () => { if (val === '') return toast('Tik eerst de voorraad in'); opslaan(); i++; val = ''; teken(); };
+    $('#tB', ov).onclick = () => { if (val === '') return toast('Tik eerst de voorraad in'); opslaan(); verder(); };
     $('#tS', ov).onclick = () => scanStart(od, naar);
   };
   telHook = code => {

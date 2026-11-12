@@ -66,7 +66,7 @@ function lijstMenu(od, cur, arts, bdSleutel) {
   const ov = sheet(`<h2 style="margin:0 0 4px">Meer opties</h2>${opties.map(o => `<button class="belrij" data-lm="${o[0]}"><span class="ic">${o[1]}</span><span><b>${o[2]}</b>${o[3] ? `<small>${o[3]}</small>` : ''}</span><span class="pijl">›</span></button>`).join('')}<button class="btn sec" data-x style="margin-top:10px">Sluiten</button>`, (e, o) => {
     const b = e.target.closest('[data-lm]'); if (!b) return; o.remove(); const k = b.dataset.lm;
     if (k === 'allesAdv') allesVolgensAdvies(od, cur);
-    if (k === 'telB') telModus(od, arts.filter(a => !a.uit && assStatus(a) === 'in'));
+    if (k === 'telB') telModus(od, arts.filter(a => !a.uit && assStatus(a) === 'in'), false, true);
     if (k === 'telS') telModus(od, [], true);
     if (k === 'prt') printOpties(od, lijstArtikelen(od));
     if (k === 'ctl') controleSheet(od, cur);

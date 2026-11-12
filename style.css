@@ -582,3 +582,4 @@ select{max-width:100%}
 .zoekrij .scanknop{min-width:48px;padding:0 10px;font-size:18px}
 .telmerk{color:var(--oranje);font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:.4px;margin-top:6px}.telmerk+.telnaam{margin-top:0}
 body:has(.telmodus) .flits{display:none}
+.telnog{display:block;font-size:12px;color:var(--grijs);font-weight:600}.telkop>span:not(:has(button)){text-align:center}.teldagen button{font-size:13px;padding:10px 2px}

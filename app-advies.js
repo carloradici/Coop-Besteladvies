@@ -28,7 +28,7 @@ function naModel() {
   };
   M.weerFactor = weerModel();
 }
-function vrVan(key) { const v = S.voorraad[key]; const bo = boVr(key); if (bo && !(v && v.dag && v.dag >= bo.dag)) return bo; if (v && v.dag && C.diff(v.dag, C.today()) <= 7) return v; return restant(key) || schatVoorraad(key) || v; }
+function vrVan(key) { const v = S.voorraad[key]; const bo = boVr(key); if (bo && !(v && v.dag && v.dag >= bo.dag)) return bo; if (v && v.dag && C.diff(v.dag, C.today()) <= 7) return v; return restant(key) || schatVoorraad(key) || null; }
 /* 1.37: geschatte voorraad = leveringen via de app min kassaverkoop (vanaf de eerste levering in 21 dagen) */
 function schatVoorraad(key) {
   const a = M.art[key], sr = M.keys[key], vandaag = C.today(); if (!a || !sr) return null; const he = a.perHE && a.he > 0 ? a.he : 1, lev = {};
