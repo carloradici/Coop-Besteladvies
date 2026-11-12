@@ -89,33 +89,32 @@ function renderLijst(od, soft) {
   const bdSleutel = cur ? `b:${od}:${cur.besteldag}` : '';
   if (!ui.modus) ui.modus = ui.fOpen ? 'todo' : ui.fAdv ? 'advies' : ui.fActie ? 'acties' : 'alles';
   const zetModus = m => { ui.modus = m; ui.fOpen = m === 'todo'; ui.fAdv = m === 'advies'; ui.fActie = m === 'acties'; ui.groep = ''; saveUi(); };
-  if (beginner() || !mag('bestellen')) { if (!window.__E2E_ALLES) ui.modus = 'todo'; }
+  if ((beginner() || !mag('bestellen')) && !ui.q) { if (!window.__E2E_ALLES) ui.modus = 'todo'; }
   zetModus(ui.modus);
   const ci = cur ? lijst.indexOf(cur) : -1;
   const st = cur ? voortgang(od, cur, cur.besteldag < C.today()) : null; const klaar = st ? st.nodig - st.open : 0;
   const leeg = !boek || !M.dagLijst.length;
   let html = `<div class="bar lijstkop">
-  ${cur ? `<div class="bdkop"><button class="bdpijl" id="bdV" ${ci > 0 ? '' : 'disabled'} aria-label="Vorige besteldag">‹</button><div class="bdmid"><b>Bestellen ${C.DAGNAAM[C.wd(cur.besteldag)]} ${C.fmtDag(cur.besteldag).split(' ')[1]}</b><span>levering ${C.fmtDag(cur.L)}${!leeg && st.nodig ? ` · ${st.open ? `${klaar} van ${st.nodig} besteld` : '✓ alles besteld'}` : ''}</span></div><button class="bdpijl" id="bdN" ${ci < lijst.length - 1 ? '' : 'disabled'} aria-label="Volgende besteldag">›</button>${!leeg && st.nodig && klaar ? `<div class="vgbalk ${st.open ? '' : 'klaar'}"><div style="width:${Math.round(klaar / st.nodig * 100)}%"></div></div>` : ''}</div>` : '<div class="bdkop"><div class="bdmid"><b>Geen besteldag</b><span>Stel de besteldagen in onder Beheer</span></div></div>'}
+  ${cur ? `<div class="bdkop"><button class="bdpijl" id="bdV" ${ci > 0 ? '' : 'disabled'} aria-label="Vorige besteldag">‹</button><div class="bdmid"><b>Bestellen ${C.DAGNAAM[C.wd(cur.besteldag)]} ${C.fmtDag(cur.besteldag).split(' ')[1]}</b><span>${lijstAftel(od, cur)}levering ${C.fmtDag(cur.L)}${!leeg && st.nodig ? ` · ${st.open ? `${klaar} van ${st.nodig} besteld` : '✓ alles besteld'}` : ''}</span></div><button class="bdpijl" id="bdN" ${ci < lijst.length - 1 ? '' : 'disabled'} aria-label="Volgende besteldag">›</button>${!leeg && st.nodig && klaar ? `<div class="vgbalk ${st.open ? '' : 'klaar'}"><div style="width:${Math.round(klaar / st.nodig * 100)}%"></div></div>` : ''}</div>` : '<div class="bdkop"><div class="bdmid"><b>Geen besteldag</b><span>Stel de besteldagen in onder Kantoor</span></div></div>'}
   ${cur && cur.besteldag < C.today() ? `<div class="banner dlnog"><h3>⏰ Nog te bestellen: ${dlRegels().filter(r => r.lev === (od === 'kw' ? 'vantol' : 'versunie') && odGroepen(od).some(g => r.groepen.includes(g))).map(r => [r, dlVoor(r.lev, r.groepen[0], cur)]).filter(x => x[1] && x[1].ts > nuTs()).map(([r, dg]) => `${esc(regelNaam(r))} ${dlKort(dg)}`).join(', ')}</h3><div class="sub">De andere groepen van deze bestelling zijn al voorbij.</div></div>` : ''}
   ${cur && !leeg && !st.nodig ? '<div class="vgtxt">Voor deze besteldag is er geen advies.</div>' : ''}
   <div id="weer"></div>
   ${cur && !leeg ? telVraagHtml(od, cur) : ''}
   ${cur ? notitieHtml(bdSleutel) : ''}
-  <div class="row zoekrij"><input type="search" id="q" placeholder="🔍 Zoek naam of nummer" value="${esc(ui.q)}"><button class="btn sm sec scanknop" id="scanB" aria-label="Scannen">📷 Scan</button></div>
+  <div class="row zoekrij"><input type="search" id="q" placeholder="🔍 Zoek naam of nummer" value="${esc(ui.q)}"><button class="btn sm sec scanknop" id="scanB" aria-label="Scannen">📷</button><button class="btn sm sec scanknop" id="lijstMenu" aria-label="Meer opties">⋯</button></div>${ui.fAlles ? '<div class="small">Hele bestelboek staat aan (⋯)</div>' : ''}
   ${cur && !leeg && st.nodig && !st.open && !kantoorMag() && !ui.q ? `<div class="blk klaarblok"><div style="font-size:56px">✅</div><h2>Klaar! ${esc(odNaam(od))} is besteld.</h2><p class="small">${st.nodig} artikelen. Goed bezig!</p><button class="btn" id="klaarHome" style="width:100%">Terug naar Home</button></div>` : ''}
-  ${beginner() || !mag('bestellen') ? '' : `<div class="segment licht modus">${[['todo', 'Te doen'], ['alles', 'Alles']].map(([k, l]) => `<button class="${ui.modus === k ? 'aan' : ''}" data-mod="${k}">${l}</button>`).join('')}${ui.modus === 'advies' || ui.modus === 'acties' ? `<button class="aan" data-mod="alles">${ui.modus === 'advies' ? 'Met advies' : 'Acties'} ✕</button>` : ''}</div>`}
-  <button class="link meeropties" id="lijstMenu">⋯ Meer opties${ui.fAlles ? ' · hele boek aan' : ''}</button></div>`;
-  if (leeg) html += `<div class="blk leegblok"><h2>Nog geen bestelboek of verkoopcijfers</h2><p class="small">${!boek ? `Het bestelboek van ${bron === 'vers' ? 'Versunie' : 'Van Tol'} ontbreekt. ` : ''}${!M.dagLijst.length ? 'Er zijn nog geen dag-exports uit CasPos. ' : ''}${mag('upload') ? 'Upload ze via Beheer, daarna zie je hier het advies.' : 'De beheerder zet dit klaar. Daarna zie je hier het advies.'}</p>${mag('upload') ? '<button class="btn" id="naarBeheer" style="width:100%">Naar Beheer</button>' : ''}</div>`;
+  ${beginner() || !mag('bestellen') ? '' : `<div class="segment licht modus">${[['todo', 'Nog te bestellen'], ['alles', 'Alle artikelen']].map(([k, l]) => `<button class="${ui.modus === k ? 'aan' : ''}" data-mod="${k}">${l}</button>`).join('')}${ui.modus === 'advies' || ui.modus === 'acties' ? `<button class="aan" data-mod="alles">${ui.modus === 'advies' ? 'Met advies' : 'Acties'} ✕</button>` : ''}</div>`}</div>`;
+  if (leeg) html += `<div class="blk leegblok"><h2>Nog geen bestelboek of verkoopcijfers</h2><p class="small">${!boek ? `Het bestelboek van ${bron === 'vers' ? 'Versunie' : 'Van Tol'} ontbreekt. ` : ''}${!M.dagLijst.length ? 'Er zijn nog geen dag-exports uit CasPos. ' : ''}${mag('upload') ? 'Upload ze via Kantoor, daarna zie je hier het advies.' : 'De beheerder zet dit klaar. Daarna zie je hier het advies.'}</p>${mag('upload') ? '<button class="btn" id="naarBeheer" style="width:100%">Naar Kantoor</button>' : ''}</div>`;
   else { const last = M.dagLijst[M.dagLijst.length - 1]; const oud = C.diff(last, C.today()); if (oud > 2 && (isBeheer() || mag('upload'))) html += `<div class="banner warn"><h3>Verkoop t/m ${C.fmtDag(last)}</h3><div class="sub">De laatste dag-export is ${oud} dagen oud. Het advies is minder nauwkeurig.</div></div>`; }
   const t = (() => { let n = 0, u = 0; if (boek) { n = (boek.nieuw || []).filter(nr => M.art[bron + ':' + nr] && onderdeelVan(M.art[bron + ':' + nr]) === od).length; u = (boek.uit || []).filter(a => !S.schapOk.has(bron + ':' + a.nr) && M.art[bron + ':' + a.nr] && onderdeelVan(M.art[bron + ':' + a.nr]) === od).length; } for (const k in S.assort) { const r = S.assort[k], a = M.art[k]; if (!a || onderdeelVan(a) !== od || r.schap_ok) continue; if (r.status === 'gesaneerd') u++; if (r.status === 'in' && r.opgenomen) n++; } return { n, u }; })();
   if (t.n || t.u) html += `<div class="banner"><h3><span>Assortiment gewijzigd</span><button class="btn sm sec" id="assT">Bekijk</button></h3><div class="sub">${t.n} nieuw · ${t.u} schap opnieuw indelen</div></div>`;
   if (cur && !leeg) html += boBanner(alleArts, cur);
   let arts = alleArts.filter(a => zichtbaar(a, cur)), nulVan = -1;
   let extraNaam = 'Zonder advies';
-  if (cur && ui.modus === 'todo' && !ui.q && kantoorMag()) { const tw = alleArts.filter(a => !a.uit && assStatus(a) === 'in' && (!ui.groep || groepVan(a) === ui.groep) && !S.bestel[a.key + '|' + cur.besteldag] && C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).twijfel); if (tw.length) { extraNaam = '👀 Even kijken'; nulVan = arts.length; if (ui.toonNul) arts = arts.concat(tw); else arts.nulN = tw.length; } }
+  if (cur && ui.modus === 'todo' && !ui.q && kantoorMag()) { const tw = alleArts.filter(a => !a.uit && assStatus(a) === 'in' && (!ui.groep || groepVan(a) === ui.groep) && !S.bestel[a.key + '|' + cur.besteldag] && C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).twijfel); if (tw.length) { extraNaam = 'Even kijken'; nulVan = arts.length; if (ui.toonNul) arts = arts.concat(tw); else arts.nulN = tw.length; } }
   if (cur && ui.modus === 'alles' && !ui.q) { const nul = arts.filter(a => { if (a.uit || assStatus(a) !== 'in') return false; const be = S.bestel[a.key + '|' + cur.besteldag]; return !(be && (be.besteld || (be.aantal != null && be.aantal !== ''))) && !C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).adv; }); if (nul.length > 5) { const z = new Set(nul); arts = arts.filter(a => !z.has(a)); nulVan = arts.length; if (ui.toonNul) arts = arts.concat(nul); else arts.nulN = nul.length; } }
   html += `<div id="lst"></div>`;
-  if (cur && !leeg && st.nodig && mag('afvinken')) html += `<div class="klaarblok"><button class="btn klaarknop" id="klaarB">${st.open ? 'Klaar, alles besteld ✓' : '✓ Alles besteld'}</button><p class="small">${st.open ? `Vinkt de ${st.open} open artikelen in één keer af.` : 'Goed bezig 👍'}</p></div>`;
+  if (cur && !leeg && st.nodig && mag('afvinken')) html += `<div class="klaarblok"><button class="btn klaarknop" id="klaarB">${st.open ? 'Klaar, alles besteld ✓' : '✓ Alles besteld'}</button><p class="small">${st.open ? `Vinkt de ${st.open} artikelen met advies in één keer af.` : 'Goed bezig 👍'}</p></div>`;
   if (!arts.length && !leeg) html += `<div class="empty">${ui.modus === 'todo' ? '✓ Niets meer te doen voor deze besteldag.' : 'Geen artikelen voor deze keuze.'}</div>`;
   v.innerHTML = html;
   const bv = $('#bdV'); if (bv) bv.onclick = () => { ui.bd[od] = lijst[ci - 1].besteldag; render(); };
@@ -134,7 +133,7 @@ function renderLijst(od, soft) {
   const nulKop = () => `<button class="grp nulkop" data-nul="1"><span>${extraNaam} (${ui.toonNul ? arts.length - nulVan : arts.nulN})</span><small>${ui.toonNul ? '▴ verbergen' : '▾ tonen'}</small></button>`;
   const chunk = () => {
     const end = Math.min(arts.length, pos + 40); let h = '';
-    for (; pos < end; pos++) { if (pos === nulVan && ui.toonNul) { h += nulKop(); lastG = null; } const a = arts[pos]; const g = groepToon(a); if (ra) { const p = routePad(a); if (p !== lastP) { h += `<div class="padkop">🚶 ${p ? 'Pad ' + p : 'Nog geen pad'}</div>`; lastP = p; lastG = null; } } if (g !== lastG) { const dg = cur ? dlArt(a, cur) : null; const dv = dg && dg.ts < nuTs(); h += `<div class="grp ${dv ? 'dlvoorbij' : ''}"><span>${esc(g || 'Overig')}${dg ? `<em class="dltag">⏰ ${dv ? 'deadline voorbij' : dlKort(dg)}</em>` : ''}</span><small>${tel[g]} artikel${tel[g] === 1 ? '' : 'en'}</small></div>`; lastG = g; } const laatste = pos + 1 >= arts.length || groepToon(arts[pos + 1]) !== g; h += kaart(a, cur, laatste); }
+    for (; pos < end; pos++) { if (pos === nulVan && ui.toonNul) { h += nulKop(); lastG = null; } const a = arts[pos]; const g = groepToon(a); if (ra) { const p = routePad(a); if (p !== lastP) { h += `<div class="padkop">${p ? 'Pad ' + p : 'Nog geen pad'}</div>`; lastP = p; lastG = null; } } if (g !== lastG) { const dg = cur ? dlArt(a, cur) : null; const dv = dg && dg.ts < nuTs(); h += `<div class="grp ${dv ? 'dlvoorbij' : ''}"><span>${esc(g || 'Overig')}${dg ? `<em class="dltag">⏰ ${dv ? 'deadline voorbij' : dlKort(dg)}</em>` : ''}</span><small>${tel[g]} artikel${tel[g] === 1 ? '' : 'en'}</small></div>`; lastG = g; } const laatste = pos + 1 >= arts.length || groepToon(arts[pos + 1]) !== g; h += kaart(a, cur, laatste); }
     if (pos >= arts.length && nulVan >= 0 && !ui.toonNul) h += nulKop();
     lst.insertAdjacentHTML('beforeend', h);
     if (pos < arts.length) { const s = document.createElement('div'); s.className = 'more'; lst.appendChild(s); lazy && lazy.disconnect(); lazy = new IntersectionObserver(en => { if (en[0].isIntersecting) { lazy.disconnect(); s.remove(); chunk(); } }, { rootMargin: '800px' }); lazy.observe(s); }
@@ -148,7 +147,8 @@ function renderLijst(od, soft) {
 }
 const EH = { DS: ['doos', 'dozen'], KR: ['krat', 'kratten'], ZK: ['zak', 'zakken'], PK: ['pak', 'pakken'], TR: ['tray', 'trays'], BS: ['bos', 'bossen'], KI: ['kist', 'kisten'], BK: ['bak', 'bakken'], NT: ['net', 'netten'], EM: ['emmer', 'emmers'], FL: ['fles', 'flessen'], CO: ['colli', 'colli'], HE: ['doos', 'dozen'], OM: ['omdoos', 'omdozen'], ST: ['stuk', 'stuks'], BL: ['blik', 'blikken'], PL: ['plaat', 'platen'], RL: ['rol', 'rollen'] };
 const ehCode = a => String(a.eh || '').trim().toUpperCase().slice(0, 2);
-function ehMv(a) { return (EH[ehCode(a)] || ['verpakking', 'verpakkingen'])[1]; }
+function ehMv(a, n) { return (EH[ehCode(a)] || ['verpakking', 'verpakkingen'])[n === 1 ? 0 : 1]; }
+function ehTxt(a, n) { return a.perHE ? ehMv(a, n) : eenheid(a) === 'st' ? (n === 1 ? 'stuk' : 'stuks') : eenheid(a); }
 function heTekst(a) { if (!a.perHE) return 'per stuk'; const e = EH[ehCode(a)] || ['verpakking']; return `${e[0]} van ${C.fmt(a.he)}${a.kg ? ' kg' : ''}`; }
 function eenheid(a) { const k = M.keys[a.key]; return k && k.kg ? 'kg' : 'st'; }
 function kaart(a, bd, laatste) {
@@ -160,22 +160,22 @@ function kaart(a, bd, laatste) {
   const u = eenheid(a); const rT = mag('tellen'), rB = mag('bestellen'), rA = mag('afvinken'); const isB = !!(be && be.besteld);
   const heTxt = heTekst(a);
   const advTxt = ad.adv ? `${ad.adv}` : '0';
-  const advSub = ad.adv ? (a.perHE ? `${ad.adv === 1 ? (EH[ehCode(a)] || ['verpakking'])[0] : ehMv(a)} · ${C.fmt(ad.adv * a.he)} ${u === 'st' ? 'st' : u}` : (u === 'st' ? (ad.adv === 1 ? 'stuk' : 'stuks') : u)) : ad.twijfel ? '👀 even kijken' : 'geen advies';
+  const advSub = ad.adv ? (a.perHE ? `${ehMv(a, ad.adv)} · ${C.fmt(ad.adv * a.he)} ${u === 'st' ? 'st' : u}` : (u === 'st' ? (ad.adv === 1 ? 'stuk' : 'stuks') : u)) : ad.twijfel ? '👀 even kijken' : 'geen advies';
   const comp = S.pref && S.pref.compact; const telT = rT && (ui.telAlle || vrVandaag !== '' || (ui.telK && ui.telK.has(a.key)) || (bd && telKeuze(onderdeelVan(a), bd).alle.includes(a.key)));
   let tbl = `<table class="wk"><tr><th></th>${C.DAGEN.map(d => `<th>${d}</th>`).join('')}<th>wk</th></tr>`;
   for (const [ri, r2] of wt.rows.entries()) { if (comp && ri !== 2) continue; let s = 0, any = false; tbl += `<tr><td class="l">${r2.week}</td>${r2.cells.map(c => { if (c.v !== null) { s += c.v; any = true; } return `<td class="${c.actie ? 'a' : ''} ${c.dag === C.today() ? 'today' : ''}">${c.v === null ? '' : C.fmt(c.v)}</td>`; }).join('')}<td>${any ? C.fmt(s) : ''}</td></tr>`; }
   tbl += `<tr class="gd"><td class="l">gem.</td>${wt.gd.map(g => `<td>${C.fmt(g)}</td>`).join('')}<td class="gwt">${C.fmt(wt.gwt)}</td></tr></table>`;
   const labels = [];
   { const pa = (M.actieArt[a.key] || []).find(x => x.plek && x.zon >= C.today()); if (pa) labels.push(`<span class="lbl info">📍 ${esc(pa.plek)}${pa.plekF > 0 && pa.plekF !== 1 ? ' ×' + String(pa.plekF).replace('.', ',') : ''}</span>`); }
-  if (lbl) for (const l of lbl) { labels.push(`<span class="lbl ${l.t}">Actie ${l.t} week${l.dag !== null && l.dag !== undefined ? ' (' + C.DAGNAAM[l.dag] + ')' : ''}</span><span class="lbl ${l.folder ? 'folder' : 'instore'}">${l.folder ? 'Folder' : 'Instore'}</span>`); }
-  if (lbl) { const l0 = lbl[0]; labels.push(`<span class="lbl info">${l0.cap ? '€ ' + l0.cap.toFixed(2).replace('.', ',') : ''}${l0.opm && !/^(maandag|dinsdag|woensdag|donderd|vrijdag|zaterdag|zondag)$/i.test(l0.opm) ? ' · ' + esc(l0.opm) : ''}${l0.disc ? ' · −' + Math.round(l0.disc * 100) + '%' : ''}</span>`); }
+  if (lbl) for (const l of lbl) { labels.push(`<span class="lbl ${l.t}">Actie ${l.t} week${l.dag !== null && l.dag !== undefined ? ' (' + C.DAGNAAM[l.dag] + ')' : ''} · ${l.folder ? 'folder' : 'in de winkel'}</span>`); }
+  let prijsInfo = ''; if (lbl) { const l0 = lbl[0]; prijsInfo = (`<span class="lbl info">${l0.cap ? '€ ' + l0.cap.toFixed(2).replace('.', ',') : ''}${l0.opm && !/^(maandag|dinsdag|woensdag|donderd|vrijdag|zaterdag|zondag)$/i.test(l0.opm) ? ' · ' + esc(l0.opm) : ''}${l0.disc ? ' · −' + Math.round(l0.disc * 100) + '%' : ''}</span>`); }
   if (a.eigen) { labels.push('<span class="lbl eigen">Eigen artikel</span>'); const bk = eigenInBoek(a); if (bk) labels.push(`<span class="lbl chk">Staat nu in het bestelboek</span>${mag('saneren') ? `<button class="link" data-eigover="${bk.key}">Boekartikel overnemen</button>` : ''}`); }
   else if (a.nieuw) labels.push('<span class="lbl nieuw">Nieuw in assortiment</span>');
   if (st === 'in' && r && r.opgenomen && r.sinds && C.diff(r.sinds, C.today()) <= 28) labels.push(`<span class="lbl nieuw">Opgenomen ${C.fmtDag(r.sinds).split(' ')[1]} · ${esc(ini(r.door))}</span>`);
   if (a.uit) labels.push('<span class="lbl uit">Uit het bestelboek</span>');
   if (nietGeleverd(a.key)) labels.push('<span class="lbl uit">Vorige keer niet geleverd</span>');
   if (S.leeg && S.leeg[a.key + '|' + C.today()]) labels.push('<span class="lbl uit">🚫 Vandaag leeg gemeld</span>');
-  if (bd && !a.uit && telKeuze(onderdeelVan(a), bd).open.includes(a.key)) labels.push('<span class="lbl tel">🔢 Graag tellen</span>');
+  if (bd && !a.uit && telKeuze(onderdeelVan(a), bd).open.includes(a.key)) labels.push('<span class="lbl tel">Tellen</span>');
   if (san) labels.push(`<span class="lbl uit">Gesaneerd ${r.sinds ? C.fmtDag(r.sinds).split(' ')[1] : ''} · ${esc(ini(r.door))} – niet meer bestellen</span>`);
   if (niet) labels.push('<span class="lbl vorige">Niet in assortiment</span>');
   if (a.check && mag('instellingen')) labels.push('<span class="lbl chk">Besteleenheid controleren</span>');
@@ -198,9 +198,11 @@ function kaart(a, bd, laatste) {
   let onder;
   if (a.uit || san) onder = `${(a.uit && !S.schapOk.has(a.key)) || (san && !(r && r.schap_ok)) ? (mag('schap') ? `<div style="margin-top:10px"><button class="btn sm" data-schap="1">Schap klaar</button></div>` : '') : ''}`;
   else if (niet) onder = '';
-  else onder = `<div class="ctl ${telT ? '' : 'een'}">${telT ? `<div><label>Tel wat er ligt <i>(mag leeg)</i></label><div class="stp ${rT ? '' : 'uit'}"><button data-s="v" data-d="-1" ${rT ? '' : 'disabled'}>−</button><input type="number" inputmode="decimal" data-in="v" value="${vrVandaag}" placeholder="" ${rT ? '' : 'disabled'}><button data-s="v" data-d="1" ${rT ? '' : 'disabled'}>+</button></div></div>` : ''}
-  <div><label>Bestellen (${a.perHE ? ehMv(a) : u === 'st' ? 'stuks' : u})</label><div class="stp ${rB ? '' : 'uit'}"><button data-s="b" data-d="-1" ${rB ? '' : 'disabled'}>−</button><input type="number" inputmode="decimal" data-in="b" class="${be && be.aantal !== null && be.aantal !== undefined ? 'zelf' : ''}" value="${be && be.aantal !== null && be.aantal !== undefined ? be.aantal : ''}" placeholder="" data-adv="${ad.adv || 0}" ${rB ? '' : 'disabled'}><button data-s="b" data-d="1" ${rB ? '' : 'disabled'}>+</button></div>${rB && ad.adv && !(be && be.aantal !== null && be.aantal !== undefined) && !isB ? `<button class="neemadv groot" data-neem="1">✓ Bestel ${ad.adv} ${a.perHE ? (ad.adv === 1 ? (EH[ehCode(a)] || ['verpakking'])[0] : ehMv(a)) : u === 'st' ? (ad.adv === 1 ? 'stuk' : 'stuks') : u}</button>` : ''}</div></div>
-  ${rA ? `<button class="besteld klein ${isB ? 'aan' : ''}" data-besteld="1">${isB ? besteldTxt : '☐ Besteld'}</button>` : isB ? `<div class="besteld aan">${besteldTxt}</div>` : ''}`;
+  else {
+    const hb = be && be.aantal !== null && be.aantal !== undefined, nB = hb ? +be.aantal : ad.adv, toonB = rB || (hb && rA);
+    const knop = isB ? (rA ? `<button class="besteld aan" data-besteld="1">${besteldTxt}</button>` : `<div class="besteld aan">${besteldTxt}</div>`) : rA && nB > 0 ? `<button class="besteld hoofd" data-bok="1">✓ Bestel ${C.fmt(nB)} ${ehTxt(a, nB)}</button>` : rB && nB > 0 ? `<button class="besteld hoofd" data-neem="1">✓ Bestel ${C.fmt(nB)} ${ehTxt(a, nB)}</button>` : rA && hb ? `<button class="besteld" data-besteld="1">☐ Besteld</button>` : '';
+    onder = (telT || toonB ? `<div class="ctl ${telT && toonB ? '' : 'een'}">${telT ? `<div>${toonB ? '<label>Tellen</label>' : '<label>Hoeveel liggen er? <i>(mag leeg)</i></label>'}<div class="stp"><button data-s="v" data-d="-1">−</button><input type="number" inputmode="decimal" data-in="v" value="${vrVandaag}" placeholder="–"><button data-s="v" data-d="1">+</button></div></div>` : ''}${toonB ? `<div>${telT ? '<label>Bestellen</label>' : ''}<div class="stp ${rB ? '' : 'uit'}"><button data-s="b" data-d="-1" ${rB ? '' : 'disabled'}>−</button><input type="number" inputmode="decimal" data-in="b" class="${hb ? 'zelf' : ''}" value="${hb ? be.aantal : ''}" placeholder="${ad.adv || 0}" data-adv="${ad.adv || 0}" ${rB ? '' : 'disabled'}><button data-s="b" data-d="1" ${rB ? '' : 'disabled'}>+</button></div></div>` : ''}</div>` : '') + knop;
+  }
   const dgv = bd && !isB ? dlArt(a, bd) : null;
   return `<div class="card ${dgv && dgv.ts < nuTs() ? 'dlvoorbij' : ''} ${a.uit || san ? 'uit' : ''} ${niet ? 'niet' : ''} ${laatste ? 'laatste' : ''} ${isB ? 'isbesteld' : ''} ${ui.open && ui.open.has(a.key) ? 'open' : ''}" data-k="${a.key}">
   <div class="hd" data-meer="1"><div class="nm" ${a.eigen && mag('saneren') ? 'data-eig="' + esc(a.nr) + '"' : ''}>${a.foto ? `<img class="duimfoto" src="${a.foto}" alt="">` : ''}${esc(a.naam)}${a.eigen && mag('saneren') ? ' <span class="small">✎</span>' : ''}</div><div class="adv ${ad.adv ? '' : 'nul'}"><small>Advies</small><b>${advTxt}</b><span>${advSub}</span></div></div>
@@ -208,8 +210,7 @@ function kaart(a, bd, laatste) {
   ${labels.length ? `<div class="lbls">${labels.join('')}</div>` : ''}
   ${notitieHtml('a:' + a.key)}
   ${onder}
-  <div class="tikmeer">${ui.open && ui.open.has(a.key) ? '▴ tik op de naam voor minder' : '▾ tik op de naam voor meer'}</div>
-  <div class="kaartmeer"><div class="meta">${routeChip(a)}${a.merk ? esc(a.merk) + ' · ' : ''}${a.cons ? 'prijs ' + C.eur(a.cons) : ''}${mag('inkoop') && a.ink ? ' · inkoop ' + C.eur(a.ink) : ''}${a.bst && !a.eigen ? ' · bestelnr ' + esc(a.bst) : ''}</div>
+  <div class="kaartmeer">${prijsInfo ? `<div class="lbls">${prijsInfo}</div>` : ''}<div class="meta">${routeChip(a)}${a.merk ? esc(a.merk) + ' · ' : ''}${a.cons ? 'prijs ' + C.eur(a.cons) : ''}${mag('inkoop') && a.ink ? ' · inkoop ' + C.eur(a.ink) : ''}${a.bst && !a.eigen ? ' · bestelnr ' + esc(a.bst) : ''}</div>
   ${k ? tbl : '<div class="hint">Nog geen verkoop van dit artikel.</div>'}
   ${!(a.uit || san || niet) ? `<div class="why">${why}</div>${rB ? `<button class="minlink" data-min="1">Min. schap: ${M.min[a.key] ? C.fmt(M.min[a.key]) + ' ' + u : 'niet ingesteld'} ✎</button>` : ''}` : ''}
   <div class="kaartvoet">${rT && !telT && !a.uit ? '<button class="link" data-telnu="1">🔢 Tellen</button>' : ''}<button class="link" data-not="1">📝 Notitie</button>${mag('tellen') && !a.uit ? '<button class="link" data-derv="1">🗑️ Derving</button><button class="link" data-leeg="1">🚫 Schap leeg</button>' : ''}${assKnop}</div></div></div>`;
@@ -218,7 +219,7 @@ async function onKaartKlik(e) {
   const card = e.target.closest('.card'); if (!card) return; const key = card.dataset.k; const a = M.art[key]; const { cur } = besteldag(onderdeelVan(a));
   const eg = e.target.closest('[data-eig]'); if (eg) return eigenBewerk(S.eigen[eg.dataset.eig], a.od);
   if (e.target.closest('[data-pad]')) return routeKiesPad(a);
-  if (e.target.closest('[data-meer]')) { ui.open = ui.open || new Set(); ui.open.has(key) ? ui.open.delete(key) : ui.open.add(key); card.classList.toggle('open', ui.open.has(key)); const tm = card.querySelector('.tikmeer'); if (tm) tm.textContent = ui.open.has(key) ? '▴ tik op de naam voor minder' : '▾ tik op de naam voor meer'; return; }
+  if (e.target.closest('[data-meer]')) { ui.open = ui.open || new Set(); ui.open.has(key) ? ui.open.delete(key) : ui.open.add(key); card.classList.toggle('open', ui.open.has(key)); return; }
   if (e.target.dataset.collo !== undefined) { const inp = card.querySelector('[data-in="b"]'); inp.value = e.target.dataset.collo; card._okHoog = +inp.value; return opslaan(card, 'b', inp.value); }
   if (e.target.dataset.telnu !== undefined) { (ui.telK = ui.telK || new Set()).add(card.dataset.k); return render(true); }
   if (e.target.dataset.neem !== undefined) { const inp = card.querySelector('[data-in="b"]'); inp.value = inp.dataset.adv; return opslaan(card, 'b', inp.value); }
@@ -239,7 +240,8 @@ async function onKaartKlik(e) {
     else { write('schap_ok', [{ bron: a.bron, nr: a.nr, ok: true, door: mijnNaam() }]); ongedaan('Schap klaar', () => write('schap_ok', [{ bron: a.bron, nr: a.nr, ok: false }])); }
     log('schap', `Schap aangepast: ${a.naam}`); render(true); return;
   }
-  if (e.target.closest('[data-besteld]')) {
+  if (e.target.closest('[data-bok]')) { const inp = card.querySelector('[data-in="b"]'); if (inp && inp.value === '' && mag('bestellen')) { inp.value = inp.dataset.adv; await opslaan(card, 'b', inp.value); } }
+  if (e.target.closest('[data-besteld]') || e.target.closest('[data-bok]')) {
     const be = S.bestel[key + '|' + cur.besteldag]; const was = !!(be && be.besteld); const nu = !was;
     const adv0 = C.advies(M, key, cur, vrVan(key), bestellingenVan(key)).adv;
     const zet = v => write('bestellingen', [{ bron: a.bron, nr: a.nr, besteldag: cur.besteldag, lever: cur.L, besteld: v, besteld_door: v ? mijnNaam() : null, besteld_om: v ? new Date().toISOString() : null, advies: adv0 }]);
@@ -262,7 +264,7 @@ async function opslaan(card, s, val, getypt) {
     const wf = waarschuwF(); const grens = ad.adv ? Math.max(ad.adv * wf, ad.adv + (a.perHE ? 1 : 2)) : (a.perHE ? 3 : 10);
     if (wf && n > grens && !(card._okHoog >= n)) {
       if (card._vraagt) return; card._vraagt = true;
-      const ok = await bevestig('Klopt dit?', `Je bestelt <b>${C.fmt(n)} ${a.perHE ? ehMv(a) : eenheid(a) === 'st' ? 'stuks' : eenheid(a)}</b> ${esc(a.naam)}.<br>Het advies is ${ad.adv}.`, 'Ja, klopt', 'Aanpassen');
+      const ok = await bevestig('Klopt dit?', `Je bestelt <b>${C.fmt(n)} ${ehTxt(a, n)}</b> ${esc(a.naam)}.<br>Het advies is ${ad.adv}.`, 'Ja, klopt', 'Aanpassen');
       card._vraagt = false; if (ok) card._okHoog = n;
       if (!ok) { const i = card.querySelector('[data-in="b"]'); i.value = vorig && vorig.aantal !== null && vorig.aantal !== undefined ? vorig.aantal : ''; return; }
     }

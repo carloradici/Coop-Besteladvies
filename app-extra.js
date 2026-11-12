@@ -69,7 +69,7 @@ function belItemsBasis() {
   const out = []; const vandaag = C.today();
   for (const od of BESTEL_OD) {
     if (!mag('o_' + od)) continue; const cur = besteldag(od).cur;
-    if (cur && cur.besteldag <= vandaag && (S.boeken[bronVan(od)] || lijstArtikelen(od).length)) { const st = voortgang(od, cur, cur.besteldag < vandaag); if (st.open) out.push({ ic: (ONDERDELEN.find(o => o[0] === od) || [])[2] || '🛒', t: `${odNaam(od)}: vandaag bestellen`, sub: `Nog ${st.open} te gaan · levering ${C.fmtDag(cur.L)}`, ga: od, n: st.open, laat: cur.besteldag < vandaag }); }
+    if (cur && (mag('bestellen') || mag('afvinken')) && cur.besteldag <= vandaag && (S.boeken[bronVan(od)] || lijstArtikelen(od).length)) { const st = voortgang(od, cur, cur.besteldag < vandaag); if (st.open) out.push({ ic: (ONDERDELEN.find(o => o[0] === od) || [])[2] || '🛒', t: `${odNaam(od)}: vandaag bestellen`, sub: `Nog ${st.open} te gaan · levering ${C.fmtDag(cur.L)}`, ga: od, n: st.open, laat: cur.besteldag < vandaag }); }
   }
   const at = assortTelling(); if (at.nieuw || at.uit || at.san) out.push({ ic: '🔄', t: 'Assortiment gewijzigd', sub: `${at.nieuw} nieuw · ${at.uit + at.san} schap opnieuw indelen`, ga: 'assort' });
   if (mag('saneren')) { const n = Object.values(M.art).filter(a => a.eigen && eigenInBoek(a)).length; if (n) out.push({ ic: '📘', t: `${n} eigen ${n === 1 ? 'artikel staat' : 'artikelen staan'} nu in het bestelboek`, sub: 'Neem het boekartikel over', ga: BESTEL_OD.find(od => Object.values(M.art).some(a => a.eigen && a.od === od && eigenInBoek(a))) || 'home' }); }
@@ -79,7 +79,7 @@ function belItemsBasis() {
   }
   if (mag('o_overig')) { let n = 0; for (const ean in S.inout) { const io = S.inout[ean]; if (!(io.ingekocht > 0)) continue; const r = C.overig(M, 'e:' + ean, io); if (r.melding && r.melding.t === 'op') n++; } if (n) out.push({ ic: '📦', t: `${n} in/out-${n === 1 ? 'artikel' : 'artikelen'} bijna op`, sub: 'Telefonisch bijbestellen?', ga: 'overig' }); }
   const ovd = Object.values(S.overdracht || {}).filter(r => !r.klaar && !r.soort).length; if (ovd) out.unshift({ ic: '📋', t: `${ovd} ${ovd === 1 ? 'punt' : 'punten'} in de overdracht`, sub: 'Staat op Home', ga: 'home' });
-  if (mag('upload') && onbekendLijst().length) out.push({ ic: '🔍', t: `${onbekendLijst().length} verkochte artikelen niet gekoppeld`, sub: 'Bekijk bij Beheer → Controleren', ga: 'beheer', bsub: 'controle' });
+  if (mag('upload') && onbekendLijst().length) out.push({ ic: '🔍', t: `${onbekendLijst().length} verkochte artikelen niet gekoppeld`, sub: 'Tik om ze te controleren', ga: 'beheer', bsub: 'controle' });
   const pr = prijsLijst().length; if (pr) out.push({ ic: '🏷️', t: `${pr} schapkaartje${pr === 1 ? '' : 's'} vervangen`, sub: 'Prijs gewijzigd in het bestelboek', ga: 'assort' });
   const lv = leverRegels(C.today()); const lvOpen = lv.filter(x => !x.chk).length; if (lvOpen) out.push({ ic: '📦', t: 'Levering van vandaag controleren', sub: `Nog ${lvOpen} van ${lv.length} af te vinken`, ga: 'levering' });
   const tt = tafelTelling(); if (tt.ombouw && tt.open) out.push({ ic: '🗂️', t: 'Actietafels ombouwen', sub: `${tt.klaar} van ${tt.totaal} klaar`, ga: 'tafels' });
@@ -102,7 +102,7 @@ function vindCode(code) {
 }
 function naarArtikel(a) {
   const od = onderdeelVan(a); if (!mag('o_' + od)) return toast('Dit artikel hoort bij ' + odNaam(od) + ', dat mag je niet zien');
-  ga(od); ui.q = a.eigen ? a.naam : a.nr; if (assStatus(a) !== 'in' || a.uit) ui.fAlles = true; ui.fAdv = false; ui.fOpen = false; ui.fActie = false; render();
+  ga(od); ui.q = a.eigen ? a.naam : a.nr; ui.modus = 'alles'; if (assStatus(a) !== 'in' || a.uit) ui.fAlles = true; ui.fAdv = false; ui.fOpen = false; ui.fActie = false; render();
 }
 let scanStop = null;
 async function scanStart(od, opVondst) {
@@ -148,7 +148,7 @@ function telModus(od, arts, vrij) {
     const ad = cur && val !== '' ? C.advies(M, a.key, cur, { aantal: C.num(val), dag: C.today() }, bestellingenVan(a.key)) : null;
     ov.innerHTML = `<div class="telkop"><button id="tX">Sluiten</button><span>${i + 1} van ${arts.length}</span><span><button id="tN" aria-label="Artikelnummer typen">🔢</button> <button id="tS">📷</button></span></div><div class="telbalk"><div style="width:${Math.round(i / arts.length * 100)}%"></div></div>
     <div class="telnaam">${esc(a.naam)}</div><div class="telsub">${esc(a.eigen ? a.artNr || '' : a.nr)} · ${esc(groepVan(a))}${vr && vr.dag ? ` · laatst ${C.fmtDag(vr.dag)}: ${C.fmt(vr.aantal)}` : ''}</div>
-    <div class="telwaarde">${val === '' ? '<span class="ph">Voorraad (' + u + ')</span>' : esc(val)}</div><div class="teladv">${ad ? 'Advies ' + C.fmtDag(cur.besteldag) + ': ' + (ad.adv ? ad.adv + (a.perHE ? ' ' + ehMv(a) : ' ' + u) : 'niets') : ''}</div>
+    <div class="telwaarde">${val === '' ? '<span class="ph">Hoeveel ' + (u === 'kg' ? 'kilo' : 'stuks') + '?</span>' : esc(val)}</div><div class="teladv">${ad ? 'Advies ' + C.fmtDag(cur.besteldag) + ': ' + (ad.adv ? ad.adv + ' ' + ehTxt(a, ad.adv) : 'niets') : ''}</div>
     ${val === '0' ? `<div style="text-align:center"><button class="btn sm sec" id="tLeeg">${S.leeg[a.key + '|' + C.today()] ? '✓ Leeg gemeld' : '🚫 Schap was leeg'}</button></div>` : ''}
     ${scannerGezien ? '<div class="telhint">📟 Volgende artikel scannen = opslaan · zelfde artikel scannen = +1</div>' : ''}
     <div class="telblok">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-t="${n}">${n}</button>`).join('')}<button data-t=",">,</button><button data-t="0">0</button><button data-t="w">⌫</button></div>
@@ -173,12 +173,12 @@ function telModus(od, arts, vrij) {
 function controle115() {
   const g28 = C.add(C.today(), -28);
   const mis = Object.values(S.lever || {}).filter(r => r.ok === false && r.lever >= g28 && M.art[r.bron + ':' + r.nr]).sort((a, b) => a.lever < b.lever ? 1 : -1);
-  window.__afwTekst = `Niet of minder geleverd – ${(WINKEL && WINKEL.naam) || ''}\n` + mis.map(r => { const a = M.art[r.bron + ':' + r.nr]; return `${C.fmtDag(r.lever)}\t${a.eigen ? a.artNr || '' : a.nr}\t${a.naam}\tmist ${C.fmt(+r.mist || 0)}${a.perHE ? ' ' + ehMv(a) : ''}\t${LEV_NAAM[levVan(a)] || ''}`; }).join('\n');
+  window.__afwTekst = `Niet of minder geleverd – ${(WINKEL && WINKEL.naam) || ''}\n` + mis.map(r => { const a = M.art[r.bron + ':' + r.nr]; return `${C.fmtDag(r.lever)}\t${a.eigen ? a.artNr || '' : a.nr}\t${a.naam}\tmist ${C.fmt(+r.mist || 0)}${a.perHE ? ' ' + ehMv(a, +r.mist || 0) : ''}\t${LEV_NAAM[levVan(a)] || ''}`; }).join('\n');
   const leegT = {}; for (const r of Object.values(S.leeg || {})) if (r.dag >= g28) { const k = r.bron + ':' + r.nr; leegT[k] = (leegT[k] || 0) + 1; }
   const leegL = Object.entries(leegT).filter(([k]) => M.art[k]).sort((a, b) => b[1] - a[1]).slice(0, 30);
   const red = {}; for (const k in S.bestel) { const b = S.bestel[k]; if (!b.reden || b.besteldag < g28) continue; const a = M.art[k.split('|')[0]]; if (!a) continue; const g = groepVan(a); red[g] = red[g] || {}; red[g][b.reden] = (red[g][b.reden] || 0) + 1; }
   const redL = Object.entries(red).map(([g, r]) => [g, r, Object.values(r).reduce((x, y) => x + y, 0)]).sort((a, b) => b[2] - a[2]).slice(0, 20);
-  return `<div class="blk" data-sec="controle"><h2>Niet of minder geleverd (${mis.length})</h2><p class="small">Laatste 4 weken, uit de leveringscontrole.</p><div class="list">${mis.slice(0, 60).map(r => { const a = M.art[r.bron + ':' + r.nr]; return `<div class="it"><span style="flex:1">${esc(a.naam)}<br><span class="small">${C.fmtDag(r.lever)} · ${LEV_NAAM[levVan(a)] || ''} · mist ${C.fmt(+r.mist || 0)}${a.perHE ? ' ' + ehMv(a) : ''}</span></span></div>`; }).join('') || '<div class="small">Niets gemist.</div>'}</div>${mis.length ? '<button class="btn sm sec" id="lcAfw" style="margin-top:8px">📤 Delen (voor het correctieformulier)</button>' : ''}</div>
+  return `<div class="blk" data-sec="controle"><h2>Niet of minder geleverd (${mis.length})</h2><p class="small">Laatste 4 weken, uit de leveringscontrole.</p><div class="list">${mis.slice(0, 60).map(r => { const a = M.art[r.bron + ':' + r.nr]; return `<div class="it"><span style="flex:1">${esc(a.naam)}<br><span class="small">${C.fmtDag(r.lever)} · ${LEV_NAAM[levVan(a)] || ''} · mist ${C.fmt(+r.mist || 0)}${a.perHE ? ' ' + ehMv(a, +r.mist || 0) : ''}</span></span></div>`; }).join('') || '<div class="small">Niets gemist.</div>'}</div>${mis.length ? '<button class="btn sm sec" id="lcAfw" style="margin-top:8px">📤 Delen (voor het correctieformulier)</button>' : ''}</div>
   <div class="blk" data-sec="controle"><h2>Vaak leeg (${leegL.length})</h2><p class="small">Schap leeg gemeld in de laatste 4 weken. Vanaf 2 keer gaat het advies omhoog.</p><div class="list">${leegL.map(([k, n]) => `<div class="it"><span style="flex:1">${esc(M.art[k].naam)} <span class="small">· ${esc(groepVan(M.art[k]))}</span></span><b>${n}×</b></div>`).join('') || '<div class="small">Nog niets leeg gemeld.</div>'}</div></div>
   <div class="blk" data-sec="controle"><h2>Afwijken van het advies</h2><p class="small">Redenen die zijn gekozen, per groep, laatste 4 weken. Veel "Voorraad klopt niet" = vaker tellen.</p><div class="list">${redL.map(([g, r, n]) => `<div class="it"><span style="flex:1">${esc(g)}<br><span class="small">${REDENEN.filter(x => r[x[0]]).map(x => `${x[1]} ${r[x[0]]}×`).join(' · ')}</span></span><b>${n}</b></div>`).join('') || '<div class="small">Nog geen redenen gekozen.</div>'}</div></div>`;
 }

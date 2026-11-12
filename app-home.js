@@ -7,7 +7,7 @@ function render(soft) {
 function renderScherm(soft) {
   const kan = { agf: mag('o_agf'), vers: mag('o_vers'), brood: mag('o_brood'), diep: mag('o_diep'), kw: mag('o_kw'), overig: mag('o_overig'), beheer: mag('upload') || mag('instellingen'), medewerkers: mag('team'), mwedit: mag('team'), winkel: mag('team'), vandaag: mag('team'), export: mag('upload') || mag('bestellen'), hoegoed: mag('bestellen'), rapport: kantoorMag(), gebruik: kantoorMag(), leverancier: mag('bestellen') || mag('afvinken'), acties: mag('bestellen') };
   if (ui.tab in kan && !kan[ui.tab]) ui.tab = 'home';
-  document.querySelectorAll('nav.tabs button').forEach(b => { b.classList.toggle('on', b.dataset.t === (ui.tab === 'home' ? 'home' : ui.tab === 'taken' ? 'taken' : ui.tab === 'meer' || MEER_SUB.includes(ui.tab) ? 'meer' : '')); if (b.dataset.t === 'tellen') b.classList.toggle('hide', !mag('tellen')); });
+  document.querySelectorAll('nav.tabs button').forEach(b => { b.classList.toggle('on', b.dataset.t === (ui.tab === 'home' ? 'home' : ui.tab === 'taken' ? 'taken' : ui.tab === 'tellen' ? 'tellen' : ui.tab === 'meer' || MEER_SUB.includes(ui.tab) ? 'meer' : '')); if (b.dataset.t === 'tellen') b.classList.toggle('hide', !mag('tellen')); });
   const v = $('#view'); if (!v) return;
   v.onclick = null; v.onchange = null;
   kop(); oefenBalk();
@@ -35,6 +35,7 @@ function renderScherm(soft) {
   else if (ui.tab === 'tafels') renderTafels();
   else if (ui.tab === 'kwacties') renderKwActies();
   else if (ui.tab === 'taken') renderTaken();
+  else if (ui.tab === 'tellen') renderTellen();
   if (ui.tab === 'tafels' || ui.tab === 'kwacties') plekSegment();
 }
 function groet() { const h = new Date().getHours(); return h < 6 ? 'Goedenacht' : h < 12 ? 'Goedemorgen' : h < 18 ? 'Goedemiddag' : 'Goedenavond'; }
@@ -42,13 +43,14 @@ function kop() {
   const bron = ui.tab === 'kw' ? 'kw' : 'vers'; const b = S.boeken[bron];
   const d = new Date(); const datum = `${C.DAGNAAM[C.wd(C.today())]} ${d.getDate()} ${['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'][d.getMonth()]}`;
   const boekTxt = ui.tab === 'kw' ? (b ? `Bestelboek Van Tol${b.datum ? ' · ' + C.fmtDag(b.datum) : ''}` : 'Bestelboek Van Tol') : (b ? `Bestelboek Versunie · week ${b.week || '?'}` : 'Bestelboek Versunie');
-  let t = { rapport: ['Rapporten', 'Vorige week, advies en acties'], gebruik: ['Wat wordt gebruikt', 'Hoe vaak elk scherm geopend wordt'], taken: ['Taken', 'Wat er vandaag moet gebeuren'], tafels: ['Actie planning', 'Vers-acties op de koeltafels'], kwacties: ['Actie planning', 'KW-acties op de koppen'], home: [`${groet()}, ${mijnNaam()}`, datum + (winkels.length > 1 && WINKEL ? ' · ' + WINKEL.naam : '')], agf: ['AGF', boekTxt], vers: ['Vers', boekTxt], brood: ['Brood', boekTxt], diep: ['Diepvries', boekTxt], kw: ['KW', boekTxt], overig: ['Overig', 'Andere leveranciers en in/out. Alleen verwachte verkoop.'], assort: ['Assortiment', 'Nieuw, uit, gesaneerd en opgenomen'], beheer: ['Beheer', ui.bsub ? (BEHEER_SEC.find(x => x[0] === ui.bsub) || [])[2] || '' : 'Kies wat je wilt doen'], meer: ['Meer', `${mijnNaam()} · ${isBeheer() ? 'beheerder' : 'medewerker'}`], medewerkers: ['Medewerkers', 'Namen, pincodes en rechten'], mwedit: ['Rechten', ''], winkel: ['Winkel', (WINKEL && WINKEL.naam) || ''], meldingen: ['Meldingen', 'Pushmeldingen op dit toestel'], appinst: ['App-instellingen', 'Alleen voor jou'], vandaag: ['Wie deed wat', 'Per dag wat er is gedaan'], export: ['Exporteren', 'Naar Excel'], uitleg: ['Uitleg', 'Hoe de app werkt'], hoegoed: ['Hoe goed was het advies', 'Advies, besteld en verkocht per week'], leverancier: ['Overtypen', 'Per leverancier, voor de terminal'], levering: ['Leverdag-check', 'Afvinken bij het uitpakken'], acties: ['Actie planning', '3 · Bestellen voor de actieweek'], tafels: ['Actie planning', ui.tafel && S.tafels[ui.tafel] ? 'Vers · week ' + +tafelWeek().split('-')[1] : 'Vers-acties op de koeltafels'] }[ui.tab] || ['', ''];
+  let t = { rapport: ['Rapporten', 'Vorige week, advies en acties'], gebruik: ['Wat wordt gebruikt', 'Hoe vaak elk scherm geopend wordt'], taken: ['Taken', ''], tellen: ['Tellen', ''], route: ['Looproute', ''], tafels: ['Actie planning', 'Vers-acties op de koeltafels'], kwacties: ['Actie planning', 'KW-acties op de koppen'], home: [`${groet()}, ${mijnNaam()}`, datum + (winkels.length > 1 && WINKEL ? ' · ' + WINKEL.naam : '')], agf: ['AGF', boekTxt], vers: ['Vers', boekTxt], brood: ['Brood', boekTxt], diep: ['Diepvries', boekTxt], kw: ['KW', boekTxt], overig: ['Overig', 'Andere leveranciers en in/out. Alleen verwachte verkoop.'], assort: ['Assortiment', 'Nieuw, uit, gesaneerd en opgenomen'], beheer: [ui.bsub ? (BEHEER_SEC.find(x => x[0] === ui.bsub) || [])[2] || 'Kantoor' : 'Kantoor', ''], meer: ['Meer', `${mijnNaam()} · ${isBeheer() ? 'beheerder' : 'medewerker'}`], medewerkers: ['Medewerkers', 'Namen, pincodes en rechten'], mwedit: ['Rechten', ''], winkel: ['Winkel', (WINKEL && WINKEL.naam) || ''], meldingen: ['Pushmeldingen', 'Op dit toestel'], appinst: ['App-instellingen', 'Alleen voor jou'], vandaag: ['Wie deed wat', 'Per dag wat er is gedaan'], export: ['Exporteren', 'Naar Excel'], uitleg: ['Uitleg', 'Hoe de app werkt'], hoegoed: ['Hoe goed was het advies', 'Advies, besteld en verkocht per week'], leverancier: ['Overtypen', 'Per leverancier, voor de terminal'], levering: ['Leverdag-check', 'Afvinken bij het uitpakken'], acties: ['Actie planning', '3 · Bestellen voor de actieweek'], tafels: ['Actie planning', ui.tafel && S.tafels[ui.tafel] ? 'Vers · week ' + +tafelWeek().split('-')[1] : 'Vers-acties op de koeltafels'] }[ui.tab] || ['', ''];
   if (ui.tab === 'mwedit') { const m = mwLijst().find(x => x.id === ui.mwId); t[1] = m ? m.naam : ''; }
   if (ui.tab === 'meer' && ui.meerG) { const g = MEER_GROEPEN.find(x => x[0] === ui.meerG); if (g) t = [g[2], g[3]]; }
   $('#kopG').classList.add('hide');
-  $('#terugB').classList.toggle('hide', ui.tab === 'home' || ui.tab === 'taken' || (ui.tab === 'meer' && !ui.meerG)); { const hb = $('#hulpB'); if (hb) hb.classList.remove('hide'); }
+  $('#kop').classList.toggle('sub', ui.tab !== 'home'); $('#terugB').classList.toggle('hide', ui.tab === 'home' || ui.tab === 'taken' || ui.tab === 'tellen' || (ui.tab === 'meer' && !ui.meerG)); { const hb = $('#hulpB'); if (hb) hb.classList.remove('hide'); }
   belTel();
-  $('#terugB').textContent = ui.tab === 'acties' ? '‹ Actie planning' : ui.tab === 'meer' ? '‹ Meer' : ui.tab === 'mwedit' ? '‹ Medewerkers' : ui.tab === 'tafels' && ui.tafel ? '‹ Alle tafels' :  MEER_SUB.includes(ui.tab) ? '‹ Meer' : '‹ Home';
+  const gNaam = g => '‹ ' + ((MEER_GROEPEN.find(x => x[0] === g) || [])[2] || 'Meer');
+  $('#terugB').textContent = ui.tab === 'acties' ? '‹ Actie planning' : ui.tab === 'meer' ? (KANTOOR_G.includes(ui.meerG) ? '‹ Kantoor' : '‹ Meer') : ui.tab === 'beheer' ? gNaam(BSUB_GROEP[ui.bsub] || 'data') : ui.tab !== 'mwedit' && MEER_SUB.includes(ui.tab) && ui.meerG ? gNaam(ui.meerG) : ui.tab === 'mwedit' ? '‹ Medewerkers' : ui.tab === 'tafels' && ui.tafel ? '‹ Alle tafels' :  MEER_SUB.includes(ui.tab) ? '‹ Meer' : '‹ Home';
   $('#kopT').textContent = t[0]; if (BESTEL_OD.includes(ui.tab)) $('#kopS').innerHTML = lijstKopTekst(ui.tab, t[1]); else $('#kopS').textContent = t[1];
   const wb = $('#wieB'); wb.classList.add('hide'); if (mw) wb.textContent = `👤 ${mw.naam} ⇄`;
   $('.koplogo').src = logoSrc();
@@ -59,7 +61,7 @@ const TEGELS = ONDERDELEN.map(o => [o[0], o[1]]).concat([['plekken', 'Actie plan
 const ICOON = Object.assign(Object.fromEntries(ONDERDELEN.map(o => [o[0], o[2]])), { plekken: '📅', tafels: '🗂️', kwacties: '📣', assort: '🔄', beheer: '⚙️' });
 function bronVan(od) { return od === 'kw' ? 'kw' : 'vers'; }
 function bestelStatus(od) {
-  if (!S.boeken[bronVan(od)]) return { titel: 'Nog geen bestelboek', sub: mag('upload') ? 'Upload via Beheer' : 'Beheerder uploadt het boek' };
+  if (!S.boeken[bronVan(od)]) return { titel: 'Nog geen bestelboek', sub: mag('upload') ? 'Upload via Kantoor' : 'Beheerder uploadt het boek' };
   const cur = besteldag(od).cur; if (!cur) return { titel: 'Geen besteldag', sub: '' };
   const st = voortgang(od, cur);
   if (cur.besteldag < C.today()) { const sl = voortgang(od, cur, true); return { titel: `Nog open voor ${C.DAGEN[C.wd(cur.L)]}`, sub: `${sl.open ? `nog ${sl.open} te gaan` : 'alles besteld'} · bestelling ${C.DAGEN[C.wd(cur.besteldag)]}`, actief: sl.open > 0 }; }
@@ -368,8 +370,8 @@ const notitieHtml = sleutel => { const n = S.notities[sleutel]; return n ? `<div
 /* ---------- uitleg en rondleiding ---------- */
 function sheet(html, onclick) { const ov = document.createElement('div'); ov.className = 'sheet'; ov.innerHTML = `<div class="sheetIn">${html}</div>`; ov.onclick = e => { if (e.target === ov || e.target.dataset.x !== undefined) ov.remove(); else if (onclick) onclick(e, ov); }; document.body.appendChild(ov); return ov; }
 const HULP = {
-  home: ['Home', 'Bij <b>Vandaag</b> staat wat je moet doen: tik op een regel en de app brengt je erheen. Zoek een artikel met de zoekbalk (een spelfout mag) of scan met 📷. Onder <b>Alle lijsten</b> open je elke afdeling. Wisselen van medewerker doe je bij Meer → Mijn app.'],
-  lijst: ['Bestellen', 'Tik op de oranje knop <b>✓ Bestel</b> om het advies over te nemen, of pas het aan met − en +. Vink af met ☐ Besteld; ⚠️ = je komt niet uit tot de volgende levering, 👀 Even kijken = weinig nodig en voorraad onbekend, kijk zelf.'],
+  home: ['Home', 'Bij <b>Vandaag</b> staat wat je moet doen: tik op een regel en de app brengt je erheen. Zoek een artikel met de zoekbalk (een spelfout mag) of scan met 📷. Onder <b>Alle lijsten</b> open je elke afdeling. Een ander persoon laten inloggen doe je bij Meer › Mijn app.'],
+  lijst: ['Bestellen', 'Het grijze getal is het advies. Klopt het? Tik op <b>✓ Bestel</b>: het aantal wordt ingevuld en afgevinkt. Wil je meer of minder, pas het eerst aan met − en +. Tik op de naam van een artikel voor verkoop en uitleg.<br>⚠️ = je komt niet uit tot de volgende levering. <b>Even kijken</b> = weinig nodig en de voorraad is onbekend: kijk zelf.'],
   overig: ['Overig', 'Artikelen die je niet via de terminal bestelt, met wat er verkocht is en wat de app verwacht.'],
   assort: ['Assortiment', 'Wat er nieuw is, uit het bestelboek gaat of gesaneerd is. Tik op <b>Schap klaar</b> zodra het schap klopt.'],
   taken: ['Taken', 'Wat de app vandaag vraagt, taken en berichten voor jou, meldingen en berichten voor collega\'s. Tik op ✓ Gedaan of Gelezen als het klaar is.'],
@@ -422,13 +424,13 @@ function hulpSleutel() { const t = ui.tab; if (BESTEL_OD.includes(t)) return 'li
 function hulp() { const t = HULP[hulpSleutel()] || ['Hulp', 'Nog geen uitleg voor dit scherm.']; sheet(`<h2 style="margin:0">${t[0]}</h2><div class="hulptekst">${t[1]}</div><button class="btn" data-x>Begrepen</button>`); }
 const TOUR = [
   ['Welkom bij Besteladvies', 'De app vertelt je per artikel hoeveel je moet bestellen. Bovenaan Home staat <b>Vandaag</b>: daar begin je.'],
-  ['Zo bestel je', '1. Tik op je afdeling, bijvoorbeeld AGF.<br>2. Tel wat er ligt en vul het in (mag leeg).<br>3. Kijk naar het <b>Advies</b> en tik op <b>Neem advies over</b> of vul zelf in.<br>4. Klaar? Tik onderaan op <b>Klaar, alles besteld</b>.'],
+  ['Zo werk je', () => mag('bestellen') ? '1. Tik bij <b>Vandaag</b> op je afdeling.<br>2. Kijk naar het <b>Advies</b>. Pas het zo nodig aan met − en +.<br>3. Tik op <b>✓ Bestel</b>. Het artikel is dan afgevinkt.' : '1. Tik onderin op <b>Tellen</b>.<br>2. Kies je afdeling en tik in hoeveel er op het schap ligt.<br>3. Tik op <b>Opslaan</b>. Het advies wordt daardoor beter.'],
   ['Hulp nodig?', 'Op elk scherm staat rechtsboven <b>❓</b>. Onder Meer kun je <b>Oefenen</b> zonder dat er iets echt verandert. Vergissing? Tik op <b>Ongedaan</b> onderin.']
 ];
 function tourAlsNodig() { if (OEFEN) return; const k = 'cba-tour-' + wieSleutel(); if (ls.get(k)) return; ls.set(k, 1); tour(); }
 function tour(i = 0) {
   const t = TOUR[i];
-  sheet(`<div class="small">Stap ${i + 1} van ${TOUR.length}</div><h2 style="margin:0">${t[0]}</h2><div class="hulptekst">${t[1]}</div><div class="row"><button class="btn sec" data-x style="flex:1">Overslaan</button><button class="btn" data-volg style="flex:1">${i < TOUR.length - 1 ? 'Volgende' : 'Aan de slag'}</button></div>`,
+  sheet(`<div class="small">Stap ${i + 1} van ${TOUR.length}</div><h2 style="margin:0">${t[0]}</h2><div class="hulptekst">${typeof t[1] === 'function' ? t[1]() : t[1]}</div><div class="row"><button class="btn sec" data-x style="flex:1">Overslaan</button><button class="btn" data-volg style="flex:1">${i < TOUR.length - 1 ? 'Volgende' : 'Aan de slag'}</button></div>`,
     (e, ov) => { if (e.target.dataset.volg !== undefined) { ov.remove(); if (i < TOUR.length - 1) tour(i + 1); } });
 }
 

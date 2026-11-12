@@ -11,7 +11,7 @@ function renderBeheer() {
   const vg = S.boeken.vers ? [...new Set(S.boeken.vers.artikelen.map(x => x.groep))] : [];
   const odVan = g => ((S.inst && S.inst.onderdelen) || {})[g] || (odCache && odCache.m[g]) || C.standaardOnderdelen(vg)[g] || 'vers';
   const schemaVan = o => st.schema[o] || st.schema.vers;
-  const schemaRij = (bron, r, i) => `<div class="f"><label>Bestellen <select data-sch="${bron}" data-i="${i}" data-f="b">${C.DAGNAAM.map((d, j) => `<option value="${j}" ${j === r.b ? 'selected' : ''}>${d}</option>`).join('')}</select></label><label>levering <select data-sch="${bron}" data-i="${i}" data-f="l">${C.DAGNAAM.map((d, j) => `<option value="${j}" ${j === r.l ? 'selected' : ''}>${d}</option>`).join('')}</select></label><button class="btn sm sec" data-schdel="${bron}" data-i="${i}">×</button></div>`;
+  const schemaRij = (bron, r, i) => `<div class="f"><label>Bestellen <select data-sch="${bron}" data-i="${i}" data-f="b">${C.DAGNAAM.map((d, j) => `<option value="${j}" ${j === r.b ? 'selected' : ''}>${d}</option>`).join('')}</select></label><label>levering <select data-sch="${bron}" data-i="${i}" data-f="l">${C.DAGNAAM.map((d, j) => `<option value="${j}" ${j === r.l ? 'selected' : ''}>${d}</option>`).join('')}</select></label><button class="btn sm sec" data-schdel="${bron}" data-i="${i}" aria-label="Verwijderen">🗑️</button></div>`;
   v.innerHTML = `${kU ? `
   <div class="blk" data-sec="upload"><h2>Bestanden uploaden</h2><p class="small">Kies één of meer bestanden tegelijk: dag-exports uit CasPos (.xls), bestelboek Vers of KW (.pdf) en de actie-pdf. De app herkent zelf wat het is.</p>
   <label class="btn" style="display:block;text-align:center">Bestanden kiezen<input type="file" id="up" multiple accept=".xls,.xlsx,.pdf" class="hide"></label><button class="btn sec" id="upLink" style="width:100%;margin-top:8px">🔗 Link plakken</button><div class="log hide" id="upLog"></div></div>
@@ -70,7 +70,7 @@ function renderBeheer() {
   const inst = () => JSON.parse(JSON.stringify(Object.assign({}, S.inst || {}, { weken: st.weken, buffer: st.buffer, actieFactor: st.actieFactor, vooraf: st.vooraf, schema: Object.fromEntries(BESTEL_OD.map(o => [o, schemaVan(o)])), open: st.open, he: st.he })));
   const work = inst();
   v.querySelectorAll('[data-sch]').forEach(s => s.onchange = () => { work.schema[s.dataset.sch][+s.dataset.i][s.dataset.f] = +s.value; });
-  v.querySelectorAll('[data-schdel]').forEach(b => b.onclick = () => { work.schema[b.dataset.schdel].splice(+b.dataset.i, 1); saveInst(work); });
+  v.querySelectorAll('[data-schdel]').forEach(b => b.onclick = async () => { if (!await bevestig('Besteldag verwijderen?', 'Deze besteldag en levering verdwijnen uit het schema.', 'Verwijderen')) return; work.schema[b.dataset.schdel].splice(+b.dataset.i, 1); saveInst(work); });
   v.querySelectorAll('[data-schadd]').forEach(b => b.onclick = () => { work.schema[b.dataset.schadd].push({ b: 0, l: 2 }); saveInst(work); });
   if ($('#volgOd')) volgordeEvents(v);
   v.querySelectorAll('[data-dlr]').forEach(b => b.onclick = () => dlRegelBewerk(work, +b.dataset.dlr));

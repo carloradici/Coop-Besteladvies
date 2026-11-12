@@ -68,12 +68,13 @@ function levD(a, b, max) {
   for (let i = 1; i <= a.length; i++) { let rmin = 1e9; for (let j = 1; j <= b.length; j++) { const c = a[i - 1] === b[j - 1] ? 0 : 1; let v = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c); if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, d[i - 2][j - 2] + 1); d[i][j] = v; if (v < rmin) rmin = v; } if (rmin > max) return max + 1; }
   return d[a.length][b.length];
 }
+const stamZ = x => x.replace(/(en|s)$/, '').replace(/([aeou])\1/g, '$1');
 function zoekScore(q, tekst) {
   const Q = normZ(q), T = normZ(tekst); if (!Q || !T) return 0; const at = T.indexOf(Q); if (at >= 0) return 100 - Math.min(40, at);
   const ws = T.split(' '); let tot = 0;
   for (const qw of Q.split(' ')) {
     const max = qw.length >= 8 ? 2 : qw.length >= 4 ? 1 : 0; let best = 99;
-    for (const w of ws) { if (w.includes(qw)) { best = 0; break; } if (!max) continue; let dd = levD(qw, w, max); if (w.length > qw.length + 1) dd = Math.min(dd, levD(qw, w.slice(0, qw.length), max)); if (dd < best) best = dd; }
+    const sq = stamZ(qw); for (const w of ws) { if (w.includes(qw) || (sq.length >= 4 && stamZ(w).startsWith(sq))) { best = 0; break; } if (!max) continue; let dd = levD(qw, w, max); if (w.length > qw.length + 1) dd = Math.min(dd, levD(qw, w.slice(0, qw.length), max)); if (dd < best) best = dd; }
     if (best > max) return 0; tot += best;
   }
   return 60 - tot * 10;
@@ -85,33 +86,32 @@ function odDeadline(od, cur) {
   return l.find(x => x.ts > nu) || l[l.length - 1];
 }
 function lijstKopTekst(od, boekTxt) {
-  const cur = besteldag(od).cur; if (!cur) return esc(boekTxt);
-  const dl = odDeadline(od, cur); const dag = x => `${C.DAGEN[C.wd(x)]} ${C.fmtDag(x).split(' ')[1]}`;
-  let t = dl ? `Bestellen vóór ${dag(dl.dag)} ${dl.t}` : `Bestellen ${dag(cur.besteldag)}`; t += ` · levering ${C.DAGEN[C.wd(cur.L)]}`;
-  if (dl && dl.dag === C.today()) { const rest = minuten(dl.t) - minuten(nuHHMM()); t += rest < 0 ? ' <span class="aftel rood">⏰ deadline voorbij</span>' : ` <span class="aftel ${rest < 60 ? 'rood' : ''}">⏰ nog ${rest >= 60 ? Math.floor(rest / 60) + ' u ' : ''}${rest % 60} min</span>`; }
   const bw = +((String(boekTxt).match(/week (\d+)/) || [])[1] || 0); const oud = bw && ((C.isoWeek(C.today()).w - bw + 53) % 53) >= 2;
-  return t + (oud ? `<br><small class="boekregel">⚠️ ${esc(boekTxt)} is oud, upload een nieuw bestelboek</small>` : '');
+  return oud ? `<small class="boekregel">⚠️ ${esc(boekTxt)} is oud, upload een nieuw bestelboek</small>` : '';
+}
+function lijstAftel(od, cur) {
+  const dl = odDeadline(od, cur); if (!dl) return ''; if (dl.dag !== C.today()) return `vóór ${C.DAGEN[C.wd(dl.dag)]} ${dl.t} · `;
+  const r = minuten(dl.t) - minuten(nuHHMM()); return r < 0 ? '<b class="rood">deadline voorbij</b> · ' : `<b class="${r < 60 ? 'rood' : ''}">vóór ${dl.t}${r < 60 ? ` (nog ${r} min)` : ''}</b> · `;
 }
 let flitsT = null;
 function opgeslagenFlits() {
+  if ($('#undoBalk') || $('.toast')) return;
   let el = $('#flits'); if (!el) { el = document.createElement('div'); el.id = 'flits'; el.className = 'flits'; document.body.appendChild(el); }
   const off = !DEMO && !OEFEN && !online; el.textContent = OEFEN ? '🎓 Oefenen · niet echt opgeslagen' : off ? '📴 Offline · wordt later verstuurd' : '✓ Opgeslagen'; el.className = 'flits aan' + (off ? ' off' : '');
   clearTimeout(flitsT); flitsT = setTimeout(() => { el.className = 'flits'; }, off ? 2600 : 1200);
 }
 /* navigatie */
 function navKlik(t) {
-  if (t === 'tellen') return tellenSheet();
   if (t === 'meer') ui.meerG = null; ga(t);
 }
-function tellenSheet() {
-  if (!mag('tellen')) return toast('Je mag niet tellen');
+function tellenHtml() {
   const ods = BESTEL_OD.filter(od => mag('o_' + od) && lijstArtikelen(od).length);
-  const rij = od => { const cur = besteldag(od).cur; const t = cur ? telKeuze(od, cur) : { open: [] }; return `<button class="belrij" data-tod="${od}"><span class="ic">${(ONDERDELEN.find(o => o[0] === od) || [])[2]}</span><span><b>${odNaam(od)}</b><small>${t.open.length ? `Even tellen: nog ${t.open.length}` : 'Alles van deze afdeling, één voor één'}</small></span><span class="pijl">›</span></button>`; };
-  const ov = sheet(`<h2 style="margin:0 0 4px">🔢 Tellen</h2><p class="small">Tel wat er op het schap ligt. Dan wordt het advies beter.</p>${ods.map(rij).join('')}<button class="belrij" data-tvrij="1"><span class="ic">📟</span><span><b>Vrij tellen met scanner</b><small>Scan schapkaartjes, producten of het bestelboek</small></span><span class="pijl">›</span></button><button class="btn sec" data-x style="width:100%;margin-top:10px">Sluiten</button>`, (e, o) => {
-    const b = e.target.closest('[data-tod]'); if (b) { o.remove(); const od = b.dataset.tod; const cur = besteldag(od).cur; const t = cur ? telKeuze(od, cur) : { open: [] }; const arts = t.open.length ? t.open.map(k => M.art[k]).filter(Boolean) : lijstArtikelen(od).filter(a => !a.uit && assStatus(a) === 'in'); return telModus(od, arts); }
-    if (e.target.closest('[data-tvrij]')) { o.remove(); telModus(ods[0] || 'vers', [], true); }
-  });
-  return ov;
+  const rij = od => { const cur = besteldag(od).cur; const t = cur ? telKeuze(od, cur) : { open: [] }; return `<button class="belrij" data-tod="${od}"><span class="ic">${(ONDERDELEN.find(o => o[0] === od) || [])[2]}</span><span><b>${odNaam(od)}</b><small>${t.open.length ? `${t.open.length} artikel${t.open.length === 1 ? '' : 'en'} tellen` : 'Alles van deze afdeling, één voor één'}</small></span>${t.open.length ? `<b class="telbadge">${t.open.length}</b>` : ''}<span class="pijl">›</span></button>`; };
+  return `<div class="blk"><p class="small" style="margin-top:0">Tel wat er op het schap ligt. Dan wordt het advies beter.</p>${ods.map(rij).join('')}<button class="belrij" data-tvrij="1"><span class="ic">📟</span><span><b>Tellen met de scanner</b><small>Scan schapkaartjes, producten of het bestelboek</small></span><span class="pijl">›</span></button></div>`;
+}
+function renderTellen() {
+  const v = $('#view'); if (!mag('tellen')) { v.innerHTML = '<div class="empty">Je mag niet tellen.</div>'; return; } v.innerHTML = tellenHtml();
+  v.onclick = e => { const b = e.target.closest('[data-tod]'); if (b) { const od = b.dataset.tod; const cur = besteldag(od).cur; const t = cur ? telKeuze(od, cur) : { open: [] }; return telModus(od, t.open.length ? t.open.map(k => M.art[k]).filter(Boolean) : lijstArtikelen(od).filter(a => !a.uit && assStatus(a) === 'in')); } if (e.target.closest('[data-tvrij]')) { const o = BESTEL_OD.find(od => mag('o_' + od)); telModus(o || 'vers', [], true); } };
 }
 /* taken en berichten */
 function beheerNamen() { const l = [...new Set(mwLijst().filter(m => m.rol === 'beheerder').map(m => m.naam).concat(S.inst && S.inst.beheerNaam ? [S.inst.beheerNaam] : []))].filter(Boolean); return l.length ? l : ['Beheerder']; }
@@ -142,19 +142,19 @@ function takenHomeEvents(v) {
   const auto = autoTaken();
   v.querySelectorAll('[data-tka]').forEach(b => b.onclick = () => { const x = auto[+b.dataset.tka]; if (!x) return; if (x.bsub) ui.bsub = x.bsub; ga(x.ga); if (x.bsub) { ui.bsub = x.bsub; render(); } });
   v.querySelectorAll('[data-tkok]').forEach(b => b.onclick = () => taakKlaar(b.dataset.tkok));
-  v.querySelectorAll('[data-tktel]').forEach(b => b.onclick = tellenSheet);
+  v.querySelectorAll('[data-tktel]').forEach(b => b.onclick = () => ga('tellen'));
   v.querySelectorAll('[data-tkh]').forEach(b => b.onclick = () => ga('taken'));
 }
 function renderTaken() {
-  const v = $('#view'); const auto = autoTaken(); const mijn = openTaken(); const anderen = isBeheer() || mag('team') ? openTaken(true).filter(r => !mijn.includes(r)) : [];
+  const v = $('#view'); const mijn = openTaken(); const anderen = isBeheer() || mag('team') ? openTaken(true).filter(r => !mijn.includes(r)) : [];
   const l = belItems(), info = l.filter(belInfo).filter(x => !x.taak);
-  v.innerHTML = `${auto.length ? `<div class="blk"><h2>Vandaag in de app</h2>${takenRijen(auto)}</div>` : ''}${info.length ? `<div class="blk"><h2>🔔 Meldingen</h2>${info.map(x => `<button class="belrij" data-bi="${l.indexOf(x)}"><span class="ic">${x.ic}</span><span><b>${esc(x.t)}</b><small>${esc(x.sub)}</small></span><span class="pijl">›</span></button>`).join('')}</div>` : ''}
+  v.innerHTML = `${info.length ? `<div class="blk"><h2>Meldingen</h2>${info.map(x => `<button class="belrij" data-bi="${l.indexOf(x)}"><span class="ic">${x.ic}</span><span><b>${esc(x.t)}</b><small>${esc(x.sub)}</small></span><span class="pijl">›</span></button>`).join('')}</div>` : ''}
   <div class="blk"><h2>Voor jou</h2>${mijn.length ? `<div class="list">${mijn.map(r => taakRij(r)).join('')}</div>` : '<p class="small">Geen taken of berichten voor jou. 👍</p>'}</div>
   ${anderen.length ? `<div class="blk"><h2>Taken van anderen</h2><div class="list">${anderen.map(r => taakRij(r, true)).join('')}</div></div>` : ''}
-  <div class="blk">${isBeheer() || mag('team') ? '<button class="btn" id="tkNieuw" style="width:100%">+ Nieuwe taak</button>' : ''}<button class="btn sec" id="tkBericht" style="width:100%;margin-top:10px">✉️ Bericht voor ${esc(beheerNamen().join(' of '))}</button></div>`;
+  <div class="blk">${isBeheer() || mag('team') ? '<button class="btn" id="tkNieuw" style="width:100%">+ Nieuwe taak</button>' : ''}${beheerNamen().includes(mijnNaam()) ? '' : `<button class="btn sec" id="tkBericht" style="width:100%;margin-top:10px">Bericht voor ${esc(beheerNamen().join(' of '))}</button>`}</div>`;
   v.insertAdjacentHTML('beforeend', overdrachtHtml()); takenHomeEvents(v); homeEvents(v);
   v.querySelectorAll('[data-bi]').forEach(b => b.onclick = () => { const x = l[+b.dataset.bi]; ga(x.ga); if (x.bsub) { ui.bsub = x.bsub; render(); } });
-  const n = $('#tkNieuw'); if (n) n.onclick = taakMaken; $('#tkBericht').onclick = () => berichtMaken('');
+  const n = $('#tkNieuw'); if (n) n.onclick = taakMaken; const tb = $('#tkBericht'); if (tb) tb.onclick = () => berichtMaken('');
 }
 function taakMaken() {
   const mws = mwLijst().filter(m => m.actief !== false).map(m => m.naam);
@@ -214,15 +214,15 @@ function plekSegment() {
   d.querySelectorAll('[data-pls]').forEach(b => b.onclick = () => { ui.plekSoort = b.dataset.pls; ga(b.dataset.pls === 'kop' ? 'kwacties' : 'tafels'); });
 }
 /* meer: groepen + slim zoeken */
-const MEER_GROEPEN = [['kantoor', '🗂', 'Kantoor', 'Beheer, planning, uploads en instellingen'], ['mij', '👤', 'Mijn app', 'Weergave, meldingen, pincode, uitloggen'], ['bestellen', '🛒', 'Bestellen', 'Leveranciers, levering, deadlines, waarschuwingen'], ['team', '👥', 'Medewerkers', 'Pincodes, rechten, nieuwe medewerker, wie deed wat'], ['plekken', '📅', 'Actie planning', 'Vers op de koeltafels, KW op de koppen'], ['data', '📤', 'Gegevens uploaden', 'Bestanden, automatisch uploaden, controleren'], ['winkel', '🏪', 'Winkel en app', 'Koppelcode, openingstijden, afdelingen, back-up'], ['hulp', '❓', 'Hulp', 'Uitleg, woordenlijst, rondleiding, oefenen']];
+const MEER_GROEPEN = [['kantoor', '🏢', 'Kantoor', 'Planning, bestanden en instellingen'], ['mij', '👤', 'Mijn app', 'Weergave, pincode en ander persoon'], ['bestellen', '🛒', 'Bestellen', 'Leveranciers, levering, deadlines, waarschuwingen'], ['team', '👥', 'Medewerkers', 'Pincodes, rechten, nieuwe medewerker, wie deed wat'], ['plekken', '📅', 'Actie planning', 'Vers op de koeltafels, KW op de koppen'], ['data', '📤', 'Gegevens uploaden', 'Bestanden, automatisch uploaden, controleren'], ['winkel', '🏪', 'Winkel en app', 'Koppelcode, openingstijden, afdelingen, back-up'], ['hulp', '❓', 'Hulp', 'Uitleg, woordenlijst, rondleiding, oefenen']];
 function naarBeheer(sec) { ui.bsub = sec; ga('beheer'); }
 function meerItems() {
   const kU = mag('upload'), kI = mag('instellingen'), kT = mag('team');
   const L = [
     ['mij', 'mApp', '⚙️', 'App-instellingen', 'Licht of donker, tekstgrootte, korte lijst', 'weergave thema donker licht donkere modus lettergrootte tekst groot scherm', true, () => ga('appinst')],
-    ['mij', 'mMeld', '🔔', 'Meldingen', 'Pushmeldingen aan of uit zetten', 'notificatie notificaties push bel herinnering melding', true, () => ga('meldingen')],
+    ['mij', 'mMeld', '🔔', 'Pushmeldingen', 'Meldingen op dit toestel aan of uit', 'notificatie notificaties push bel herinnering melding', true, () => ga('meldingen')],
     ['mij', 'mPin', '🔑', kanFace() ? 'Pincode en Face ID' : 'Pincode wijzigen', 'Je eigen pincode', 'pincode wachtwoord code inloggen face id', !!mw, pinWijzigen],
-    ['mij', 'mWis', '👤', 'Wisselen of vergrendelen', `Nu: ${esc(mijnNaam())}`, 'wisselen andere medewerker uitloggen vergrendelen naam', !!mw, () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); }],
+    ['mij', 'mWis', '👤', 'Ander persoon', `Nu ingelogd: ${esc(mijnNaam())}`, 'wisselen andere medewerker uitloggen vergrendelen naam', !!mw, () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); }],
     ['bestellen', 'mLev', '🚚', 'Overtypen in de terminal', 'Per leverancier, met controle', 'leverancier terminal versunie van tol lijst bellen pdf printen', mag('bestellen') || mag('afvinken'), () => ga('leverancier')],
     ['bestellen', 'mRoute', '🚶', 'Looproute', 'Bestellijst in de volgorde waarin je door de winkel loopt', 'looproute route pad paden volgorde lopen winkel stelling bestelvolgorde', mag('bestellen') || mag('afvinken'), () => ga('route')],
     ['bestellen', 'mLc', '📦', 'Leverdag-check', 'Afvinken bij het uitpakken, ontbrekende artikelen doorgeven', 'levering controle uitpakken ontbreekt niet geleverd', true, () => ga('levering')],

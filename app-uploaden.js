@@ -197,7 +197,7 @@ Instellen (eenmalig, ongeveer 5 minuten)
 3. Dubbelklik 1-testen.cmd. Je moet zien: "Test gelukt: Koppeling met ... werkt."
    Krijg je een blauw venster "Windows heeft uw pc beschermd"? Kies "Meer informatie" > "Toch uitvoeren".
 4. Dubbelklik 2-installeren.cmd. Vanaf nu draait het elke 5 minuten.
-5. Controleer in de app onder Beheer > Automatisch uploaden of de uploads binnenkomen.
+5. Controleer in de app onder Kantoor › Automatisch uploaden of de uploads binnenkomen.
 
 Meteen versturen? Dubbelklik 4-nu-versturen.cmd.
 

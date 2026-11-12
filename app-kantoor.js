@@ -14,7 +14,7 @@ function startPunten() {
 }
 function startHtml() {
   const p = startPunten(), klaar = p.filter(x => x[2]).length; if (klaar === p.length) return '';
-  return `<div class="blk starthier"><h2>🚀 Start hier <small class="small">${klaar} van ${p.length} klaar</small></h2><div class="list">${p.map(([k, t, ok, , bev]) => `<div class="it"><span style="flex:1">${ok ? '✅' : '⬜'} ${ok ? `<s>${t}</s>` : `<b>${t}</b>`}</span>${ok ? '' : `${bev && mag('instellingen') ? `<button class="btn sm sec" data-spk="${k}">✓ Klopt</button>` : ''}<button class="btn sm" data-sp="${k}">Open</button>`}</div>`).join('')}</div></div>`;
+  return `<div class="blk starthier"><h2>Start hier <small class="small">${klaar} van ${p.length} klaar</small></h2><div class="list">${p.filter(x => !x[2]).map(([k, t, , , bev]) => `<div class="it"><b style="flex:1">${t}</b>${bev && mag('instellingen') ? `<button class="btn sm sec" data-spk="${k}">Is goed</button>` : ''}<button class="btn sm" data-sp="${k}">Instellen</button></div>`).join('')}</div></div>`;
 }
 function startEvents(v) {
   v.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { const x = startPunten().find(y => y[0] === b.dataset.sp); if (x) x[3](); });

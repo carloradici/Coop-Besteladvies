@@ -59,7 +59,7 @@ function renderRoute() {
   v.querySelectorAll('[data-rod]').forEach(b => b.onclick = () => { ui.routeOd = b.dataset.rod; render(); });
   const ra = $('#rAan'); if (ra) ra.onchange = () => zet(x => x.aan = ra.checked);
   v.querySelectorAll('[data-rup]').forEach(b => b.onclick = () => { const [p, j] = b.dataset.rup.split(',').map(Number); zet(x => x.paden[p].splice(j - 1, 0, x.paden[p].splice(j, 1)[0])); });
-  v.querySelectorAll('[data-rx]').forEach(b => b.onclick = () => { const [p, j] = b.dataset.rx.split(',').map(Number); zet(x => x.paden[p].splice(j, 1)); });
+  v.querySelectorAll('[data-rx]').forEach(b => b.onclick = () => { const [p, j] = b.dataset.rx.split(',').map(Number); let weg; zet(x => { weg = x.paden[p].splice(j, 1)[0]; }); ongedaan('Groep uit pad gehaald', () => zet(x => x.paden[p].splice(j, 0, weg))); });
   v.querySelectorAll('[data-radd]').forEach(s => s.onchange = () => s.value && zet(x => x.paden[+s.dataset.radd].push(s.value)));
   v.querySelectorAll('[data-rgp]').forEach(s => s.onchange = () => s.value && zet(x => x.paden[+s.value - 1].push(s.dataset.rgp)));
   const rp = $('#rPad'); if (rp) rp.onclick = () => zet(x => x.paden.push([]));
