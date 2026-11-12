@@ -206,11 +206,11 @@ function kaart(a, bd, laatste) {
   const dgv = bd && !isB ? dlArt(a, bd) : null;
   return `<div class="card ${dgv && dgv.ts < nuTs() ? 'dlvoorbij' : ''} ${a.uit || san ? 'uit' : ''} ${niet ? 'niet' : ''} ${laatste ? 'laatste' : ''} ${isB ? 'isbesteld' : ''} ${ui.open && ui.open.has(a.key) ? 'open' : ''}" data-k="${a.key}">
   <div class="hd" data-meer="1"><div class="nm" ${a.eigen && mag('saneren') ? 'data-eig="' + esc(a.nr) + '"' : ''}>${a.foto ? `<img class="duimfoto" src="${a.foto}" alt="">` : ''}${esc(a.naam)}${a.eigen && mag('saneren') ? ' <span class="small">✎</span>' : ''}</div><div class="adv ${ad.adv ? '' : 'nul'}"><small>Advies</small><b>${advTxt}</b><span>${advSub}</span></div></div>
-  <div class="meta">${a.eigen ? esc(a.artNr || 'zonder nummer') + ' · ' + esc(LEV_NAAM[a.lev] || '') : a.nr} · ${heTxt}</div>${!a.uit && !niet ? colloHtml(a, ad, rB) + boHtml(a, bd, be, ad) : ''}
+  <div class="meta">${a.merk ? '<b>' + esc(a.merk) + '</b> · ' : ''}${a.eigen ? esc(a.artNr || 'zonder nummer') + ' · ' + esc(LEV_NAAM[a.lev] || '') : a.nr} · ${heTxt}</div>${!a.uit && !niet ? colloHtml(a, ad, rB) + boHtml(a, bd, be, ad) : ''}
   ${labels.length ? `<div class="lbls">${labels.join('')}</div>` : ''}
   ${notitieHtml('a:' + a.key)}
   ${onder}
-  <div class="kaartmeer">${prijsInfo ? `<div class="lbls">${prijsInfo}</div>` : ''}<div class="meta">${routeChip(a)}${a.merk ? esc(a.merk) + ' · ' : ''}${a.cons ? 'prijs ' + C.eur(a.cons) : ''}${mag('inkoop') && a.ink ? ' · inkoop ' + C.eur(a.ink) : ''}${a.bst && !a.eigen ? ' · bestelnr ' + esc(a.bst) : ''}</div>
+  <div class="kaartmeer">${prijsInfo ? `<div class="lbls">${prijsInfo}</div>` : ''}<div class="meta">${routeChip(a)}${a.cons ? 'prijs ' + C.eur(a.cons) : ''}${mag('inkoop') && a.ink ? ' · inkoop ' + C.eur(a.ink) : ''}${a.bst && !a.eigen ? ' · bestelnr ' + esc(a.bst) : ''}</div>
   ${k ? tbl : '<div class="hint">Nog geen verkoop van dit artikel.</div>'}
   ${!(a.uit || san || niet) ? `<div class="why">${why}</div>${rB ? `<button class="minlink" data-min="1">Min. schap: ${M.min[a.key] ? C.fmt(M.min[a.key]) + ' ' + u : 'niet ingesteld'} ✎</button>` : ''}` : ''}
   <div class="kaartvoet">${rT && !telT && !a.uit ? '<button class="link" data-telnu="1">🔢 Tellen</button>' : ''}<button class="link" data-not="1">📝 Notitie</button>${mag('tellen') && !a.uit ? '<button class="link" data-derv="1">🗑️ Derving</button><button class="link" data-leeg="1">🚫 Schap leeg</button>' : ''}${assKnop}</div></div></div>`;

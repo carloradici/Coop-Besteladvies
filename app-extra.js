@@ -126,6 +126,8 @@ async function scanStart(od, opVondst) {
 function telModus(od, arts, vrij) {
   if (!arts.length && !vrij) return toast('Geen artikelen om te tellen');
   arts = arts.slice(); let i = 0, val = '', geteld = 0, zoek = arts.length ? null : '';
+  const lk = 'cba-tel-' + od + '-' + arts.length, oud = ls.get(lk), vrij0 = arts.findIndex(a => !(S.voorraad[a.key] && S.voorraad[a.key].dag === C.today()));
+  i = Math.max(vrij0 < 0 ? 0 : vrij0, oud && oud.dag === C.today() && oud.i < arts.length ? oud.i : 0); if (i > 0) toast(`Verder bij ${i + 1} van ${arts.length}`, 2500);
   const ov = document.createElement('div'); ov.className = 'telmodus'; document.body.appendChild(ov);
   const curVan = a => besteldag(onderdeelVan(a)).cur;
   const opslaan = () => { const a = arts[i]; write('voorraad', [{ bron: a.bron, nr: a.nr, aantal: C.num(val), dag: C.today(), door: mijnNaam() }]); geteld++; };
@@ -147,7 +149,7 @@ function telModus(od, arts, vrij) {
     const a = arts[i]; const vr = S.voorraad[a.key]; const u = eenheid(a); const cur = curVan(a);
     const ad = cur && val !== '' ? C.advies(M, a.key, cur, { aantal: C.num(val), dag: C.today() }, bestellingenVan(a.key)) : null;
     ov.innerHTML = `<div class="telkop"><button id="tX">Sluiten</button><span>${i + 1} van ${arts.length}</span><span><button id="tN" aria-label="Artikelnummer typen">🔢</button> <button id="tS">📷</button></span></div><div class="telbalk"><div style="width:${Math.round(i / arts.length * 100)}%"></div></div>
-    <div class="telnaam">${esc(a.naam)}</div><div class="telsub">${esc(a.eigen ? a.artNr || '' : a.nr)} · ${esc(groepVan(a))}${vr && vr.dag ? ` · laatst ${C.fmtDag(vr.dag)}: ${C.fmt(vr.aantal)}` : ''}</div>
+    ${a.merk ? `<div class="telmerk">${esc(a.merk)}</div>` : ''}<div class="telnaam">${esc(a.naam)}</div><div class="telsub">${esc(a.eigen ? a.artNr || '' : a.nr)} · ${esc(groepVan(a))}${vr && vr.dag ? ` · laatst ${C.fmtDag(vr.dag)}: ${C.fmt(vr.aantal)}` : ''}</div>
     <div class="telwaarde">${val === '' ? '<span class="ph">Hoeveel ' + (u === 'kg' ? 'kilo' : 'stuks') + '?</span>' : esc(val)}</div><div class="teladv">${ad ? 'Advies ' + C.fmtDag(cur.besteldag) + ': ' + (ad.adv ? ad.adv + ' ' + ehTxt(a, ad.adv) : 'niets') : ''}</div>
     ${val === '0' ? `<div style="text-align:center"><button class="btn sm sec" id="tLeeg">${S.leeg[a.key + '|' + C.today()] ? '✓ Leeg gemeld' : '🚫 Schap was leeg'}</button></div>` : ''}
     ${scannerGezien ? '<div class="telhint">📟 Volgende artikel scannen = opslaan · zelfde artikel scannen = +1</div>' : ''}
@@ -166,7 +168,7 @@ function telModus(od, arts, vrij) {
     if (zoek === null && i < arts.length && val !== '') { opslaan(); toast('✓ ' + arts[i].naam + ': ' + val, 1500); }
     if (navigator.vibrate) navigator.vibrate(60); naar(a);
   };
-  const sluit = () => { ov.remove(); telHook = null; if (geteld) log('voorraad', `${geteld} artikelen geteld${vrij ? ' met scanner' : ` (${odNaam(od)})`}`); render(true); };
+  const sluit = () => { if (arts.length && !vrij) ls.set(lk, { dag: C.today(), i }); ov.remove(); telHook = null; if (geteld) log('voorraad', `${geteld} artikelen geteld${vrij ? ' met scanner' : ` (${odNaam(od)})`}`); render(true); };
   teken();
 }
 
