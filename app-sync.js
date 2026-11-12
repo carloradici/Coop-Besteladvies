@@ -27,7 +27,7 @@ async function sync(full) {
     }
     WINKEL = winkels.find(x => x.id === W); eigenaar = berekenEigenaar();
     if (WINKEL.open === false) { setSync(); inlogScherm(); return; }
-    await flush();
+    if (await flush() === 'login') return;
     const [inst, agenda, boekMeta, acties, dagMeta, vr, be, so, io, mws, ass, nts, wr, eig, mins, ovd, lvc, drv, pok, tfl, tfi, lg, kwa] = await Promise.all([
       rest(wq('instellingen?select=data')), rest(wq('agenda?select=*')), rest(wq('boeken?select=bron,geupload')), rest(wq('acties?select=*&order=van.asc')),
       getAll(wq(`dagverkoop?select=dag,geupload&dag=gte.${C.add(C.today(), -460)}&order=dag.asc`)),
@@ -111,14 +111,19 @@ async function write(t, rows, stil) {
   outbox.push(o); await iset('outbox', outbox); await saveCache(); setSync();
   flush().then(() => setSync());
 }
-let flushing = false;
+let flushing = false, herIn = 0;
 async function flush() {
   if (DEMO || OEFEN || flushing || !outbox.length) return; flushing = true;
   try {
     while (outbox.length) {
       const o = outbox[0];
       try { if (PK[o.t]) await upsert(o.t, o.rows, PK[o.t]); else await rest(o.t, { method: 'POST', body: o.rows, headers: { Prefer: 'return=minimal' }, noBody: true }); }
-      catch (e) { if (/^(400|403|409):/.test(e.message)) { console.warn('geweigerd', o, e.message); toast('Niet opgeslagen: geen recht of ongeldige gegevens', 4000); } else throw e; }
+      catch (e) {
+        const c = +(e.message.match(/^(\d{3}):/) || [])[1]; if (![400, 403, 409].includes(c)) throw e;
+        if (c === 403 && !OPEN) return;
+        if (c === 403 && !o.f && Date.now() - herIn > 600000) { herIn = Date.now(); outbox.forEach(x => x.f = 1); await iset('outbox', outbox); inlogScherm('Je bent te lang ingelogd. Tik je pincode in, dan wordt alles alsnog opgeslagen.'); return 'login'; }
+        console.warn('geweigerd', o, e.message); toast(`${({ voorraad: 'Telling', bestellingen: 'Bestelling', leeg: 'Schap leeg' })[o.t] || 'Wijziging'} niet opgeslagen: ${c === 403 ? 'geen recht' : 'ongeldige gegevens'}`, 4000);
+      }
       outbox.shift(); await iset('outbox', outbox);
     }
     online = true;

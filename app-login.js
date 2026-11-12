@@ -61,7 +61,7 @@ function berekenEigenaar() { if (!WINKEL || WINKEL.rol !== 'beheer' || !mw) retu
 function demoNamen() { return DEMO_MW.map(m => Object.assign({}, m, { eigen: m.id === 'd1' && WINKEL && WINKEL.rol === 'beheer', mail: m.id === 'd1' })); }
 const IN = { namen: [], keuze: null, pin: '', eerste: null, msg: '', blokTot: 0 };
 function naarMail(msg, vergeten) { OPEN = false; sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); ui.loginModus = 'mail'; ui.pinVergeten = !!vergeten; showLogin(msg); }
-function opruimen() { const u = $('#undoBalk'); if (u) u.remove(); document.querySelectorAll('.sheet').forEach(x => x.remove()); }
+function opruimen() { const u = $('#undoBalk'); if (u) u.remove(); document.querySelectorAll('.sheet,.telmodus').forEach(x => x.remove()); telHook = null; }
 async function inlogScherm(msg) {
   OPEN = false; mw = null; ls.del('cba-mw'); opruimen();
   IN.pin = ''; IN.eerste = null; IN.msg = msg || ''; IN.faceAuto = false;
