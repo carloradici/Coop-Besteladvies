@@ -53,7 +53,7 @@ function boTekort(a, bd, n) {
   const laag = Math.min(0, ...pts.map(p => p[1])), x = (+n || 0) * he, eerst = pts.find(p => p[1] + x < 0);
   return { voor, na: eerst ? { dag: eerst[0], t: Math.ceil(-(laag + x)) } : null, min: Math.ceil(-laag / he) };
 }
-function boEh(a, n) { return a.perHE ? (n === 1 ? (EH[ehCode(a)] || ['verpakking'])[0] : ehMv(a)) : n === 1 ? 'stuk' : 'stuks'; }
+function boEh(a, n) { return a.perHE ? ehMv(a, n) : n === 1 ? 'stuk' : 'stuks'; }
 function boHtml(a, bd, be, ad) {
   const i = M.boInfo && M.boInfo[a.key]; if (!i) return '';
   const vr = boVr(a.key), om = i.vlag.filter(x => x[1] === 'op').map(x => C.DAGEN[x[0]]), af = i.vlag.filter(x => x[1] !== 'op').map(x => C.DAGEN[x[0]]);

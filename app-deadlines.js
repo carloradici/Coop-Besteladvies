@@ -147,9 +147,12 @@ function renderLijst(od, soft) {
 }
 const EH = { DS: ['doos', 'dozen'], KR: ['krat', 'kratten'], ZK: ['zak', 'zakken'], PK: ['pak', 'pakken'], TR: ['tray', 'trays'], BS: ['bos', 'bossen'], KI: ['kist', 'kisten'], BK: ['bak', 'bakken'], NT: ['net', 'netten'], EM: ['emmer', 'emmers'], FL: ['fles', 'flessen'], CO: ['colli', 'colli'], HE: ['doos', 'dozen'], OM: ['omdoos', 'omdozen'], ST: ['stuk', 'stuks'], BL: ['blik', 'blikken'], PL: ['plaat', 'platen'], RL: ['rol', 'rollen'] };
 const ehCode = a => String(a.eh || '').trim().toUpperCase().slice(0, 2);
-function ehMv(a, n) { return (EH[ehCode(a)] || ['verpakking', 'verpakkingen'])[n === 1 ? 0 : 1]; }
+const kwDoos = a => a.bron === 'kw' && a.perHE;
+function ehMv(a, n) { return (kwDoos(a) ? EH.DS : EH[ehCode(a)] || ['verpakking', 'verpakkingen'])[n === 1 ? 0 : 1]; }
+const KWSTUK = { BS: ['bus', 'bussen'], PT: ['pot', 'potten'], TB: ['tube', 'tubes'], CN: ['jerrycan', 'jerrycans'] };
+function stukMv(a, n) { const c = ehCode(a), e = kwDoos(a) && !['DS', 'KR', 'CO', 'OM', 'HE'].includes(c) && (KWSTUK[c] || EH[c]); return e ? e[n === 1 ? 0 : 1] : n === 1 ? 'stuk' : 'stuks'; }
 function ehTxt(a, n) { return a.perHE ? ehMv(a, n) : eenheid(a) === 'st' ? (n === 1 ? 'stuk' : 'stuks') : eenheid(a); }
-function heTekst(a) { if (!a.perHE) return 'per stuk'; const e = EH[ehCode(a)] || ['verpakking']; return `${e[0]} van ${C.fmt(a.he)}${a.kg ? ' kg' : ''}`; }
+function heTekst(a) { if (!a.perHE) return 'per stuk'; if (kwDoos(a)) return `doos van ${C.fmt(a.he)} ${stukMv(a, a.he)}`; const e = EH[ehCode(a)] || ['verpakking']; return `${e[0]} van ${C.fmt(a.he)}${a.kg ? ' kg' : ''}`; }
 function eenheid(a) { const k = M.keys[a.key]; return k && k.kg ? 'kg' : 'st'; }
 function kaart(a, bd, laatste) {
   const k = M.keys[a.key]; const wt = C.weekTabel(M, a.key); const lbl = C.actieLabel(M, a.key);
@@ -160,7 +163,7 @@ function kaart(a, bd, laatste) {
   const u = eenheid(a); const rT = mag('tellen'), rB = mag('bestellen'), rA = mag('afvinken'); const isB = !!(be && be.besteld);
   const heTxt = heTekst(a);
   const advTxt = ad.adv ? `${ad.adv}` : '0';
-  const advSub = ad.adv ? (a.perHE ? `${ehMv(a, ad.adv)} · ${C.fmt(ad.adv * a.he)} ${u === 'st' ? 'st' : u}` : (u === 'st' ? (ad.adv === 1 ? 'stuk' : 'stuks') : u)) : ad.twijfel ? '👀 even kijken' : 'geen advies';
+  const advSub = ad.adv ? (a.perHE ? `${ehMv(a, ad.adv)} · ${C.fmt(ad.adv * a.he)} ${u === 'st' ? (kwDoos(a) ? stukMv(a, ad.adv * a.he) : 'st') : u}` : (u === 'st' ? (ad.adv === 1 ? 'stuk' : 'stuks') : u)) : ad.twijfel ? '👀 even kijken' : 'geen advies';
   const comp = S.pref && S.pref.compact; const telT = rT && (ui.telAlle || vrVandaag !== '' || (ui.telK && ui.telK.has(a.key)) || (bd && telKeuze(onderdeelVan(a), bd).alle.includes(a.key)));
   let tbl = `<table class="wk"><tr><th></th>${C.DAGEN.map(d => `<th>${d}</th>`).join('')}<th>wk</th></tr>`;
   for (const [ri, r2] of wt.rows.entries()) { if (comp && ri !== 2) continue; let s = 0, any = false; tbl += `<tr><td class="l">${r2.week}</td>${r2.cells.map(c => { if (c.v !== null) { s += c.v; any = true; } return `<td class="${c.actie ? 'a' : ''} ${c.dag === C.today() ? 'today' : ''}">${c.v === null ? '' : C.fmt(c.v)}</td>`; }).join('')}<td>${any ? C.fmt(s) : ''}</td></tr>`; }
@@ -200,7 +203,7 @@ function kaart(a, bd, laatste) {
   else if (niet) onder = '';
   else {
     const hb = be && be.aantal !== null && be.aantal !== undefined, nB = hb ? +be.aantal : ad.adv, toonB = rB || (hb && rA);
-    const knop = isB ? (rA ? `<button class="besteld aan" data-besteld="1">${besteldTxt}</button>` : `<div class="besteld aan">${besteldTxt}</div>`) : rA && nB > 0 ? `<button class="besteld hoofd" data-bok="1">✓ Bestel ${C.fmt(nB)} ${ehTxt(a, nB)}</button>` : rB && nB > 0 ? `<button class="besteld hoofd" data-neem="1">✓ Bestel ${C.fmt(nB)} ${ehTxt(a, nB)}</button>` : rA && hb ? `<button class="besteld" data-besteld="1">☐ Besteld</button>` : '';
+    const knop = isB ? (rA ? `<button class="besteld aan" data-besteld="1">${besteldTxt}</button>` : `<div class="besteld aan">${besteldTxt}</div>`) : rA && nB > 0 ? `<button class="besteld hoofd" data-bok="1">✓ Bestel ${C.fmt(nB)} ${ehTxt(a, nB)}${kwDoos(a) ? ` <small>(${C.fmt(nB * a.he)} ${stukMv(a, nB * a.he)})</small>` : ''}</button>` : rB && nB > 0 ? `<button class="besteld hoofd" data-neem="1">✓ Bestel ${C.fmt(nB)} ${ehTxt(a, nB)}${kwDoos(a) ? ` <small>(${C.fmt(nB * a.he)} ${stukMv(a, nB * a.he)})</small>` : ''}</button>` : rA && hb ? `<button class="besteld" data-besteld="1">☐ Besteld</button>` : '';
     onder = (telT || toonB ? `<div class="ctl ${telT && toonB ? '' : 'een'}">${telT ? `<div>${toonB ? '<label>Tellen</label>' : '<label>Hoeveel liggen er? <i>(mag leeg)</i></label>'}<div class="stp"><button data-s="v" data-d="-1">−</button><input type="number" inputmode="decimal" data-in="v" value="${vrVandaag}" placeholder="–"><button data-s="v" data-d="1">+</button></div></div>` : ''}${toonB ? `<div>${telT ? '<label>Bestellen</label>' : ''}<div class="stp ${rB ? '' : 'uit'}"><button data-s="b" data-d="-1" ${rB ? '' : 'disabled'}>−</button><input type="number" inputmode="decimal" data-in="b" class="${hb ? 'zelf' : ''}" value="${hb ? be.aantal : ''}" placeholder="${ad.adv || 0}" data-adv="${ad.adv || 0}" ${rB ? '' : 'disabled'}><button data-s="b" data-d="1" ${rB ? '' : 'disabled'}>+</button></div></div>` : ''}</div>` : '') + knop;
   }
   const dgv = bd && !isB ? dlArt(a, bd) : null;
