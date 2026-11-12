@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
-<link rel="stylesheet" href="style.css?b=1.44">
+<link rel="stylesheet" href="style.css?b=1.45">
 </head>
 <body>
 <header class="kop hide" id="kop"><div class="sync" id="sync"></div><div class="kopRij"><img class="koplogo" src="" alt="Coop Vogelenzang"><span class="ruimte"></span><button class="wiebtn hide" id="wieB"></button><span class="belwrap"><button class="belknop" id="belB" aria-label="Meldingen"><span aria-hidden="true">🔔</span><b class="belgetal hide" id="belN"></b></button><button class="hulpknop hide" id="hulpB" aria-label="Hulp">❓</button></span></div><button class="terug hide" id="terugB">‹ Home</button><div class="groet hide" id="kopG"></div><h1 id="kopT"></h1><p id="kopS"></p></header>
@@ -21,7 +21,7 @@
 <script>
 const LADEN=[["",["rekenkern.js"],""],["/* Coop Besteladvies – app */\n(function () {\n'use strict';",["app-basis.js","app-sync.js","app-login.js","app-home.js","app-deadlines.js","app-beheer.js","app-uploaden.js","app-pdf-print.js","app-extra.js","app-advies.js","app-acties.js","app-plekken.js","app-voorkoop.js","app-overig.js","app-brood.js","app-route.js","app-kantoor.js","app-start.js"],"})();"]];
 /* Laadt de app-bestanden en voert ze uit als één geheel (zoals vroeger in één index.html). */
-Promise.all(LADEN.map(([v,f,a])=>Promise.all(f.map(n=>fetch(n+'?b=1.44').then(r=>{if(!r.ok)throw n;return r.text()}))).then(t=>v+'\n'+t.join('\n')+'\n'+a))).then(l=>l.forEach(c=>{const s=document.createElement('script');s.textContent=c;document.body.appendChild(s)})).catch(e=>document.body.insertAdjacentHTML('beforeend','<p style="padding:24px;font:18px sans-serif">De app kon niet laden ('+e+'). Controleer internet en open de app opnieuw.</p>'));
+Promise.all(LADEN.map(([v,f,a])=>Promise.all(f.map(n=>fetch(n+'?b=1.45').then(r=>{if(!r.ok)throw n;return r.text()}))).then(t=>v+'\n'+t.join('\n')+'\n'+a))).then(l=>l.forEach(c=>{const s=document.createElement('script');s.textContent=c;document.body.appendChild(s)})).catch(e=>document.body.insertAdjacentHTML('beforeend','<p style="padding:24px;font:18px sans-serif">De app kon niet laden ('+e+'). Controleer internet en open de app opnieuw.</p>'));
 </script>
 </body>
 </html>
