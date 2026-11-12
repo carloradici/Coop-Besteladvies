@@ -86,7 +86,7 @@ try { const pr = window.print.bind(window); window.print = () => { buitenApp++; 
 document.addEventListener('touchmove', e => { if (document.body.classList.contains('vast') && !(e.target.closest && e.target.closest('select'))) e.preventDefault(); }, { passive: false });
 
 /* ---------- home: zoeken, overdracht, deadline ---------- */
-function homeZoekHtml() { return `<div class="bar homezoek"><div class="row"><input type="search" id="hq" placeholder="🔍 Zoek in alle onderdelen" value="${esc(ui.hq || '')}"><button class="btn sm sec" id="hScan" aria-label="Scannen">📷</button></div><div id="hRes"></div></div>`; }
+function homeZoekHtml() { return `<div class="bar homezoek"><div class="zoekveld"><input type="search" id="hq" placeholder="🔍 Zoek een artikel" value="${esc(ui.hq || '')}"><button id="hScan" aria-label="Scannen">📷</button></div><div id="hRes"></div></div>`; }
 function zoekAlles(q) {
   q = q.toLowerCase().trim(); if (q.length < 2) return [];
   const out = [];
@@ -109,27 +109,6 @@ function overdrachtHtml() {
   const l = Object.values(S.overdracht || {}).filter(r => !r.klaar && !r.soort).sort((a, b) => (a.ts || '') < (b.ts || '') ? -1 : 1);
   if (!l.length) return '<div class="ovklein"><button class="btn sm sec" id="ovAdd">📋 Bericht voor collega\'s</button></div>';
   return `<div class="blk overdracht"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">📋 Voor collega's</h2><button class="btn sm sec" id="ovAdd">+ Toevoegen</button></div>${l.length ? `<div class="list">${l.map(r => `<div class="it"><span style="flex:1">${esc(r.tekst)}<br><span class="small">${esc(r.wie || '')} · ${C.fmtDag((r.ts || C.today()).slice(0, 10))} ${hhmm(r.ts)}</span></span><button class="btn sm" data-ovok="${esc(r.id)}">✓ Gedaan</button></div>`).join('')}</div>` : '<p class="small" style="margin:6px 0 0">Geen openstaande punten voor de volgende dienst.</p>'}</div>`;
-}
-function deadlineHtml() {
-  const vandaag = C.today(); const nu = nuTs(); const units = {}; const regels = dlRegels();
-  for (const od of BESTEL_OD) {
-    if (!mag('o_' + od) || !(S.boeken[bronVan(od)] || lijstArtikelen(od).length)) continue;
-    for (const lv of bdLijst(od, 1)) {
-      if (lv.besteldag > vandaag) continue;
-      for (const a of lijstArtikelen(od)) {
-        if (a.uit || assStatus(a) !== 'in') continue; const dg = dlArt(a, lv); if (!dg || dg.dag !== vandaag) continue;
-        const lev = levVan(a); const id = lev + '|' + (dg.regel ? regels.indexOf(dg.regel) : 's') + '|' + lv.besteldag;
-        const u = units[id] || (units[id] = { lev, naam: dg.regel ? regelNaam(dg.regel) : '', t: dg.t, ts: dg.ts, L: lv.L, open: 0 });
-        const be = S.bestel[a.key + '|' + lv.besteldag]; const ad = C.advies(M, a.key, lv, vrVan(a.key), bestellingenVan(a.key));
-        const nodig = be && be.aantal !== null && be.aantal !== undefined ? be.aantal > 0 : ad.adv > 0; if (nodig && !(be && be.besteld)) u.open++;
-      }
-    }
-  }
-  const l = Object.values(units).sort((x, y) => x.ts < y.ts ? -1 : 1); if (!l.length) return '';
-  return `<div class="deadlines">${l.map(u => { const rest = minuten(u.t) - minuten(nuHHMM()); const naam = `${LEV_NAAM[u.lev]}${u.naam ? ' · ' + esc(u.naam) : ''}${u.naam ? ` (levering ${C.DAGEN[C.wd(u.L)]})` : ''}`;
-    const cls = !u.open ? 'groen' : rest <= 30 ? 'rood' : 'oranje';
-    const txt = !u.open ? `✓ ${naam}: alles besteld` : rest < 0 ? `⏰ ${naam}: deadline ${u.t} voorbij – nog ${u.open} open` : `⏰ ${naam}: nog ${rest >= 60 ? Math.floor(rest / 60) + ' u ' : ''}${rest % 60} min tot ${u.t} · ${u.open} open`;
-    return `<div class="deadline ${cls}">${txt}</div>`; }).join('')}</div>`;
 }
 function homeEvents(v) {
   const q = $('#hq'); if (q) { q.oninput = () => { ui.hq = q.value; homeZoekRes(); }; homeZoekRes(); }

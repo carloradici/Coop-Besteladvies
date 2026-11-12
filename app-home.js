@@ -42,15 +42,15 @@ function kop() {
   const bron = ui.tab === 'kw' ? 'kw' : 'vers'; const b = S.boeken[bron];
   const d = new Date(); const datum = `${C.DAGNAAM[C.wd(C.today())]} ${d.getDate()} ${['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'][d.getMonth()]}`;
   const boekTxt = ui.tab === 'kw' ? (b ? `Bestelboek Van Tol${b.datum ? ' · ' + C.fmtDag(b.datum) : ''}` : 'Bestelboek Van Tol') : (b ? `Bestelboek Versunie · week ${b.week || '?'}` : 'Bestelboek Versunie');
-  let t = { rapport: ['Rapporten', 'Vorige week, advies en acties'], gebruik: ['Wat wordt gebruikt', 'Hoe vaak elk scherm geopend wordt'], taken: ['Taken', 'Wat er vandaag moet gebeuren'], tafels: ['Actie planning', 'Vers-acties op de koeltafels'], kwacties: ['Actie planning', 'KW-acties op de koppen'], home: [mijnNaam(), datum + (winkels.length > 1 && WINKEL ? ' · ' + WINKEL.naam : '')], agf: ['AGF', boekTxt], vers: ['Vers', boekTxt], brood: ['Brood', boekTxt], diep: ['Diepvries', boekTxt], kw: ['KW', boekTxt], overig: ['Overig', 'Andere leveranciers en in/out. Alleen verwachte verkoop.'], assort: ['Assortiment', 'Nieuw, uit, gesaneerd en opgenomen'], beheer: ['Beheer', ui.bsub ? (BEHEER_SEC.find(x => x[0] === ui.bsub) || [])[2] || '' : 'Kies wat je wilt doen'], meer: ['Meer', `${mijnNaam()} · ${isBeheer() ? 'beheerder' : 'medewerker'}`], medewerkers: ['Medewerkers', 'Namen, pincodes en rechten'], mwedit: ['Rechten', ''], winkel: ['Winkel', (WINKEL && WINKEL.naam) || ''], meldingen: ['Meldingen', 'Pushmeldingen op dit toestel'], appinst: ['App-instellingen', 'Alleen voor jou'], vandaag: ['Wie deed wat', 'Per dag wat er is gedaan'], export: ['Exporteren', 'Naar Excel'], uitleg: ['Uitleg', 'Hoe de app werkt'], hoegoed: ['Hoe goed was het advies', 'Advies, besteld en verkocht per week'], leverancier: ['Overtypen', 'Per leverancier, voor de terminal'], levering: ['Leverdag-check', 'Afvinken bij het uitpakken'], acties: ['Actie planning', '3 · Bestellen voor de actieweek'], tafels: ['Actie planning', ui.tafel && S.tafels[ui.tafel] ? 'Vers · week ' + +tafelWeek().split('-')[1] : 'Vers-acties op de koeltafels'] }[ui.tab] || ['', ''];
+  let t = { rapport: ['Rapporten', 'Vorige week, advies en acties'], gebruik: ['Wat wordt gebruikt', 'Hoe vaak elk scherm geopend wordt'], taken: ['Taken', 'Wat er vandaag moet gebeuren'], tafels: ['Actie planning', 'Vers-acties op de koeltafels'], kwacties: ['Actie planning', 'KW-acties op de koppen'], home: [`${groet()}, ${mijnNaam()}`, datum + (winkels.length > 1 && WINKEL ? ' · ' + WINKEL.naam : '')], agf: ['AGF', boekTxt], vers: ['Vers', boekTxt], brood: ['Brood', boekTxt], diep: ['Diepvries', boekTxt], kw: ['KW', boekTxt], overig: ['Overig', 'Andere leveranciers en in/out. Alleen verwachte verkoop.'], assort: ['Assortiment', 'Nieuw, uit, gesaneerd en opgenomen'], beheer: ['Beheer', ui.bsub ? (BEHEER_SEC.find(x => x[0] === ui.bsub) || [])[2] || '' : 'Kies wat je wilt doen'], meer: ['Meer', `${mijnNaam()} · ${isBeheer() ? 'beheerder' : 'medewerker'}`], medewerkers: ['Medewerkers', 'Namen, pincodes en rechten'], mwedit: ['Rechten', ''], winkel: ['Winkel', (WINKEL && WINKEL.naam) || ''], meldingen: ['Meldingen', 'Pushmeldingen op dit toestel'], appinst: ['App-instellingen', 'Alleen voor jou'], vandaag: ['Wie deed wat', 'Per dag wat er is gedaan'], export: ['Exporteren', 'Naar Excel'], uitleg: ['Uitleg', 'Hoe de app werkt'], hoegoed: ['Hoe goed was het advies', 'Advies, besteld en verkocht per week'], leverancier: ['Overtypen', 'Per leverancier, voor de terminal'], levering: ['Leverdag-check', 'Afvinken bij het uitpakken'], acties: ['Actie planning', '3 · Bestellen voor de actieweek'], tafels: ['Actie planning', ui.tafel && S.tafels[ui.tafel] ? 'Vers · week ' + +tafelWeek().split('-')[1] : 'Vers-acties op de koeltafels'] }[ui.tab] || ['', ''];
   if (ui.tab === 'mwedit') { const m = mwLijst().find(x => x.id === ui.mwId); t[1] = m ? m.naam : ''; }
   if (ui.tab === 'meer' && ui.meerG) { const g = MEER_GROEPEN.find(x => x[0] === ui.meerG); if (g) t = [g[2], g[3]]; }
-  $('#kopG').textContent = ui.tab === 'home' ? groet() : ''; $('#kopG').classList.toggle('hide', ui.tab !== 'home');
+  $('#kopG').classList.add('hide');
   $('#terugB').classList.toggle('hide', ui.tab === 'home' || ui.tab === 'taken' || (ui.tab === 'meer' && !ui.meerG)); { const hb = $('#hulpB'); if (hb) hb.classList.remove('hide'); }
   belTel();
   $('#terugB').textContent = ui.tab === 'acties' ? '‹ Actie planning' : ui.tab === 'meer' ? '‹ Meer' : ui.tab === 'mwedit' ? '‹ Medewerkers' : ui.tab === 'tafels' && ui.tafel ? '‹ Alle tafels' :  MEER_SUB.includes(ui.tab) ? '‹ Meer' : '‹ Home';
   $('#kopT').textContent = t[0]; if (BESTEL_OD.includes(ui.tab)) $('#kopS').innerHTML = lijstKopTekst(ui.tab, t[1]); else $('#kopS').textContent = t[1];
-  const wb = $('#wieB'); wb.classList.toggle('hide', !mw); if (mw) wb.textContent = `👤 ${mw.naam} ⇄`;
+  const wb = $('#wieB'); wb.classList.add('hide'); if (mw) wb.textContent = `👤 ${mw.naam} ⇄`;
   $('.koplogo').src = logoSrc();
 }
 
@@ -94,10 +94,10 @@ function feestdagVoorstel() {
   return '';
 }
 function renderHome() {
-  const v = $('#view'), ks = kantoorMag(), inTaken = autoTaken().map(x => x.ga), lijsten = BESTEL_OD.filter(od => mag('o_' + od) && !inTaken.includes(od) && lijstArtikelen(od).length);
-  v.innerHTML = takenHomeHtml() + homeZoekHtml() + deadlineHtml() + (lijsten.length ? `<div class="lijstchips"><span class="small">Andere lijsten:</span>${lijsten.map(od => `<button class="chipknop" data-ga="${od}">${esc(odNaam(od))}</button>`).join('')}</div>` : '') + (ks ? kantoorKaart() + feestdagVoorstel() : '');
-  v.querySelectorAll('[data-ga]').forEach(b => b.onclick = () => ga(b.dataset.ga));
-  homeEvents(v); takenHomeEvents(v); const nk = $('#naarKantoor'); if (nk) nk.onclick = naarKantoor;
+  const v = $('#view'), lijsten = BESTEL_OD.filter(od => mag('o_' + od));
+  v.innerHTML = takenHomeHtml() + homeZoekHtml() + (lijsten.length ? `<div class="blk alleLijsten"><h2>Alle lijsten</h2><div class="lijstgrid">${lijsten.map(od => `<button class="lijstknop" data-ga="${od}"><span>${(ONDERDELEN.find(o => o[0] === od) || [])[2] || '🛒'}</span>${esc(odNaam(od))}</button>`).join('')}</div></div>` : '') + (kantoorMag() ? feestdagVoorstel() : '');
+  v.querySelectorAll('.lijstknop').forEach(b => b.onclick = () => ga(b.dataset.ga));
+  homeEvents(v); takenHomeEvents(v);
   v.querySelectorAll('[data-fd]').forEach(b => b.onclick = () => { const d = b.dataset.fd, s = b.dataset.s, bz = M.bijz[d]; const row = { dag: d, naam: bz.naam, soort: s, open: s === 'aangepast' ? (M.st.open[C.wd(d)][0] || '08:00') : null, dicht: s === 'aangepast' ? '16:00' : null }; saveAgenda(row).then(() => { if (s === 'aangepast') toast('Pas de tijden aan onder Beheer → Feestdagen', 4000); }); });
   v.querySelectorAll('[data-fdx]').forEach(b => b.onclick = () => { ls.set('cba-fd-' + W + '-' + b.dataset.fdx, 1); render(); });
 }
@@ -368,7 +368,7 @@ const notitieHtml = sleutel => { const n = S.notities[sleutel]; return n ? `<div
 /* ---------- uitleg en rondleiding ---------- */
 function sheet(html, onclick) { const ov = document.createElement('div'); ov.className = 'sheet'; ov.innerHTML = `<div class="sheetIn">${html}</div>`; ov.onclick = e => { if (e.target === ov || e.target.dataset.x !== undefined) ov.remove(); else if (onclick) onclick(e, ov); }; document.body.appendChild(ov); return ov; }
 const HULP = {
-  home: ['Home', 'Bovenaan staat wat je vandaag moet doen: tik erop en de app brengt je erheen. Zoek een artikel met de zoekbalk (een spelfout mag).'],
+  home: ['Home', 'Bij <b>Vandaag</b> staat wat je moet doen: tik op een regel en de app brengt je erheen. Zoek een artikel met de zoekbalk (een spelfout mag) of scan met 📷. Onder <b>Alle lijsten</b> open je elke afdeling. Wisselen van medewerker doe je bij Meer → Mijn app.'],
   lijst: ['Bestellen', 'Tik op de oranje knop <b>✓ Bestel</b> om het advies over te nemen, of pas het aan met − en +. Vink af met ☐ Besteld; ⚠️ = je komt niet uit tot de volgende levering, 👀 Even kijken = weinig nodig en voorraad onbekend, kijk zelf.'],
   overig: ['Overig', 'Artikelen die je niet via de terminal bestelt, met wat er verkocht is en wat de app verwacht.'],
   assort: ['Assortiment', 'Wat er nieuw is, uit het bestelboek gaat of gesaneerd is. Tik op <b>Schap klaar</b> zodra het schap klopt.'],
@@ -421,9 +421,9 @@ const HULP_ZIJ = new Set(['meer:kantoor', 'meer:mij', 'meer:bestellen', 'meer:te
 function hulpSleutel() { const t = ui.tab; if (BESTEL_OD.includes(t)) return 'lijst'; if (t === 'beheer') return 'beheer:' + (ui.bsub || 'upload'); if (t === 'meer') return ui.meerG ? 'meer:' + ui.meerG : 'meer'; if (t === 'tafels') return ui.tafel ? 'tafels:tafel' : 'tafels:' + (ui.versStap === 'in' ? 'in' : 'sort'); if (t === 'kwacties') return ui.kwKop ? 'kwacties:kop' : 'kwacties:' + (ui.kwStap === 'in' ? 'in' : 'sort'); return t; }
 function hulp() { const t = HULP[hulpSleutel()] || ['Hulp', 'Nog geen uitleg voor dit scherm.']; sheet(`<h2 style="margin:0">${t[0]}</h2><div class="hulptekst">${t[1]}</div><button class="btn" data-x>Begrepen</button>`); }
 const TOUR = [
-  ['Welkom bij Besteladvies', 'De app vertelt je per artikel hoeveel je moet bestellen. Bovenaan Home staat <b>Jouw taken vandaag</b>: daar begin je.'],
+  ['Welkom bij Besteladvies', 'De app vertelt je per artikel hoeveel je moet bestellen. Bovenaan Home staat <b>Vandaag</b>: daar begin je.'],
   ['Zo bestel je', '1. Tik op je afdeling, bijvoorbeeld AGF.<br>2. Tel wat er ligt en vul het in (mag leeg).<br>3. Kijk naar het <b>Advies</b> en tik op <b>Neem advies over</b> of vul zelf in.<br>4. Klaar? Tik onderaan op <b>Klaar, alles besteld</b>.'],
-  ['Hulp nodig?', 'Op elk scherm staat bovenaan <b>❓ Hulp</b>. Onder Meer kun je <b>Oefenen</b> zonder dat er iets echt verandert. Vergissing? Tik op <b>Ongedaan</b> onderin.']
+  ['Hulp nodig?', 'Op elk scherm staat rechtsboven <b>❓</b>. Onder Meer kun je <b>Oefenen</b> zonder dat er iets echt verandert. Vergissing? Tik op <b>Ongedaan</b> onderin.']
 ];
 function tourAlsNodig() { if (OEFEN) return; const k = 'cba-tour-' + wieSleutel(); if (ls.get(k)) return; ls.set(k, 1); tour(); }
 function tour(i = 0) {

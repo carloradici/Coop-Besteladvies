@@ -69,7 +69,7 @@ function belItemsBasis() {
   const out = []; const vandaag = C.today();
   for (const od of BESTEL_OD) {
     if (!mag('o_' + od)) continue; const cur = besteldag(od).cur;
-    if (cur && cur.besteldag <= vandaag && (S.boeken[bronVan(od)] || lijstArtikelen(od).length)) { const st = voortgang(od, cur, cur.besteldag < vandaag); if (st.open) out.push({ ic: (ONDERDELEN.find(o => o[0] === od) || [])[2] || '🛒', t: `${odNaam(od)}: vandaag bestellen`, sub: `Nog ${st.open} te gaan · levering ${C.fmtDag(cur.L)}`, ga: od }); }
+    if (cur && cur.besteldag <= vandaag && (S.boeken[bronVan(od)] || lijstArtikelen(od).length)) { const st = voortgang(od, cur, cur.besteldag < vandaag); if (st.open) out.push({ ic: (ONDERDELEN.find(o => o[0] === od) || [])[2] || '🛒', t: `${odNaam(od)}: vandaag bestellen`, sub: `Nog ${st.open} te gaan · levering ${C.fmtDag(cur.L)}`, ga: od, n: st.open, laat: cur.besteldag < vandaag }); }
   }
   const at = assortTelling(); if (at.nieuw || at.uit || at.san) out.push({ ic: '🔄', t: 'Assortiment gewijzigd', sub: `${at.nieuw} nieuw · ${at.uit + at.san} schap opnieuw indelen`, ga: 'assort' });
   if (mag('saneren')) { const n = Object.values(M.art).filter(a => a.eigen && eigenInBoek(a)).length; if (n) out.push({ ic: '📘', t: `${n} eigen ${n === 1 ? 'artikel staat' : 'artikelen staan'} nu in het bestelboek`, sub: 'Neem het boekartikel over', ga: BESTEL_OD.find(od => Object.values(M.art).some(a => a.eigen && a.od === od && eigenInBoek(a))) || 'home' }); }

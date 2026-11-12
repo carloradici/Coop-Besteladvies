@@ -20,15 +20,6 @@ function startEvents(v) {
   v.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { const x = startPunten().find(y => y[0] === b.dataset.sp); if (x) x[3](); });
   v.querySelectorAll('[data-spk]').forEach(b => b.onclick = () => { const w = Object.assign({}, S.inst, { start: Object.assign({}, (S.inst || {}).start, { [b.dataset.spk]: true }) }); if (DEMO) { S.inst = w; render(); } else saveInst(w); });
 }
-function kantoorKaart() {
-  const r = [], open = startPunten().filter(p => !p[2]).length, last = M.dagLijst[M.dagLijst.length - 1], t = assortTelling(), tt = tafelTelling();
-  if (open) r.push(`🚀 Start hier: nog ${open} ${open === 1 ? 'punt' : 'punten'}`);
-  if (!last || C.diff(last, C.today()) > 1) r.push(`<b class="rood">Verkoop ${last ? 't/m ' + C.fmtDag(last) : 'nog niet binnen'}</b>`);
-  if (t.nieuw || t.uit || t.san) r.push(`Assortiment: ${t.nieuw} nieuw · ${t.uit + t.san} schap aanpassen`);
-  if (tt.ombouw && tt.open) r.push(`<b class="rood">Actietafels ombouwen: ${tt.klaar} van ${tt.totaal} klaar</b>`);
-  if (C.wd(C.today()) <= 2) r.push('📊 Rapport van vorige week staat klaar');
-  return `<button class="blk kantoorkaart" id="naarKantoor"><span class="meeric">🗂</span><span style="flex:1"><b>Kantoor</b><br><span class="small">${r.join('<br>') || 'Alles bijgewerkt 👍'}</span></span><span class="pijl">›</span></button>`;
-}
 function naarKantoor() { ui.meerG = 'kantoor'; ga('meer'); }
 /* rapporten: vorige week, advies, acties */
 function vorigeWeek() { const w = C.isoWeek(C.add(C.today(), -7)); return `${w.y}-${String(w.w).padStart(2, '0')}`; }

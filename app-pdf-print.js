@@ -121,23 +121,29 @@ function totTekst(r) { if (!r.tot) return ''; const d = new Date(r.tot); if (isN
 function taakRij(r, metVoor) { return `<div class="it taakrij"><span style="flex:1">${r.soort === 'bericht' ? '✉️ ' : ''}<b>${esc(r.tekst)}</b><br><span class="small">${r.soort === 'bericht' ? `van ${esc(r.wie || '')} aan ${esc(String(r.voor || '').split(',').join(' en '))}` : `${metVoor ? `voor ${esc(!r.voor || r.voor === 'iedereen' ? 'iedereen' : r.voor)} · ` : ''}van ${esc(r.wie || '')}`}${r.tot ? ' · ' + totTekst(r) : ''}</span></span><button class="btn sm" data-tkok="${esc(r.id)}">${r.soort === 'bericht' ? 'Gelezen' : '✓ Gedaan'}</button></div>`; }
 function taakKlaar(id) { const r = S.overdracht[id]; if (!r) return; const rij = Object.assign({}, r, { klaar: true, klaar_door: mijnNaam(), klaar_om: new Date().toISOString() }); write('overdracht', [rij]); log('taak', `${r.soort === 'bericht' ? 'Bericht gelezen' : 'Taak gedaan'}: ${r.tekst}`); ongedaan(r.soort === 'bericht' ? 'Gelezen' : 'Taak afgevinkt', () => write('overdracht', [Object.assign({}, r, { klaar: false, klaar_door: null, klaar_om: null })])); render(); }
 function autoTaken() { try { return belItems().filter(x => x.jij && !x.taak); } catch (e) { return []; } }
+function dlTekst(od) {
+  const t = ((S.inst || {}).deadline || {})[od === 'kw' ? 'vantol' : 'versunie']; if (!t) return '';
+  const r = minuten(t) - minuten(nuHHMM()); return r < 0 ? '<span class="rood">deadline voorbij</span>' : r <= 60 ? `<span class="rood">nog ${r} min</span>` : 'vóór ' + esc(t);
+}
 function takenRijen(auto) {
   const best = auto.filter(x => BESTEL_OD.includes(x.ga) && x.ic !== '🔢'), tel = auto.filter(x => x.ic === '🔢'), rest = auto.filter(x => !best.includes(x) && !tel.includes(x));
   const rij = (ic, t, sub, attr) => `<button class="belrij" ${attr}><span class="ic">${ic}</span><span><b>${esc(t)}</b><small>${sub}</small></span><span class="pijl">›</span></button>`;
-  return (best.length ? `<div class="belrij takenbest"><span class="ic">🛒</span><span><b>Bestellen</b><small>${best.map(x => `<button class="chipknop" data-ga="${x.ga}" data-tka="${auto.indexOf(x)}">${esc(odNaam(x.ga))}</button>`).join('')}</small></span></div>` : '')
-    + (tel.length ? rij('🔢', 'Tellen', esc(tel.map(x => x.t.replace(/: tel (\d+) artikelen/, ' $1')).join(' · ')), 'data-tktel="1"') : '')
+  const nTel = tel.reduce((s, x) => s + (+(x.t.match(/tel (\d+)/) || [])[1] || 0), 0);
+  return best.map(x => rij(x.ic, `${odNaam(x.ga)} bestellen`, [x.laat ? '<span class="rood">te laat</span>' : dlTekst(x.ga), x.n ? `${x.n} artikel${x.n === 1 ? '' : 'en'}` : ''].filter(Boolean).join(' · '), `data-ga="${x.ga}" data-tka="${auto.indexOf(x)}"`)).join('')
+    + (tel.length ? rij('🔢', `${nTel} artikel${nTel === 1 ? '' : 'en'} tellen`, esc(tel.map(x => x.t.split(':')[0]).join(', ')), 'data-tktel="1"') : '')
     + rest.map(x => rij(x.ic, x.t, esc(x.sub), `data-tka="${auto.indexOf(x)}"`)).join('');
 }
 function takenHomeHtml() {
-  const auto = autoTaken(); const hand = openTaken(); if (!auto.length && !hand.length) return mag('o_agf') || mag('o_vers') || mag('o_kw') ? `<div class="takenblok leeg"><b>👍 Jouw taken vandaag</b><span class="small">Alles is gedaan. Goed bezig!</span></div>` : '';
-  return `<div class="blk takenblok"><div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Jouw taken vandaag</h2><button class="link" id="tkAlle">Alle taken ›</button></div>${takenRijen(auto)}${hand.slice(0, 3).map(r => taakRij(r)).join('')}${hand.length > 3 ? `<p class="small">+${hand.length - 3} meer bij Taken</p>` : ''}</div>`;
+  const auto = autoTaken(), hand = openTaken(); if (!auto.length && !hand.length) return mag('o_agf') || mag('o_vers') || mag('o_kw') ? `<div class="blk takenblok leeg"><b>✓ Alles gedaan voor vandaag</b></div>` : '';
+  const van = [...new Set(hand.map(r => r.wie).filter(Boolean))];
+  return `<div class="blk takenblok"><h2>Vandaag</h2>${takenRijen(auto)}${hand.length ? `<button class="belrij" data-tkh="1"><span class="ic">✅</span><span><b>${hand.length} ${hand.length === 1 ? 'taak' : 'taken'}${van.length === 1 ? ' van ' + esc(van[0]) : ''}</b><small>${esc(hand[0].tekst)}${hand.length > 1 ? ' …' : ''}</small></span><span class="pijl">›</span></button>` : ''}</div>`;
 }
 function takenHomeEvents(v) {
   const auto = autoTaken();
   v.querySelectorAll('[data-tka]').forEach(b => b.onclick = () => { const x = auto[+b.dataset.tka]; if (!x) return; if (x.bsub) ui.bsub = x.bsub; ga(x.ga); if (x.bsub) { ui.bsub = x.bsub; render(); } });
   v.querySelectorAll('[data-tkok]').forEach(b => b.onclick = () => taakKlaar(b.dataset.tkok));
   v.querySelectorAll('[data-tktel]').forEach(b => b.onclick = tellenSheet);
-  const a = $('#tkAlle'); if (a) a.onclick = () => ga('taken');
+  v.querySelectorAll('[data-tkh]').forEach(b => b.onclick = () => ga('taken'));
 }
 function renderTaken() {
   const v = $('#view'); const auto = autoTaken(); const mijn = openTaken(); const anderen = isBeheer() || mag('team') ? openTaken(true).filter(r => !mijn.includes(r)) : [];
@@ -262,7 +268,7 @@ function renderMeer() {
       const sc = items.map(x => [Math.max((zoekScore(q, x.t) || -5) + 5, zoekScore(q, x.s), zoekScore(q, x.syn), zoekScore(q, (MEER_GROEPEN.find(g => g[0] === x.g) || [])[2])), x]).filter(z => z[0] > 0).sort((a, b) => b[0] - a[0]);
       return sc.length ? `<div class="blk lijstblok">${sc.slice(0, 12).map(([, x]) => knop(Object.assign({}, x, { s: `${(MEER_GROEPEN.find(g => g[0] === x.g) || [])[2] || ''}${x.s ? ' · ' + x.s : ''}` }))).join('')}</div>` : '<div class="empty">Niets gevonden. Probeer een ander woord.</div>';
     }
-    const grp = gs => `<div class="blk lijstblok">${gs.map(g => { if (g[0] === 'kantoor') { const o = startPunten().filter(p => !p[2]).length; return `<button class="rijknop" data-mg="kantoor"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${o ? `🚀 Start hier: nog ${o} ${o === 1 ? 'punt' : 'punten'}` : g[3]}</span></span><span class="pijl">›</span></button>`; } const n = items.filter(x => x.g === g[0]); return `<button class="rijknop" data-mg="${g[0]}"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${n.length === 1 ? n[0].s || g[3] : n.map(x => x.t).slice(0, 4).join(', ')}</span></span><span class="pijl">›</span></button>`; }).join('')}</div><p class="small" style="text-align:center">Coop Besteladvies · versie ${VERSIE}</p>`;
+    const grp = gs => `<div class="blk lijstblok">${gs.map(g => { if (g[0] === 'kantoor') { const o = startPunten().filter(p => !p[2]).length; return `<button class="rijknop" data-mg="kantoor"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${o ? `🚀 Start hier: nog ${o} ${o === 1 ? 'punt' : 'punten'}` : g[3]}</span></span>${o ? `<b class="telbadge">${o}</b>` : ''}<span class="pijl">›</span></button>`; } const n = items.filter(x => x.g === g[0]); return `<button class="rijknop" data-mg="${g[0]}"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${n.length === 1 ? n[0].s || g[3] : n.map(x => x.t).slice(0, 4).join(', ')}</span></span><span class="pijl">›</span></button>`; }).join('')}</div><p class="small" style="text-align:center">Coop Besteladvies · versie ${VERSIE}</p>`;
     if (ui.meerG === 'kantoor') return startHtml() + grp(MEER_GROEPEN.filter(g => KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0])));
     if (ui.meerG) return `<div class="blk lijstblok">${items.filter(x => x.g === ui.meerG).map(knop).join('')}</div>`;
     return grp(MEER_GROEPEN.filter(g => g[0] === 'kantoor' ? kantoorMag() : !KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0])));
