@@ -116,14 +116,14 @@ function renderLijst(od, soft) {
   html += `<div id="lst"></div>`;
   if (cur && !leeg && st.nodig && mag('afvinken')) html += `<div class="klaarblok"><button class="btn klaarknop" id="klaarB">${st.open ? 'Klaar, alles besteld ✓' : '✓ Alles besteld'}</button><p class="small">${st.open ? `Vinkt de ${st.open} artikelen met advies in één keer af.` : 'Goed bezig 👍'}</p></div>`;
   if (!arts.length && !leeg) html += `<div class="empty">${ui.modus === 'todo' ? '✓ Niets meer te doen voor deze besteldag.' : 'Geen artikelen voor deze keuze.'}</div>`;
-  v.innerHTML = html;
+  zetHtml(v, html);
   const bv = $('#bdV'); if (bv) bv.onclick = () => { ui.bd[od] = lijst[ci - 1].besteldag; render(); };
   const bnx = $('#bdN'); if (bnx) bnx.onclick = () => { ui.bd[od] = lijst[ci + 1].besteldag; render(); };
   v.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => { zetModus(b.dataset.mod); render(); });
   const nb = $('#naarBeheer'); if (nb) nb.onclick = () => naarBeheer('upload');
   $('#lijstMenu').onclick = () => lijstMenu(od, cur, arts, bdSleutel);
   const tv = $('#telV'); if (tv) tv.onclick = () => telModus(od, telKeuze(od, cur).open.map(k => M.art[k]).filter(Boolean));
-  const q = $('#q'); q.oninput = () => { ui.q = q.value.trim(); clearTimeout(q._t); q._t = setTimeout(() => { render(); const n = $('#q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
+  const q = $('#q'); q.oninput = () => { ui.q = q.value.trim(); clearTimeout(q._t); q._t = setTimeout(render, 250); };
   const at = $('#assT'); if (at) at.onclick = () => ga('assort');
   const kb = $('#klaarB'); if (kb) kb.onclick = () => allesBesteld(od, cur);
   $('#scanB').onclick = () => scanStart(od);
@@ -301,8 +301,8 @@ function renderOverig() {
   };
   h += sect('In/out (888888)', io, true) + sect('Andere leveranciers', an, false);
   if (!keys.length) h += '<div class="empty">Nog geen verkoopcijfers van deze artikelen.</div>';
-  v.innerHTML = h;
-  const q = $('#q'); q.oninput = () => { ui.q = q.value.trim(); clearTimeout(q._t); q._t = setTimeout(() => { render(); const n = $('#q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
+  zetHtml(v, h);
+  const q = $('#q'); q.oninput = () => { ui.q = q.value.trim(); clearTimeout(q._t); q._t = setTimeout(render, 250); };
   v.onclick = e => { const mb = e.target.closest('[data-meer]'); if (!mb) return; const c = mb.closest('.card'); const key = 'o:' + c.dataset.ean; ui.open = ui.open || new Set(); ui.open.has(key) ? ui.open.delete(key) : ui.open.add(key); c.classList.toggle('open', ui.open.has(key)); mb.textContent = ui.open.has(key) ? '▴ Minder' : '▾ Meer'; };
   v.onchange = e => {
     const c = e.target.closest('.card'); if (!c || !e.target.dataset.io) return; const ean = c.dataset.ean; const cur = Object.assign({ ean }, S.inout[ean] || {});
@@ -326,4 +326,17 @@ function kaartOverig(k, isIo, laatste) {
   const open = ui.open && ui.open.has('o:' + ean);
   return `<div class="card ${laatste ? 'laatste' : ''} ${open ? 'open' : ''}" data-ean="${ean}"><div class="hd"><div class="nm">${esc(m.n)}</div><div class="adv"><b>${C.fmt(verw7, 0)}</b><span>deze week</span></div></div><div class="meta">gem. ${C.fmt(wt.gwt / 7)} per dag · ${esc(m.m || m.l || '')}</div>${boven}
   <button class="meerknop" data-meer="1">${open ? '▴ Minder' : '▾ Meer'}</button><div class="kaartmeer"><div class="meta">EAN ${ean}${m.b ? ' · bestelnr ' + m.b : ''}${m.so ? ' · ' + esc(m.so) : ''}</div>${tbl}${x}</div></div>`;
+}
+/* 1.43: bij zoeken alleen de zoekregel laten staan, zodat het toetsenbord open blijft; de rest wordt vernieuwd */
+function zetHtml(v, html) {
+  const q = document.activeElement, t = document.createElement('div'); t.innerHTML = html; const nq = t.querySelector('#q');
+  if (!(q && q.id === 'q' && v.contains(q) && nq)) { v.innerHTML = html; return; }
+  let oud = q.closest('.row') || q.parentElement, nw = nq.closest('.row') || nq.parentElement, d1 = 0, d2 = 0; for (let x = oud; x !== v; x = x.parentElement) d1++; for (let x = nw; x !== t; x = x.parentElement) d2++;
+  if (d1 !== d2) { v.innerHTML = html; return; }
+  while (oud !== v) {
+    const op = oud.parentElement, np = nw.parentElement; let voor = true;
+    [...op.childNodes].forEach(n => n !== oud && n.remove());
+    [...np.childNodes].forEach(n => { if (n === nw) { voor = false; return; } voor ? op.insertBefore(n, oud) : op.appendChild(n); });
+    if (op !== v) op.className = np.className; oud = op; nw = np;
+  }
 }
