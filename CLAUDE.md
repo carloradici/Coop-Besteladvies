@@ -62,6 +62,8 @@ Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js`, `verkoop-export.js
 - Rapporteer alleen de uitkomst.
 
 ## Opleveren
-- Zip `coop-besteladvies-X.Y-github.zip` met alleen de gewijzigde GitHub-bestanden (plat, geen mappen).
+- **Bouw altijd verder op de bestanden in deze repo**: haal vóór elke bouw eerst de laatste versie op (Carlo kan zelf iets geüpload hebben), nooit op een eigen kopie. Werk niet in twee chats tegelijk aan deze app.
+- Na "bouwen" en testen: **zelf committen en pushen naar main** (versienummer in de commit-boodschap). Carlo uploadt niets meer.
+- Lukt pushen niet, dan als terugval een zip `coop-besteladvies-X.Y-github.zip` met alleen de gewijzigde bestanden (plat, geen mappen).
 - Supabase: SQL als platte tekst in de chat, compacte delen zonder commentaar (max ~5 KB per deel), altijd met link naar de juiste Supabase-pagina. Nooit "vervang één regel": altijd het hele bestand. Niets nodig? Zeg: "Voor Supabase hoef je niets te doen".
-- Na oplevering alleen: wat nieuw is, wat te uploaden, of Supabase iets nodig heeft.
+- Na oplevering alleen: wat nieuw is, dat het op GitHub staat, of Supabase iets nodig heeft (SQL, of Deploy tikken bij een gewijzigde Edge Function).
