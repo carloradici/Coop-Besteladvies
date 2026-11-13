@@ -215,7 +215,7 @@ function plekSegment() {
   d.querySelectorAll('[data-pls]').forEach(b => b.onclick = () => { ui.plekSoort = b.dataset.pls; ga(b.dataset.pls === 'kop' ? 'kwacties' : 'tafels'); });
 }
 /* meer: groepen + slim zoeken */
-const MEER_GROEPEN = [['kantoor', '🏢', 'Kantoor', 'Planning, bestanden en instellingen'], ['mij', '👤', 'Mijn app', 'Weergave, pincode en ander persoon'], ['bestellen', '🛒', 'Bestellen instellen', 'Looproute, rapporten, besteldagen, advies'], ['team', '👥', 'Medewerkers', 'Pincodes, rechten, nieuwe medewerker, wie deed wat'], ['plekken', '📅', 'Actie planning', 'Vers op de koeltafels, KW op de koppen'], ['data', '📤', 'Gegevens uploaden', 'Bestanden, automatisch uploaden, controleren'], ['winkel', '🏪', 'Winkel', 'Koppelcode, openingstijden, afdelingen'], ['geav', '🧰', 'Geavanceerd', 'Techniek en zeldzame instellingen, alleen voor de beheerder'], ['hulp', '❓', 'Hulp', 'Uitleg, rondleiding en oefenen']];
+const MEER_GROEPEN = [['indeling', '✏️', 'Indeling aanpassen', 'Volgorde en plek van de menu-items, voor iedereen'], ['kantoor', '🏢', 'Kantoor', 'Planning, bestanden en instellingen'], ['mij', '👤', 'Mijn app', 'Weergave, pincode en ander persoon'], ['bestellen', '🛒', 'Bestellen instellen', 'Looproute, rapporten, besteldagen, advies'], ['team', '👥', 'Medewerkers', 'Pincodes, rechten, nieuwe medewerker, wie deed wat'], ['plekken', '📅', 'Actie planning', 'Vers op de koeltafels, KW op de koppen'], ['data', '📤', 'Gegevens uploaden', 'Bestanden, automatisch uploaden, controleren'], ['winkel', '🏪', 'Winkel', 'Koppelcode, openingstijden, afdelingen'], ['geav', '🧰', 'Geavanceerd', 'Techniek en zeldzame instellingen, alleen voor de beheerder'], ['hulp', '❓', 'Hulp', 'Uitleg, rondleiding en oefenen']];
 function naarBeheer(sec) { ui.bsub = sec; ga('beheer'); }
 function meerItems() {
   const kU = mag('upload'), kI = mag('instellingen'), kT = mag('team');
@@ -255,7 +255,8 @@ function meerItems() {
     ['geav', 'mGeb', '📈', 'Wat wordt gebruikt', 'Hoe vaak elk scherm geopend wordt', 'gebruik statistiek teller functies tellen', isBeheer(), () => ga('gebruik')],
     ['hulp', 'mOef', '🎓', OEFEN ? 'Stoppen met oefenen' : 'Oefenen', 'Alles uitproberen zonder dat er iets echt verandert', 'oefenen oefenronde proberen test leren', true, () => OEFEN ? stopOefenen() : startOefenen()]
   ];
-  return L.filter(x => x[6]).map(x => ({ g: x[0], id: x[1], ic: x[2], t: x[3], s: x[4], syn: x[5], go: x[7] }));
+  const m = (S.inst || {}).menu || {};
+  return L.filter(x => x[6]).map((x, i) => { const o = m[x[1]] || {}; return { g: o.g || x[0], id: x[1], ic: x[2], t: x[3], s: x[4], syn: x[5], go: x[7], o: o.o ?? i * 10 }; }).sort((a, b) => a.o - b.o);
 }
 function renderMeer() {
   const v = $('#view'); const items = meerItems(); const q = ui.meerQ || '';
@@ -267,19 +268,32 @@ function renderMeer() {
       return sc.length ? `<div class="blk lijstblok">${sc.slice(0, 12).map(([, x]) => knop(Object.assign({}, x, { s: `${(MEER_GROEPEN.find(g => g[0] === x.g) || [])[2] || ''}${x.s ? ' · ' + x.s : ''}` }))).join('')}</div>` : '<div class="empty">Niets gevonden. Probeer een ander woord.</div>';
     }
     const grp = gs => `<div class="blk lijstblok">${gs.map(g => { if (g[0] === 'kantoor') { const o = startPunten().filter(p => !p[2]).length; return `<button class="rijknop" data-mg="kantoor"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${o ? `🚀 Start hier: nog ${o} ${o === 1 ? 'punt' : 'punten'}` : g[3]}</span></span>${o ? `<b class="telbadge">${o}</b>` : ''}<span class="pijl">›</span></button>`; } const n = items.filter(x => x.g === g[0]); return `<button class="rijknop" data-mg="${g[0]}"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${n.length === 1 ? n[0].s || g[3] : g[3]}</span></span><span class="pijl">›</span></button>`; }).join('')}</div><p class="small" style="text-align:center">Coop Besteladvies · versie ${VERSIE}</p>`;
+    if (ui.meerG === 'indeling') return indelingHtml(items);
     if (ui.meerG === 'kantoor') return startHtml() + grp(MEER_GROEPEN.filter(g => KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0])));
     if (ui.meerG) return `<div class="blk lijstblok">${items.filter(x => x.g === ui.meerG).map(knop).join('')}</div>`;
     const snel = items.filter(x => x.g === 'snel');
-    return (snel.length ? `<div class="blk lijstblok">${snel.map(knop).join('')}</div>` : '') + grp(MEER_GROEPEN.filter(g => g[0] === 'kantoor' ? kantoorMag() : !KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0])));
+    return (snel.length ? `<div class="blk lijstblok">${snel.map(knop).join('')}</div>` : '') + grp(MEER_GROEPEN.filter(g => g[0] === 'kantoor' ? kantoorMag() : !KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0]))) + (isBeheer() ? '<button class="btn sec" data-mg="indeling" style="width:calc(100% - 32px);margin:4px 16px 16px">✏️ Indeling aanpassen</button>' : '');
   };
   v.innerHTML = h + res() + '</div>';
   const bind = () => {
     v.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => { const x = items.find(y => y.id === b.dataset.mi); ui.meerQ = ''; if (x) x.go(); });
     v.querySelectorAll('[data-mg]').forEach(b => b.onclick = () => { const n = items.filter(x => x.g === b.dataset.mg); if (n.length === 1) return n[0].go(); ui.meerG = b.dataset.mg; render(); });
-    startEvents(v);
+    startEvents(v); if (ui.meerG === 'indeling') indelingEvents(v, items);
   };
   bind();
   const qi = $('#meerQ'); qi.oninput = () => { ui.meerQ = qi.value; clearTimeout(qi._t); qi._t = setTimeout(() => { renderMeer(); const n = $('#meerQ'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 150); };
+}
+/* 1.47: menu-indeling aanpassen (voor iedereen, in S.inst.menu) */
+const IND_G = () => [['snel', 'Bovenaan']].concat(MEER_GROEPEN.filter(g => !['indeling', 'kantoor'].includes(g[0])).map(g => [g[0], (KANTOOR_G.includes(g[0]) ? 'Kantoor › ' : '') + g[2]]));
+function indelingHtml(items) {
+  return `<div class="blk"><p class="small" style="margin:0">Zet items hoger of lager met ▲ ▼, of kies een andere plek. Dit geldt voor iedereen; collega's zien alleen wat ze mogen.</p></div>` + IND_G().map(([g, n]) => { const l = items.filter(x => x.g === g); return l.length ? `<div class="blk lijstblok"><h3 class="indkop">${n}</h3>${l.map((x, j) => `<div class="indrij"><span class="meeric">${x.ic}</span><b>${x.t}</b><select data-ig="${x.id}" aria-label="Plek">${IND_G().map(([k, t]) => `<option value="${k}"${k === g ? ' selected' : ''}>${t}</option>`).join('')}</select><button data-iu="${x.id}" ${j ? '' : 'disabled'} aria-label="Hoger">▲</button><button data-id="${x.id}" ${j < l.length - 1 ? '' : 'disabled'} aria-label="Lager">▼</button></div>`).join('')}</div>` : ''; }).join('') + `<button class="btn sec" id="indStd" style="width:calc(100% - 32px);margin:4px 16px 16px">Standaard terugzetten</button>`;
+}
+function indelingEvents(v, items) {
+  const bewaar = menu => { const w = Object.assign({}, S.inst, { menu }); if (DEMO) { S.inst = w; render(); } else saveInst(w); };
+  const nu = () => { const m = {}; items.forEach(x => m[x.id] = { g: x.g, o: x.o }); return m; };
+  v.querySelectorAll('[data-ig]').forEach(s => s.onchange = () => { const m = nu(); m[s.dataset.ig] = { g: s.value, o: 1e6 }; bewaar(m); });
+  v.querySelectorAll('[data-iu],[data-id]').forEach(b => b.onclick = () => { const id = b.dataset.iu || b.dataset.id, x = items.find(y => y.id === id), l = items.filter(y => y.g === x.g), j = l.indexOf(x), k = b.dataset.iu ? j - 1 : j + 1; if (k < 0 || k >= l.length) return; [l[j], l[k]] = [l[k], l[j]]; const m = nu(); l.forEach((y, n) => m[y.id] = { g: y.g, o: n * 10 }); bewaar(m); });
+  $('#indStd').onclick = async () => { if (await bevestig('Standaard terugzetten?', 'Alle menu-items gaan terug naar hun gewone plek.', 'Terugzetten')) { const w = Object.assign({}, S.inst); delete w.menu; if (DEMO) { S.inst = w; render(); } else saveInst(w); } };
 }
 /* checklist nieuwe medewerker */
 function nieuwChecklist(naam) {
