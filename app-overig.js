@@ -123,19 +123,6 @@ function homeEvents(v) {
 setInterval(() => { if (OPEN && ui.tab === 'home' && !document.hidden && !$('.sheet') && document.activeElement && document.activeElement.id !== 'hq' && $('.deadlines')) render(); }, 60000);
 
 /* ---------- alles volgens advies, groep besteld ---------- */
-async function allesVolgensAdvies(od, cur) {
-  const rows = [];
-  for (const a of lijstArtikelen(od)) {
-    if (a.uit || assStatus(a) !== 'in') continue; const be = S.bestel[a.key + '|' + cur.besteldag];
-    if (be && be.aantal !== null && be.aantal !== undefined) continue;
-    const ad = C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)); if (!ad.adv) continue;
-    rows.push({ bron: a.bron, nr: a.nr, besteldag: cur.besteldag, lever: cur.L, aantal: ad.adv, door: mijnNaam(), advies: ad.adv });
-  }
-  if (!rows.length) return toast('Er is niets meer in te vullen');
-  if (!await bevestig('Klopt dit?', `Bij <b>${rows.length} artikelen</b> zonder eigen bestelling wordt het advies ingevuld als bestelling voor ${C.fmtDag(cur.besteldag)}. Wat je al hebt ingevuld blijft staan.`, 'Invullen', 'Annuleren')) return;
-  write('bestellingen', rows); log('bestelling', `${odNaam(od)}: ${rows.length} artikelen volgens advies ingevuld`);
-  ongedaan(`${rows.length} ingevuld`, () => write('bestellingen', rows.map(r => Object.assign({}, r, { aantal: null })))); render(true);
-}
 async function groepBesteld(od, cur, g) {
   const rows = [];
   for (const a of lijstArtikelen(od)) {

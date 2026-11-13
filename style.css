@@ -584,3 +584,30 @@ select{max-width:100%}
 body:has(.telmodus) .flits{display:none}
 .telnog{display:block;font-size:12px;color:var(--grijs);font-weight:600}.telkop>span:not(:has(button)){text-align:center}.teldagen button{font-size:13px;padding:10px 2px}
 .besteld small{font-weight:600;font-size:14px;opacity:.85}
+/* 1.46: kop Coop-oranje met donkere tekst */
+header.kop,body.inlog,.login{--opKop:#1a1a1a;color:var(--opKop)}
+header.kop p,header.kop .sync,header.kop .sync.off{color:rgba(26,26,26,.82)}
+.terug{color:var(--opKop)}
+.belknop,.belwrap .hulpknop{border-color:rgba(26,26,26,.55);background:rgba(255,255,255,.28);color:#1a1a1a}
+.belgetal{border-color:var(--merk)}
+.login .btn.sec{color:#1a1a1a;border-color:#1a1a1a}.login .btn{color:#9a4600}
+.login .cijferblok .wis{color:#1a1a1a}.pinbolletjes i{border-color:rgba(26,26,26,.75)}.pinbolletjes i.vol{background:#1a1a1a;border-color:#1a1a1a}
+.login .msg,.login .versie{color:#1a1a1a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) header.kop{--merk:#d06a00}}
+:root[data-theme="dark"] header.kop{--merk:#d06a00}
+/* bestellijst compacter */
+.ctl.rij{display:grid;grid-template-columns:1fr 1.25fr;gap:8px;align-items:stretch}.ctl.rij .besteld{margin-top:0;min-height:48px;padding:6px 8px;font-size:16px;line-height:1.15}
+.besteld small{display:block;font-size:12px;font-weight:600;opacity:.85}
+.card{padding-top:10px;padding-bottom:10px}
+.telvraag{min-height:44px;padding:6px 12px;font-size:15px;font-weight:700}.telvraag .pijl{margin-left:auto}
+.collo{display:flex;align-items:center;gap:8px;font-weight:600}.collo>span{flex:1}.collo .btn{margin-top:0;flex:none;min-height:40px}
+.bo.stil{background:none;padding:4px 0 0;color:var(--grijs);font-size:13px}.bo .boinfo{display:block}
+.belrij.nulkop{margin:14px 16px 0;width:calc(100% - 32px);border:1px solid var(--lijn);border-radius:14px;background:var(--kaart)}
+.kaartvoet.san{border-top:0;justify-content:flex-end;margin-top:2px}
+.segment.modus button{min-height:44px}
+.card .hd .nm{cursor:pointer}
+/* telscherm */
+.telkop span button,.telkop button{min-width:44px;min-height:44px}
+.telwaarde small{font-size:22px;font-weight:700;color:var(--grijs)}
+details.uitleg>summary{list-style:none;display:flex;justify-content:space-between;align-items:center}details.uitleg>summary::-webkit-details-marker{display:none}details.uitleg[open]>summary .pijl{transform:rotate(180deg)}
+.ctl.rij .besteld{height:auto}.padkop{margin-top:16px}

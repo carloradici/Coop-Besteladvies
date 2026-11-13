@@ -226,14 +226,14 @@ function shell() {
   $('#wieB').onclick = () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); };
   $('.koplogo').src = logoSrc(); setSync(); oefenBalk();
 }
-const MEER_SUB = ['rapport', 'gebruik', 'route', 'medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer', 'uitleg', 'hoegoed', 'leverancier', 'levering'];
+const MEER_SUB = ['tafels', 'kwacties', 'rapport', 'gebruik', 'route', 'medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer', 'uitleg', 'hoegoed', 'leverancier', 'levering'];
 const SCROLL = {}; let scrollSleutel = '';
 function schermSleutel() { return [ui.tab, ui.bsub || '', ui.meerG || '', ui.tafel || '', ui.kwKop || '', ui.kwStap || '', ui.versStap || ''].join('|'); }
 function zoekKruis(root) { (root || document).querySelectorAll('input[type=search]:not([data-kr])').forEach(i => { i.dataset.kr = 1; const w = document.createElement('span'); w.className = 'zwrap'; const cs = getComputedStyle(i); w.style.flex = cs.flex; if (i.style.width) w.style.width = i.style.width; i.parentNode.insertBefore(w, i); w.appendChild(i); i.style.width = '100%'; const k = document.createElement('button'); k.type = 'button'; k.className = 'zkruis'; k.textContent = '✕'; k.setAttribute('aria-label', 'Wissen'); k.onclick = () => { i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); i.focus(); }; w.appendChild(k); w.classList.toggle('vol', !!i.value); }); }
 document.addEventListener('input', e => { if (e.target.matches && e.target.matches('input[type=search]') && e.target.parentNode.classList.contains('zwrap')) e.target.parentNode.classList.toggle('vol', !!e.target.value); });
 new MutationObserver(() => zoekKruis()).observe(document.documentElement, { childList: true, subtree: true });
 addEventListener('scroll', () => { if (scrollSleutel) SCROLL[scrollSleutel] = window.scrollY; }, { passive: true });
-function ga(tab) { const u = $('#undoBalk'); if (u) u.remove(); if (tab === 'plekken') tab = ui.plekSoort === 'kop' ? 'kwacties' : 'tafels'; if (BESTEL_OD.includes(tab) && ui.tab !== tab && !window.__E2E_ALLES) ui.modus = 'todo'; ui.tab = tab; ui.q = ''; ui.groep = ''; render(); }
+function ga(tab) { const u = $('#undoBalk'); if (u) u.remove(); if (tab === 'plekken') tab = ui.plekSoort === 'kop' ? 'kwacties' : 'tafels'; if (BESTEL_OD.includes(tab) && ui.tab !== tab && !window.__E2E_ALLES) ui.modus = 'todo'; ui.tab = tab; ui.q = ''; ui.groep = ''; ui.blijf = null; render(); }
 async function logout() {
   if (!ask(sess && sess.kind === 'anon' ? 'Dit toestel ontkoppelen? Daarna is de koppelcode weer nodig.' : 'Uitloggen op dit apparaat?')) return;
   sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); OPEN = false; outbox = []; await iset('outbox', []); showLogin();

@@ -201,10 +201,10 @@ async function allesBesteld(od, cur) {
     rows.push({ bron: a.bron, nr: a.nr, besteldag: cur.besteldag, lever: cur.L, besteld: true, besteld_door: mijnNaam(), besteld_om: nu, advies: ad.adv }); stuks += n;
   }
   if (!rows.length) return toast('✓ Alles is al besteld. Goed bezig 👍', 3000);
-  if (!await bevestig('Klaar met bestellen?', `<b>${odNaam(od)}</b> · bestellen ${C.fmtDag(cur.besteldag)}<br>${rows.length} artikelen worden afgevinkt als besteld (${C.fmt(stuks)} in totaal).<br><br>Heb je alles in de terminal ingevoerd?`, 'Ja, alles besteld', 'Nog niet')) return;
+  if (!await bevestig('Klaar met bestellen?', `<b>${odNaam(od)}</b> · bestellen ${C.fmtDag(cur.besteldag)}<br>${rows.length} ${rows.length === 1 ? 'artikel wordt' : 'artikelen worden'} afgevinkt als besteld.`, 'Ja, alles besteld', 'Nog niet')) return;
   write('bestellingen', rows); log('besteld', `${odNaam(od)} klaar: ${rows.length} artikelen besteld`);
   ongedaan('Alles afgevinkt', () => write('bestellingen', rows.map(r => Object.assign({}, r, { besteld: false, besteld_door: null, besteld_om: null }))));
-  toast(`👍 ${odNaam(od)} is besteld. Goed bezig!`, 3000); render(true);
+  render(true);
 }
 /* plekken: koeltafels en koppen */
 function plekSegment() {
@@ -215,7 +215,7 @@ function plekSegment() {
   d.querySelectorAll('[data-pls]').forEach(b => b.onclick = () => { ui.plekSoort = b.dataset.pls; ga(b.dataset.pls === 'kop' ? 'kwacties' : 'tafels'); });
 }
 /* meer: groepen + slim zoeken */
-const MEER_GROEPEN = [['kantoor', '🏢', 'Kantoor', 'Planning, bestanden en instellingen'], ['mij', '👤', 'Mijn app', 'Weergave, pincode en ander persoon'], ['bestellen', '🛒', 'Bestellen', 'Leveranciers, levering, deadlines, waarschuwingen'], ['team', '👥', 'Medewerkers', 'Pincodes, rechten, nieuwe medewerker, wie deed wat'], ['plekken', '📅', 'Actie planning', 'Vers op de koeltafels, KW op de koppen'], ['data', '📤', 'Gegevens uploaden', 'Bestanden, automatisch uploaden, controleren'], ['winkel', '🏪', 'Winkel en app', 'Koppelcode, openingstijden, afdelingen, back-up'], ['hulp', '❓', 'Hulp', 'Uitleg, woordenlijst, rondleiding, oefenen']];
+const MEER_GROEPEN = [['kantoor', '🏢', 'Kantoor', 'Planning, bestanden en instellingen'], ['mij', '👤', 'Mijn app', 'Weergave, pincode en ander persoon'], ['bestellen', '🛒', 'Bestellen instellen', 'Looproute, rapporten, besteldagen, advies'], ['team', '👥', 'Medewerkers', 'Pincodes, rechten, nieuwe medewerker, wie deed wat'], ['plekken', '📅', 'Actie planning', 'Vers op de koeltafels, KW op de koppen'], ['data', '📤', 'Gegevens uploaden', 'Bestanden, automatisch uploaden, controleren'], ['winkel', '🏪', 'Winkel', 'Koppelcode, openingstijden, afdelingen'], ['geav', '🧰', 'Geavanceerd', 'Techniek en zeldzame instellingen, alleen voor de beheerder'], ['hulp', '❓', 'Hulp', 'Uitleg, rondleiding en oefenen']];
 function naarBeheer(sec) { ui.bsub = sec; ga('beheer'); }
 function meerItems() {
   const kU = mag('upload'), kI = mag('instellingen'), kT = mag('team');
@@ -224,38 +224,35 @@ function meerItems() {
     ['mij', 'mMeld', '🔔', 'Pushmeldingen', 'Meldingen op dit toestel aan of uit', 'notificatie notificaties push bel herinnering melding', true, () => ga('meldingen')],
     ['mij', 'mPin', '🔑', kanFace() ? 'Pincode en Face ID' : 'Pincode wijzigen', 'Je eigen pincode', 'pincode wachtwoord code inloggen face id', !!mw, pinWijzigen],
     ['mij', 'mWis', '👤', 'Ander persoon', `Nu ingelogd: ${esc(mijnNaam())}`, 'wisselen andere medewerker uitloggen vergrendelen naam', !!mw, () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); }],
-    ['bestellen', 'mLev', '🚚', 'Overtypen in de terminal', 'Per leverancier, met controle', 'leverancier terminal versunie van tol lijst bellen pdf printen', mag('bestellen') || mag('afvinken'), () => ga('leverancier')],
-    ['bestellen', 'mRoute', '🚶', 'Looproute', 'Bestellijst in de volgorde waarin je door de winkel loopt', 'looproute route pad paden volgorde lopen winkel stelling bestelvolgorde', mag('bestellen') || mag('afvinken'), () => ga('route')],
-    ['bestellen', 'mLc', '📦', 'Leverdag-check', 'Afvinken bij het uitpakken, ontbrekende artikelen doorgeven', 'levering controle uitpakken ontbreekt niet geleverd', true, () => ga('levering')],
+    ['snel', 'mLev', '🚚', 'Overtypen in de terminal', 'Per leverancier, met controle', 'leverancier terminal versunie van tol lijst bellen pdf printen', mag('bestellen') || mag('afvinken'), () => ga('leverancier')],
+    [kantoorMag() ? 'bestellen' : 'snel', 'mRoute', '🚶', 'Looproute', 'Bestellijst in de volgorde waarin je door de winkel loopt', 'looproute route pad paden volgorde lopen winkel stelling bestelvolgorde', mag('bestellen') || mag('afvinken'), () => ga('route')],
+    ['snel', 'mLc', '📦', 'Leverdag-check', 'Afvinken bij het uitpakken, ontbrekende artikelen doorgeven', 'levering controle uitpakken ontbreekt niet geleverd', true, () => ga('levering')],
     ['bestellen', 'mRap', '📊', 'Rapporten', 'Vorige week, hoe goed het advies was, acties terugblik', 'week overzicht samenvatting vorige week derving weggooien resultaat hoe goed advies controle terugblik rapport', kantoorMag(), () => ga('rapport')],
-    ['bestellen', 'mExp', '📤', 'Exporteren', 'Bestellijst, verkoop of acties naar Excel', 'excel export exporteren delen bestand', kU || mag('bestellen'), () => ga('export')],
+    [kantoorMag() ? 'bestellen' : 'snel', 'mExp', '📤', 'Exporteren', 'Bestellijst, verkoop of acties naar Excel', 'excel export exporteren delen bestand', kU || mag('bestellen'), () => ga('export')],
     ['bestellen', 'bDagen', '🗓️', 'Besteldagen en deadlines', 'Wanneer je bestelt en tot hoe laat', 'deadline sluitingstijd besteltijd uiterlijk besteldag schema tijd', kI, () => naarBeheer('dagen')],
     ['bestellen', 'bAdv', '⚠️', 'Advies, waarschuwingen en even tellen', 'Waarschuwing bij veel bestellen, even tellen, buffer', 'waarschuwing hoog advies telvragen tellen buffer instellingen houdbaarheid weer', kI, () => naarBeheer('advies')],
     ['team', 'mMw', '👥', 'Medewerkers en rechten', 'Namen, pincode resetten, rechten, beginnersmodus', 'medewerker personeel collega team rechten pincode reset resetten beginner', kT, () => ga('medewerkers')],
-    ['team', 'mCk', '✅', 'Checklist nieuwe medewerker', 'Stap voor stap klaarzetten', 'nieuw nieuwe medewerker checklist aanmaken toevoegen', kT, () => nieuwChecklist()],
     ['team', 'mVan', '🕘', 'Wie deed wat', 'Per persoon wat er is gedaan, met tijden', 'vandaag gedaan activiteit log wie wat overzicht', kT, () => ga('vandaag')],
-    ['team', 'mTk', '☑️', 'Taken en berichten', 'Taken geven en afvinken', 'taak taken bericht berichten opdracht', kT, () => ga('taken')],
     ['plekken', 'pTaf', '🥬', 'Vers', 'Vers-acties op de koeltafels', 'tafel koeltafel actietafel vers indelen plek', tegelZichtbaar('plekken'), () => { ui.plekSoort = 'tafel'; ga('tafels'); }],
     ['plekken', 'pKop', '🥫', 'KW', 'KW-acties op de koppen', 'kop koppen stelling meter kw folder actie plek', mag('o_kw') && tegelZichtbaar('plekken'), () => { ui.plekSoort = 'kop'; ga('kwacties'); }],
-    ['plekken', 'pBeh', '📐', 'Koppen instellen', 'Naam, verkoopfactor, tekening en keuzelijst (Euro-Coopjes)', 'plekken instellen euro coopjes keuzelijst tekening factor', magKwPlan() && mag('o_kw'), () => { ui.plekSoort = 'kop'; ga('kwacties'); kwPlekkenBeheer(); }],
     ['data', 'bUp', '📤', 'Bestanden uploaden', 'Dag-exports, bestelboeken en acties', 'upload uploaden bestand export kassa caspos excel pdf bestelboek dag-export', kU, () => naarBeheer('upload')],
-    ['data', 'bAuto', '📡', 'Automatisch uploaden', 'Dag-export elke dag vanzelf vanaf een computer', 'automatisch computer script sleutel elke dag', kU, () => naarBeheer('auto')],
+    ['geav', 'bAuto', '📡', 'Automatisch uploaden', 'Dag-export elke dag vanzelf vanaf een computer', 'automatisch computer script sleutel elke dag', kU && isBeheer(), () => naarBeheer('auto')],
     ['data', 'bCtl', '🔍', 'Controleren', 'Niet gekoppelde artikelen en besteleenheden', 'controleren niet gekoppeld koppelen eenheid', kU || kI, () => naarBeheer('controle')],
-    ['data', 'bBo', '🥐', 'Brood Opzet koppelen', 'Klaargezet, over en voorraad van bake-off', 'brood opzet broodopzet bake off afbakken koppelen croissant derving voorraad', kI, () => naarBeheer('brood')],
+    ['geav', 'bBo', '🥐', 'Brood Opzet koppelen', 'Klaargezet, over en voorraad van bake-off', 'brood opzet broodopzet bake off afbakken koppelen croissant derving voorraad', kI && isBeheer(), () => naarBeheer('brood')],
     ['data', 'bWeg', '🗑️', 'Uploads verwijderen', 'Als je een verkeerd bestand hebt geüpload', 'verwijderen fout verkeerd bestand', kU, () => naarBeheer('verwijderen')],
     ['mij', 'mSync', '☁️', 'Gegevens opnieuw laden', '', 'verversen opnieuw laden sync synchroniseren', true, () => { if (DEMO || OEFEN) toast(OEFEN ? 'Niet tijdens oefenen' : 'Testversie: geen server'); else sync(true); }],
     ['winkel', 'mWi', '🏪', 'Winkel en koppelcode', 'Toestellen koppelen, winkelgegevens', 'koppelcode toestel telefoon koppelen winkel plaats', kT, () => ga('winkel')],
     ['winkel', 'bOpen', '🕘', 'Openingstijden en feestdagen', 'Ook aangepaste tijden en gesloten dagen', 'openingstijden feestdag gesloten open tijden kerst pasen', kI, () => naarBeheer('open')],
     ['winkel', 'bOd', '🗂️', 'Afdelingen en volgorde', 'Welke groep bij welke afdeling', 'onderdelen onderdeel groep volgorde afdeling afdelingen', kI, () => naarBeheer('onderdelen')],
     ['mij', 'mWw', '🔀', 'Winkel wisselen', esc(WINKEL ? WINKEL.naam : ''), 'winkel wisselen andere winkel', winkels.length > 1, () => { if (OEFEN) return toast('Stop eerst met oefenen'); kiesWinkel(); }],
-    ['winkel', 'mTp', '🧪', 'Testpakket voor Claude', 'Bestelboeken, verkoop en instellingen om mee te testen', 'test testpakket claude export gegevens', isBeheer(), testPakket],
-    ['winkel', 'mBk', '💾', 'Back-up maken', 'Instellingen, tafels, indelingen en planning als bestand', 'backup back-up opslaan bewaren reservekopie', isBeheer() || mag('instellingen'), backupMaken],
-    ['winkel', 'mBt', '♻️', 'Back-up terugzetten', 'Een eerder gemaakte back-up terugzetten', 'backup terugzetten herstellen restore', isBeheer(), backupTerug],
+    ['geav', 'mTp', '🧪', 'Testpakket voor Claude', 'Bestelboeken, verkoop en instellingen om mee te testen', 'test testpakket claude export gegevens', isBeheer(), testPakket],
+    ['geav', 'mBk', '💾', 'Back-up maken', 'Instellingen, tafels, indelingen en planning als bestand', 'backup back-up opslaan bewaren reservekopie', isBeheer(), backupMaken],
+    ['geav', 'mBt', '♻️', 'Back-up terugzetten', 'Een eerder gemaakte back-up terugzetten', 'backup terugzetten herstellen restore', isBeheer(), backupTerug],
     ['mij', 'mUpd', '🔄', 'Controleren op updates', `Je hebt versie ${VERSIE}`, 'update versie nieuw bijwerken', true, () => zoekUpdate(false)],
     ['mij', 'mUit', '🚪', DEMO ? 'Terug naar startscherm' : sess && sess.kind === 'anon' ? 'Toestel ontkoppelen' : 'Uitloggen', '', 'uitloggen afmelden ontkoppelen', !(isMail() && !eigenaar && !DEMO), () => { if (DEMO) showLogin(); else logout(); }],
     ['hulp', 'mUitl', '📖', 'Uitleg en woordenlijst', 'Hoe alles werkt en wat de woorden betekenen', 'uitleg hulp help woordenlijst woorden betekenis handleiding', true, () => ga('uitleg')],
     ['hulp', 'mTour', '🧭', 'Rondleiding', 'De uitleg van het begin nog eens zien', 'rondleiding tour start uitleg', true, () => tour()],
-    ['hulp', 'mGeb', '📈', 'Wat wordt gebruikt', 'Hoe vaak elk scherm geopend wordt', 'gebruik statistiek teller functies tellen', kantoorMag(), () => ga('gebruik')],
+    ['geav', 'mGeb', '📈', 'Wat wordt gebruikt', 'Hoe vaak elk scherm geopend wordt', 'gebruik statistiek teller functies tellen', isBeheer(), () => ga('gebruik')],
     ['hulp', 'mOef', '🎓', OEFEN ? 'Stoppen met oefenen' : 'Oefenen', 'Alles uitproberen zonder dat er iets echt verandert', 'oefenen oefenronde proberen test leren', true, () => OEFEN ? stopOefenen() : startOefenen()]
   ];
   return L.filter(x => x[6]).map(x => ({ g: x[0], id: x[1], ic: x[2], t: x[3], s: x[4], syn: x[5], go: x[7] }));
@@ -263,16 +260,17 @@ function meerItems() {
 function renderMeer() {
   const v = $('#view'); const items = meerItems(); const q = ui.meerQ || '';
   const knop = x => `<button class="rijknop" data-mi="${x.id}"><span class="meeric">${x.ic}</span><span style="flex:1"><b>${x.t}</b>${x.s ? `<br><span class="small">${x.s}</span>` : ''}</span><span class="pijl">›</span></button>`;
-  let h = `<div class="bar"><input type="search" id="meerQ" placeholder="🔍 Zoek een functie, bijv. pincode" value="${esc(q)}" autocomplete="off"></div><div id="meerRes">`;
+  let h = `<div class="bar${ui.meerG ? ' hide' : ''}"><input type="search" id="meerQ" placeholder="🔍 Zoek een functie, bijv. pincode" value="${esc(q)}" autocomplete="off"></div><div id="meerRes">`;
   const res = () => {
     if (q.trim().length >= 2) {
       const sc = items.map(x => [Math.max((zoekScore(q, x.t) || -5) + 5, zoekScore(q, x.s), zoekScore(q, x.syn), zoekScore(q, (MEER_GROEPEN.find(g => g[0] === x.g) || [])[2])), x]).filter(z => z[0] > 0).sort((a, b) => b[0] - a[0]);
       return sc.length ? `<div class="blk lijstblok">${sc.slice(0, 12).map(([, x]) => knop(Object.assign({}, x, { s: `${(MEER_GROEPEN.find(g => g[0] === x.g) || [])[2] || ''}${x.s ? ' · ' + x.s : ''}` }))).join('')}</div>` : '<div class="empty">Niets gevonden. Probeer een ander woord.</div>';
     }
-    const grp = gs => `<div class="blk lijstblok">${gs.map(g => { if (g[0] === 'kantoor') { const o = startPunten().filter(p => !p[2]).length; return `<button class="rijknop" data-mg="kantoor"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${o ? `🚀 Start hier: nog ${o} ${o === 1 ? 'punt' : 'punten'}` : g[3]}</span></span>${o ? `<b class="telbadge">${o}</b>` : ''}<span class="pijl">›</span></button>`; } const n = items.filter(x => x.g === g[0]); return `<button class="rijknop" data-mg="${g[0]}"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${n.length === 1 ? n[0].s || g[3] : n.map(x => x.t).slice(0, 4).join(', ')}</span></span><span class="pijl">›</span></button>`; }).join('')}</div><p class="small" style="text-align:center">Coop Besteladvies · versie ${VERSIE}</p>`;
+    const grp = gs => `<div class="blk lijstblok">${gs.map(g => { if (g[0] === 'kantoor') { const o = startPunten().filter(p => !p[2]).length; return `<button class="rijknop" data-mg="kantoor"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${o ? `🚀 Start hier: nog ${o} ${o === 1 ? 'punt' : 'punten'}` : g[3]}</span></span>${o ? `<b class="telbadge">${o}</b>` : ''}<span class="pijl">›</span></button>`; } const n = items.filter(x => x.g === g[0]); return `<button class="rijknop" data-mg="${g[0]}"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${n.length === 1 ? n[0].s || g[3] : g[3]}</span></span><span class="pijl">›</span></button>`; }).join('')}</div><p class="small" style="text-align:center">Coop Besteladvies · versie ${VERSIE}</p>`;
     if (ui.meerG === 'kantoor') return startHtml() + grp(MEER_GROEPEN.filter(g => KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0])));
     if (ui.meerG) return `<div class="blk lijstblok">${items.filter(x => x.g === ui.meerG).map(knop).join('')}</div>`;
-    return grp(MEER_GROEPEN.filter(g => g[0] === 'kantoor' ? kantoorMag() : !KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0])));
+    const snel = items.filter(x => x.g === 'snel');
+    return (snel.length ? `<div class="blk lijstblok">${snel.map(knop).join('')}</div>` : '') + grp(MEER_GROEPEN.filter(g => g[0] === 'kantoor' ? kantoorMag() : !KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0])));
   };
   v.innerHTML = h + res() + '</div>';
   const bind = () => {

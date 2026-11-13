@@ -57,12 +57,10 @@ function boEh(a, n) { return a.perHE ? ehMv(a, n) : n === 1 ? 'stuk' : 'stuks'; 
 function boHtml(a, bd, be, ad) {
   const i = M.boInfo && M.boInfo[a.key]; if (!i) return '';
   const vr = boVr(a.key), om = i.vlag.filter(x => x[1] === 'op').map(x => C.DAGEN[x[0]]), af = i.vlag.filter(x => x[1] !== 'op').map(x => C.DAGEN[x[0]]);
-  let h = `<div class="bo">🥐 Opzet: per week ${i.o} over van ${i.g}${vr ? ` · ligt nu ${vr.aantal}` : ''}${af.length ? ` · advies lager (${af.join(', ')})` : ''}${om.length ? ` · advies hoger (${om.join(', ')})` : ''}`;
-  const t = boTekort(a, bd, be && be.aantal != null ? +be.aantal : ad.adv);
-  if (t && t.geenVr && mag('tellen')) h += '<br><span class="small">Tel de voorraad om te zien of je uitkomt.</span>';
-  if (t && t.voor) h += `<div class="bowarn">⚠️ Te weinig vóór de levering: vanaf ${C.fmtDag(t.voor.dag)} ±${t.voor.t} stuks tekort.${mag('bestellen') ? '' : ' Meld het aan ' + esc(beheerNamen()[0]) + '.'}</div>`;
-  if (t && t.na) h += `<div class="bowarn">⚠️ Je komt ${C.fmtDag(t.na.dag)} ${t.na.t} stuks tekort. Bestel minstens ${t.min} ${boEh(a, t.min)}.</div>`;
-  return h + '</div>';
+  const t = boTekort(a, bd, be && be.aantal != null ? +be.aantal : ad.adv); let w = '';
+  if (t && t.voor) w += `<div class="bowarn">⚠️ Te weinig vóór de levering: vanaf ${C.fmtDag(t.voor.dag)} ±${t.voor.t} stuks tekort.</div>`;
+  if (t && t.na) w += `<div class="bowarn">⚠️ Je komt ${C.fmtDag(t.na.dag)} ${t.na.t} stuks tekort. Bestel minstens ${t.min} ${boEh(a, t.min)}.</div>`;
+  return `<div class="bo ${w ? '' : 'stil'}"><span class="boinfo">🥐 Brood Opzet: van de ${i.g} klaargezet per week blijven er ${i.o} over${vr ? ` · in de vriezer ${vr.aantal}` : ''}${af.length ? ` · daarom advies lager op ${af.join(', ')}` : ''}${om.length ? ` · advies hoger op ${om.join(', ')}` : ''}${t && t.geenVr ? '<br>Tel de voorraad, dan zie je of je uitkomt.' : ''}</span>${w}</div>`;
 }
 function boNietUit(arts, cur) { return arts.filter(a => { if (!M.boInfo || !M.boInfo[a.key] || a.uit || assStatus(a) !== 'in') return false; const be = S.bestel[a.key + '|' + cur.besteldag]; const n = be && be.aantal != null ? +be.aantal : C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).adv; const t = boTekort(a, cur, n); return t && (t.voor || t.na); }); }
 function boBanner(arts, cur) { const l = boNietUit(arts, cur); return l.length ? `<div class="banner warn"><h3>⚠️ Te weinig tot de volgende levering: ${l.length} ${l.length === 1 ? 'artikel' : 'artikelen'}</h3><div class="sub">${l.map(a => esc(a.naam)).join(' · ')}</div></div>` : ''; }

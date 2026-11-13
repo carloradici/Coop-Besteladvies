@@ -79,7 +79,7 @@ function belItemsBasis() {
   }
   if (mag('o_overig')) { let n = 0; for (const ean in S.inout) { const io = S.inout[ean]; if (!(io.ingekocht > 0)) continue; const r = C.overig(M, 'e:' + ean, io); if (r.melding && r.melding.t === 'op') n++; } if (n) out.push({ ic: '📦', t: `${n} in/out-${n === 1 ? 'artikel' : 'artikelen'} bijna op`, sub: 'Telefonisch bijbestellen?', ga: 'overig' }); }
   const ovd = Object.values(S.overdracht || {}).filter(r => !r.klaar && !r.soort).length; if (ovd) out.unshift({ ic: '📋', t: `${ovd} ${ovd === 1 ? 'punt' : 'punten'} in de overdracht`, sub: 'Staat op Home', ga: 'home' });
-  if (mag('upload') && onbekendLijst().length) out.push({ ic: '🔍', t: `${onbekendLijst().length} verkochte artikelen niet gekoppeld`, sub: 'Tik om ze te controleren', ga: 'beheer', bsub: 'controle' });
+  if (mag('upload') && onbekendLijst().length) out.push({ ic: '🔍', t: `${onbekendLijst().length} verkochte artikelen die de app niet kent`, sub: 'Tik om ze te koppelen of te negeren', ga: 'beheer', bsub: 'controle' });
   const pr = prijsLijst().length; if (pr) out.push({ ic: '🏷️', t: `${pr} schapkaartje${pr === 1 ? '' : 's'} vervangen`, sub: 'Prijs gewijzigd in het bestelboek', ga: 'assort' });
   const lv = leverRegels(C.today()); const lvOpen = lv.filter(x => !x.chk).length; if (lvOpen) out.push({ ic: '📦', t: 'Levering van vandaag controleren', sub: `Nog ${lvOpen} van ${lv.length} af te vinken`, ga: 'levering' });
   const tt = tafelTelling(); if (tt.ombouw && tt.open) out.push({ ic: '🗂️', t: 'Actietafels ombouwen', sub: `${tt.klaar} van ${tt.totaal} klaar`, ga: 'tafels' });
@@ -89,7 +89,9 @@ function belItemsBasis() {
 function belTel() { const el = $('#belN'); if (!el) return; let n = 0; try { n = belItems().filter(belInfo).length; } catch (e) { } el.textContent = n > 9 ? '9+' : n; el.classList.toggle('hide', !n); }
 /* ---------- uitleg ---------- */
 function renderUitleg() {
-  $('#view').innerHTML = `<div class="blk"><h2>📖 Woordenlijst</h2><div class="woorden">${WOORDEN.map(w => `<p><b>${w[0]}</b> – ${w[1]}</p>`).join('')}</div></div><div class="blk lijstblok">${Object.entries(HULP).filter(([k]) => !HULP_ZIJ.has(k) && k !== 'uitleg').map(([, h]) => `<details class="uitleg"><summary><b>${h[0]}</b></summary><div class="hulptekst">${h[1]}</div></details>`).join('')}</div>`;
+  const km = kantoorMag(), bs = mag('bestellen') || mag('afvinken'), basis = ['home', 'tellen', 'taken', 'meer', 'scannen', 'eigen'], ww = ['Tellen', 'Schap leeg', 'Derving', 'Oefenen', 'Overdracht', 'Advies'];
+  const keys = Object.keys(HULP).filter(k => !HULP_ZIJ.has(k) && k !== 'uitleg' && (km || basis.includes(k) || (bs && ['lijst', 'leverancier', 'levering', 'printen'].includes(k))));
+  $('#view').innerHTML = `<div class="blk lijstblok">${keys.map(k => { const h = HULP[k]; return `<details class="uitleg"><summary><b>${h[0]}</b><span class="pijl">▾</span></summary><div class="hulptekst">${typeof h[1] === 'function' ? h[1]() : h[1]}</div></details>`; }).join('')}</div><details class="blk uitleg"><summary><b>📖 Woordenlijst</b><span class="pijl">▾</span></summary><div class="woorden">${WOORDEN.filter(w => km || ww.includes(w[0])).map(w => `<p><b>${w[0]}</b> – ${w[1]}</p>`).join('')}</div></details>`;
 }
 /* ---------- barcode scannen ---------- */
 function vindCode(code) {
@@ -102,6 +104,7 @@ function vindCode(code) {
 }
 function naarArtikel(a) {
   const od = onderdeelVan(a); if (!mag('o_' + od)) return toast('Dit artikel hoort bij ' + odNaam(od) + ', dat mag je niet zien');
+  if (!mag('bestellen') && !mag('afvinken') && mag('tellen')) return telModus(od, [a]);
   ga(od); ui.q = a.eigen ? a.naam : a.nr; ui.modus = 'alles'; if (assStatus(a) !== 'in' || a.uit) ui.fAlles = true; ui.fAdv = false; ui.fOpen = false; ui.fActie = false; render();
 }
 let scanStop = null;
@@ -126,14 +129,15 @@ async function scanStart(od, opVondst) {
 function telDagen() { return +((S.inst || {}).telDagen || 28); }
 function telModus(od, arts, vrij, ronde) {
   if (!arts.length && !vrij) return toast('Geen artikelen om te tellen');
-  arts = arts.slice(); let i = 0, val = '', geteld = 0, zoek = arts.length ? null : '';
+  arts = arts.slice(); let i = 0, val = '', dz = 0, geteld = 0, zoek = arts.length ? null : ''; const besteller = mag('bestellen') || mag('afvinken');
   const lk = 'cba-tel-' + od + '-' + arts.length, oud = ls.get(lk), td = ronde ? telDagen() : 1, recent = a => { const v = S.voorraad[a.key]; return !!(v && v.dag && C.diff(v.dag, C.today()) < td); }, vrij0 = arts.findIndex(a => !recent(a));
-  const verder = () => { i++; val = ''; if (ronde) while (i < arts.length && recent(arts[i])) i++; teken(); };
+  const heVan = a => a && a.perHE && a.he > 1 && eenheid(a) !== 'kg' ? a.he : 0, tot = () => C.r(dz * heVan(arts[i]) + C.num(val || '0'), 3), leeg0 = () => { val = ''; dz = 0; };
+  const verder = () => { i++; leeg0(); if (ronde) while (i < arts.length && recent(arts[i])) i++; teken(); };
   i = Math.max(vrij0 < 0 ? 0 : vrij0, !ronde && oud && oud.dag === C.today() && oud.i < arts.length ? oud.i : 0); if (ronde && vrij0 < 0) i = arts.length; else if (i > 0) toast(`Verder bij ${i + 1} van ${arts.length}`, 2500);
   const ov = document.createElement('div'); ov.className = 'telmodus'; document.body.appendChild(ov);
   const curVan = a => besteldag(onderdeelVan(a)).cur;
-  const opslaan = () => { const a = arts[i]; write('voorraad', [{ bron: a.bron, nr: a.nr, aantal: C.num(val), dag: C.today(), door: mijnNaam() }]); geteld++; };
-  const naar = a => { const j = arts.findIndex(x => x.key === a.key); if (j >= 0) i = j; else { i = Math.min(i, arts.length); arts.splice(i, 0, a); } val = ''; zoek = null; teken(); };
+  const opslaan = () => { const a = arts[i]; write('voorraad', [{ bron: a.bron, nr: a.nr, aantal: tot(), dag: C.today(), door: mijnNaam() }]); geteld++; };
+  const naar = a => { const j = arts.findIndex(x => x.key === a.key); if (j >= 0) i = j; else { i = Math.min(i, arts.length); arts.splice(i, 0, a); } leeg0(); zoek = null; teken(); };
   const teken = () => {
     if (zoek !== null) {
       ov.innerHTML = `<div class="telkop"><button id="tX">Sluiten</button><span>${geteld ? geteld + ' geteld' : 'Tellen'}</span><button id="tS">📷</button></div>
@@ -147,30 +151,29 @@ function telModus(od, arts, vrij, ronde) {
       $('#tS', ov).onclick = () => scanStart(od, naar);
       return;
     }
-    if (i >= arts.length) { ov.innerHTML = `<div class="telkop"><span></span><button id="tX">Sluiten</button></div><div style="margin:auto;text-align:center"><div style="font-size:64px">✓</div><div class="telnaam">Klaar</div><div class="telsub">${geteld} ${geteld === 1 ? 'artikel' : 'artikelen'} geteld${scannerGezien ? '<br>Scan nog een artikel om verder te tellen.' : ''}</div></div><button class="btn sec" id="tN" style="margin-bottom:8px">🔢 Artikelnummer typen</button><button class="btn" id="tK">Terug naar de lijst</button>`; $('#tX', ov).onclick = $('#tK', ov).onclick = sluit; $('#tN', ov).onclick = () => { zoek = ''; teken(); }; return; }
+    if (i >= arts.length) { const ov2 = arts.length - geteld; ov.innerHTML = `<div class="telkop"><span></span><span></span></div><div style="margin:auto;text-align:center"><div style="font-size:64px">${ov2 > 0 && arts.length ? '👍' : '✓'}</div><div class="telnaam">${ov2 > 0 && arts.length ? 'Einde van de lijst' : 'Klaar'}</div><div class="telsub">${geteld} van ${arts.length || geteld} geteld${ov2 > 0 && arts.length ? ` · ${ov2} overgeslagen of al eerder geteld` : ''}${scannerGezien ? '<br>Scan nog een artikel om verder te tellen.' : ''}</div></div><button class="btn" id="tK">Klaar</button>`; $('#tK', ov).onclick = sluit; return; }
     const a = arts[i]; const vr = S.voorraad[a.key]; const u = eenheid(a); const cur = curVan(a);
-    const ad = cur && val !== '' ? C.advies(M, a.key, cur, { aantal: C.num(val), dag: C.today() }, bestellingenVan(a.key)) : null;
-    const he = a.perHE && a.he > 1 && u !== 'kg' ? a.he : 0, nV = C.num(val || '0'), nD = he ? Math.floor(nV / he) : 0, nL = C.r(nV - nD * he, 3);
+    const he = heVan(a), leeg = val === '' && !dz, T = tot(), ad = besteller && cur && !leeg ? C.advies(M, a.key, cur, { aantal: T, dag: C.today() }, bestellingenVan(a.key)) : null, eh = u === 'kg' ? 'kilo' : T === 1 ? 'stuk' : 'stuks';
     ov.innerHTML = `<div class="telkop"><button id="tX">Sluiten</button><span>${i + 1} van ${arts.length}${ronde ? `<small class="telnog">nog ${arts.filter(x => !recent(x)).length} te tellen</small>` : ''}</span><span><button id="tN" aria-label="Artikelnummer typen">🔢</button> <button id="tS">📷</button></span></div><div class="telbalk"><div style="width:${Math.round(i / arts.length * 100)}%"></div></div>
     ${a.merk ? `<div class="telmerk">${esc(a.merk)}</div>` : ''}<div class="telnaam">${esc(a.naam)}</div><div class="telsub">${esc(a.eigen ? a.artNr || '' : a.nr)} · ${esc(groepVan(a))}${vr && vr.dag ? ` · laatst ${C.fmtDag(vr.dag)}: ${C.fmt(vr.aantal)}` : ''}</div>
-    <div class="telwaarde">${val === '' ? '<span class="ph">Hoeveel ' + (u === 'kg' ? 'kilo' : 'stuks') + '?</span>' : esc(val)}</div><div class="teladv">${nD ? `${nD} ${ehMv(a, nD)}${nL ? ` + ${C.fmt(nL, 3)} los` : ''} · ` : ''}${ad ? 'Advies ' + C.fmtDag(cur.besteldag) + ': ' + (ad.adv ? ad.adv + ' ' + ehTxt(a, ad.adv) : 'niets') : ''}</div>
+    <div class="telwaarde">${leeg ? '<span class="ph">Hoeveel ' + (u === 'kg' ? 'kilo' : 'stuks') + '?</span>' : `${dz ? C.fmt(T, 3) : esc(val)} <small>${eh}</small>`}</div><div class="teladv">${dz ? `${dz} ${ehMv(a, dz)}${val !== '' ? ` + ${esc(val)} los` : ''}${ad ? ' · ' : ''}` : ''}${ad ? 'Advies ' + C.fmtDag(cur.besteldag) + ': ' + (ad.adv ? ad.adv + ' ' + ehTxt(a, ad.adv) : 'niets') : ''}</div>
     ${he ? `<div style="text-align:center"><button class="btn sm sec" id="tDoos">+ 1 ${ehMv(a, 1)} (${C.fmt(he)})</button></div>` : ''}
-    ${val === '0' ? `<div style="text-align:center"><button class="btn sm sec" id="tLeeg">${S.leeg[a.key + '|' + C.today()] ? '✓ Leeg gemeld' : '🚫 Schap was leeg'}</button></div>` : ''}
+    ${val === '0' && !dz ? `<div style="text-align:center"><button class="btn sm sec" id="tLeeg">${S.leeg[a.key + '|' + C.today()] ? '✓ Leeg gemeld' : '🚫 Schap was leeg'}</button></div>` : ''}
     ${scannerGezien ? '<div class="telhint">📟 Volgende artikel scannen = opslaan · zelfde artikel scannen = +1</div>' : ''}
     <div class="telblok">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-t="${n}">${n}</button>`).join('')}<button data-t=",">,</button><button data-t="0">0</button><button data-t="w">⌫</button></div>
     <div class="telacties"><button id="tV" ${i ? '' : 'disabled'}>‹ Vorige</button><button id="tO">Overslaan</button><button class="hoofd" id="tB">Opslaan ›</button></div>`;
-    ov.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { const t = b.dataset.t; if (t === 'w') val = val.slice(0, -1); else if (t === ',') { if (!val.includes(',')) val = (val || '0') + ','; } else if (val.length < 6) val = val === '0' ? t : val + t; teken(); });
-    $('#tX', ov).onclick = sluit; $('#tV', ov).onclick = () => { if (i) { i--; val = ''; teken(); } }; $('#tO', ov).onclick = verder;
-    const tdo = $('#tDoos', ov); if (tdo) tdo.onclick = () => { if (nV + he > 99999) return; val = String(C.r(nV + he, 3)).replace('.', ','); teken(); };
+    ov.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { const t = b.dataset.t; if (t === 'w') { if (val === '' && dz) dz--; else val = val.slice(0, -1); } else if (t === ',') { if (!val.includes(',')) val = (val || '0') + ','; } else if (val.length < 6) val = val === '0' ? t : val + t; teken(); });
+    $('#tX', ov).onclick = () => { if (!leeg) { opslaan(); toast('✓ Opgeslagen: ' + a.naam, 1500); } sluit(); }; $('#tV', ov).onclick = () => { if (i) { i--; leeg0(); const v0 = S.voorraad[arts[i].key]; if (v0 && v0.dag === C.today()) val = String(v0.aantal).replace('.', ','); teken(); } }; $('#tO', ov).onclick = verder;
+    const tdo = $('#tDoos', ov); if (tdo) tdo.onclick = () => { if (T + he > 99999) return; dz++; teken(); };
     const tl = $('#tLeeg', ov); if (tl) tl.onclick = () => { if (!S.leeg[a.key + '|' + C.today()]) { write('leeg', [{ bron: a.bron, nr: a.nr, dag: C.today(), door: mijnNaam(), ts: new Date().toISOString() }]); log('leeg', `Schap leeg: ${a.naam}`); } opslaan(); verder(); };
-    $('#tN', ov).onclick = () => { if (val !== '') { opslaan(); toast('✓ ' + a.naam + ': ' + val, 1500); val = ''; } zoek = ''; teken(); };
-    $('#tB', ov).onclick = () => { if (val === '') return toast('Tik eerst de voorraad in'); opslaan(); verder(); };
+    $('#tN', ov).onclick = () => { if (!leeg) { opslaan(); toast('✓ ' + a.naam + ': ' + C.fmt(T, 3), 1500); leeg0(); } zoek = ''; teken(); };
+    $('#tB', ov).onclick = () => { if (leeg) return toast('Tik eerst in hoeveel er liggen'); opslaan(); verder(); };
     $('#tS', ov).onclick = () => scanStart(od, naar);
   };
   telHook = code => {
     const a = vindCode(code); if (!a) { piep(); toast('Niet gevonden: ' + code); return; }
     if (zoek === null && i < arts.length && arts[i].key === a.key) { val = String(C.r(C.num(val || '0') + 1, 3)).replace('.', ','); if (navigator.vibrate) navigator.vibrate(30); teken(); return; }
-    if (zoek === null && i < arts.length && val !== '') { opslaan(); toast('✓ ' + arts[i].naam + ': ' + val, 1500); }
+    if (zoek === null && i < arts.length && (val !== '' || dz)) { opslaan(); toast('✓ ' + arts[i].naam + ': ' + C.fmt(tot(), 3), 1500); }
     if (navigator.vibrate) navigator.vibrate(60); naar(a);
   };
   const sluit = () => { if (arts.length && !vrij) ls.set(lk, { dag: C.today(), i }); ov.remove(); telHook = null; if (geteld) log('voorraad', `${geteld} artikelen geteld${vrij ? ' met scanner' : ` (${odNaam(od)})`}`); render(true); };

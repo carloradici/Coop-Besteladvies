@@ -94,7 +94,7 @@ function renderBeheer() {
   v.querySelectorAll('[data-heok]').forEach(b => b.onclick = () => { const key = b.dataset.heok; const row = b.closest('.it'); const he = C.num(row.querySelector('[data-f="he"]').value) || 1; const perHE = row.querySelector('[data-f="perHE"]').checked; work.he[key] = { he, perHE, check: false }; saveInst(work); });
   beheerMenu(v, chk);
 }
-const BSUB_GROEP = { brood: 'data', upload: 'data', auto: 'data', controle: 'data', verwijderen: 'data', dagen: 'bestellen', advies: 'bestellen', open: 'winkel', onderdelen: 'winkel' };
+const BSUB_GROEP = { brood: 'geav', upload: 'data', auto: 'geav', controle: 'data', verwijderen: 'data', dagen: 'bestellen', advies: 'bestellen', open: 'winkel', onderdelen: 'winkel' };
 const BEHEER_SEC = [['upload', '📤', 'Bestanden uploaden', 'Dag-exports, bestelboeken en acties · status'], ['auto', '📡', 'Automatisch uploaden', 'Dag-export elke dag vanzelf vanaf een computer'], ['dagen', '🗓️', 'Besteldagen en deadlines', 'Wanneer je bestelt en tot hoe laat'], ['open', '🕘', 'Openingstijden en feestdagen', 'Ook aangepaste tijden en gesloten dagen'], ['onderdelen', '🗂️', 'Afdelingen en volgorde', 'Welke groep bij welke afdeling, en in welke volgorde'], ['controle', '🔍', 'Controleren', 'Niet gekoppelde artikelen en besteleenheden'], ['advies', '⚙️', 'Advies-instellingen', 'Voor gevorderden'], ['verwijderen', '🗑️', 'Uploads verwijderen', 'Als je per ongeluk een verkeerd bestand hebt geüpload']];
 function beheerMenu(v, chk) {
   const blks = [...v.querySelectorAll('[data-sec]')]; const er = new Set(blks.map(b => b.dataset.sec));
@@ -189,8 +189,8 @@ function telKeuze(od, lv) {
 }
 function telVraagHtml(od, lv) {
   const t = telKeuze(od, lv); if (!t.alle.length) return '';
-  if (!t.open.length) return `<div class="telvraag klaar">✓ Alle ${t.alle.length} telvragen gedaan</div>`;
-  return `<button class="telvraag" id="telV"><span class="ic">🔢</span><span style="flex:1;text-align:left"><b>Tel deze ${t.open.length} artikelen</b><small>Dan wordt het advies beter. Tik om te beginnen. ${t.alle.length - t.open.length ? `${t.alle.length - t.open.length} van ${t.alle.length} gedaan.` : ''}</small></span><span class="pijl">›</span></button>`;
+  if (!t.open.length) return '';
+  return `<button class="telvraag" id="telV"><span style="flex:1;text-align:left">🔢 Tel ${t.open.length} ${t.open.length === 1 ? 'artikel' : 'artikelen'} voor een beter advies</span><span class="pijl">›</span></button>`;
 }
 /* ---------- 1.13: niet gekoppeld, deadline-regels ---------- */
 function boekenMissen() {

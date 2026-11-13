@@ -1,6 +1,6 @@
 /* ---------- 1.36: werkvloer en kantoor, start hier, rapporten, testpakket, gebruik ---------- */
 function kantoorMag() { return isBeheer() || mag('instellingen') || mag('upload') || mag('team'); }
-const KANTOOR_G = ['bestellen', 'team', 'plekken', 'data', 'winkel'];
+const KANTOOR_G = ['bestellen', 'team', 'plekken', 'data', 'winkel', 'geav'];
 function startPunten() {
   const i = S.inst || {}, st = i.start || {}, dl = Object.values(i.deadline || {}), last = M.dagLijst[M.dagLijst.length - 1];
   return [

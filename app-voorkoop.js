@@ -228,11 +228,10 @@ const COLLO_STD = { datum: '2026-11-03', items: Object.fromEntries(Object.entrie
 function colloLijst() { const c = (S.inst || {}).collo; return c && c.items ? c : COLLO_STD; }
 function colloVan(a) { const c = colloLijst(); const x = c && c.items && a && a.nr && c.items[a.nr]; if (!x) return null; const st = a.perHE && a.he > 0 ? a.he : 1; return Object.assign({ eenh: Math.max(1, Math.round(x.n / st)) }, x); }
 function colloHtml(a, ad, rB) {
-  const c = colloVan(a); if (!c) return ''; const u = n => a.perHE ? ' ' + ehMv(a, n) : ''; const adv = ad.adv || 0;
-  let t = `💰 Korting bij een volle collo: ${c.n} × ${esc(c.inh)}`;
-  if (adv > 0 && adv < c.eenh) { const nd = Array.isArray(ad.days) ? ad.days.length : +ad.days || 0; const dpd = nd ? ad.need / nd : 0; const dg = dpd > 0 ? Math.floor((ad.stock || 0) / dpd) : 0; t += `<br><span class="small">${dg >= 2 ? `Er ligt nog genoeg voor ±${dg} dagen. Wacht liever en bestel dan in één keer ${c.eenh}${u(c.eenh)}.` : `Een volle collo is ${c.eenh}${u(c.eenh)}: korting, maar dan houd je ${C.fmt(c.eenh - adv)}${u(c.eenh - adv)} over.`}</span>`; }
-  else if (adv > c.eenh && adv % c.eenh) { const k = Math.ceil(adv / c.eenh); t += `<br><span class="small">Rond af naar ${k * c.eenh}${u(k * c.eenh)} (${k} volle collo).</span>`; }
-  return `<div class="collo">${t}${rB ? `<button class="btn sm" data-collo="${Math.max(1, Math.ceil(adv / c.eenh)) * c.eenh}">Volle collo bestellen</button>` : ''}</div>`;
+  const c = colloVan(a); if (!c) return ''; const u = n => a.perHE ? ' ' + ehMv(a, n) : ''; const adv = ad.adv || 0; if (!adv || adv % c.eenh === 0) return '';
+  const doel = Math.ceil(adv / c.eenh) * c.eenh, nd = Array.isArray(ad.days) ? ad.days.length : +ad.days || 0, dpd = nd ? ad.need / nd : 0, dg = dpd > 0 ? Math.floor((ad.stock || 0) / dpd) : 0;
+  const t = adv < c.eenh && dg >= 2 ? `Nog genoeg voor ±${dg} dagen. Wacht en bestel dan ${c.eenh}${u(c.eenh)} (korting).` : `Volle collo = ${doel}${u(doel)}: korting, ${C.fmt(doel - adv)} meer dan nodig.`;
+  return `<div class="collo"><span>💰 ${t}</span>${rB ? `<button class="btn sm sec" data-collo="${doel}">Neem ${doel}</button>` : ''}</div>`;
 }
 /* ---------- 1.29: link plakken ---------- */
 function linkPlakken() {
