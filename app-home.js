@@ -1,4 +1,7 @@
 /* ---------- weergave ---------- */
+// Inklapbaar blok; open/dicht wordt onthouden tot de app sluit
+const klap = (k, kop, inh) => `<details class="klap" data-k="${esc(k)}" ${(ui.klap || {})[k] ? 'open' : ''}><summary>${kop}</summary>${inh}</details>`;
+document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.klap')) (ui.klap = ui.klap || {})[d.dataset.k] = d.open; }, true);
 function render(soft) {
   if (!M) return; const sl = schermSleutel(), zelfde = sl === scrollSleutel, doelY = zelfde ? window.scrollY : (SCROLL[sl] || 0); scrollSleutel = ''; window.__doelY = doelY;
   renderScherm(soft); telGebruik();
@@ -386,12 +389,12 @@ const HULP = {
   'meer:hulp': ['Hulp', 'Uitleg met woordenlijst, de rondleiding, oefenen zonder dat er iets echt verandert, en wat er gebruikt wordt.'],
   'beheer:upload': ['Bestanden uploaden', 'Kies dag-exports, bestelboeken, actie-pdf\'s of lijsten; de app herkent zelf wat het is. Met 🔗 Link plakken haal je een bestand op via een link.'],
   'beheer:auto': ['Automatisch uploaden', 'Een pc in de winkel stuurt de dag-exports vanzelf, elke 5 minuten. Tik op <b>Nieuw script</b>, pak het uit in C:\\Besteladvies en start 2-installeren.cmd.'],
-  'beheer:controle': ['Controleren', 'Artikelen die verkocht worden maar niet in het bestelboek staan: koppel ze of negeer ze. Bij Besteleenheid tik je Klopt of pas je het aan.'],
+  'beheer:controle': ['Controleren', 'Artikelen die verkocht worden maar niet in het bestelboek staan: koppel ze of negeer ze. Bij Besteleenheid tik je Klopt of pas je het aan. Tik op een kopje met ▾ om het open of dicht te klappen.'],
   'beheer:verwijderen': ['Uploads verwijderen', 'Verwijder een verkeerd geüpload bestand en upload daarna het goede.'],
   'beheer:dagen': ['Besteldagen en deadlines', 'Per leverancier wanneer je bestelt en wanneer het komt, en tot hoe laat je kunt bestellen.'],
-  'beheer:advies': ['Advies-instellingen', 'Buffer, even tellen, houdbaarheid, weer en vanaf wanneer de app waarschuwt bij veel bestellen.'],
+  'beheer:advies': ['Advies-instellingen', 'Buffer, even tellen, houdbaarheid, weer en vanaf wanneer de app waarschuwt bij veel bestellen. Tik op een kopje met ▾ om het open of dicht te klappen.'],
   'beheer:open': ['Openingstijden', 'Openingstijden per dag en afwijkende dagen zoals feestdagen. Op gesloten dagen rekent de app geen verkoop.'],
-  'beheer:onderdelen': ['Afdelingen', 'Bij welke afdeling elke productgroep hoort en in welke volgorde de groepen staan.'],
+  'beheer:onderdelen': ['Afdelingen', 'Bij welke afdeling elke productgroep hoort en in welke volgorde de groepen staan. Tik op een kopje met ▾ om het open of dicht te klappen.'],
   'beheer:brood': ['Brood Opzet koppelen', 'Vul één keer het adres en de koppelcode in en tik op Opslaan en ophalen. Tik daarna op elke soort om het artikel te kiezen (📒 = uit je Brood Opzet-bestelboek).'],
   'tafels:sort': ['Vers-acties · 1 Sorteren', 'Tik per actie op de koeltafel waar hij komt, of op 📝 voor een notitie. Met 📄 Bekijken zie je de folder en de bestellijst.'],
   'tafels:in': ['Vers-acties · 2 Indelen', 'Tik op een koeltafel om hem in te delen. Met 👁️ Pdf bekijken krijg je per tafel een A4.'],
@@ -412,7 +415,7 @@ const HULP = {
   winkel: ['Winkel', 'Met de koppelcode koppel je een toestel van de winkel. Een nieuwe code ontkoppelt alle toestellen.'],
   meldingen: ['Meldingen', 'Kies welke pushmeldingen dit toestel krijgt. Op de iPhone werkt dit alleen als de app op je beginscherm staat.'],
   appinst: ['App-instellingen', 'Licht of donker, tekstgrootte en korte lijst.'],
-  route: ['Looproute', 'De bestellijst staat per pad in de volgorde waarin je loopt; de app leert bij elke bestelling waar een artikel staat. Pad zelf kiezen: open het artikel en tik op 🚶 Pad.'],
+  route: ['Looproute', 'De bestellijst staat per pad in de volgorde waarin je loopt; de app leert bij elke bestelling waar een artikel staat. Pad zelf kiezen: open het artikel en tik op 🚶 Pad. Tik op een kopje met ▾ om het open of dicht te klappen.'],
   uitleg: ['Uitleg', 'Bovenaan de woordenlijst, daaronder uitleg per scherm.'],
   eigen: ['Eigen artikelen', 'Artikelen die niet in het bestelboek staan voeg je zelf toe met "+ Artikel toevoegen" onderaan de lijst. Vul de EAN of PLU in, dan koppelt de app de verkoop uit de dag-export en krijg je een advies zoals bij de rest. Tik op de naam om het aan te passen of te verwijderen. Komt het artikel later in het bestelboek, dan meldt de app dat en neem je het boekartikel over.'],
   scannen: ['Barcode scannen', 'Tik in de lijst op "📷 Scannen" en richt de camera op de barcode van het product of het schapkaartje. De app springt naar het artikel. Lukt scannen niet, typ dan het nummer.'],

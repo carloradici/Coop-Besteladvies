@@ -618,3 +618,12 @@ details.uitleg>summary{list-style:none;display:flex;justify-content:space-betwee
 .indrij button:disabled{opacity:.3}
 .indrij{grid-template-columns:32px 1fr 44px 44px}.indrij b{grid-column:2/5}.indrij select{grid-column:2/3}
 .indrij{grid-template-columns:32px minmax(0,1fr) 44px 44px}.indrij select{min-width:0;width:100%}
+/* 1.48 inklapbare blokken */
+details.klap{border-top:1px solid var(--lijn,#ddd)}
+details.klap>summary{list-style:none;cursor:pointer;min-height:48px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:1.05rem;padding:6px 0}
+details.klap>summary::-webkit-details-marker{display:none}
+details.klap>summary::after{content:'▾';margin-left:auto;font-size:1.2rem;transition:transform .15s}
+details.klap[open]>summary::after{transform:rotate(180deg)}
+details.klap>summary .small{font-weight:400}
+details.klap>.btn{margin-bottom:8px}
+.blk>details.klap:first-child{border-top:0}
