@@ -197,7 +197,7 @@ function kaart(a, bd, laatste) {
   { const rv = vrVan(a.key); if (rv && rv.restant) why += ` · actie-restant wk ${rv.week} ±${C.fmt(rv.aantal)}`; }
   if (ad.schat) why += ` · ± ${C.fmt(vrVan(a.key).aantal)} in winkel (geschat uit bestellingen en kassa)`;
   if (ad.stock !== null && ad.stock !== undefined) why += ` · voorraad bij levering ±${C.fmt(Math.max(0, ad.stock))}`;
-  if (ad.twijfel) why += ' · minder dan 60% van een doos nodig en voorraad onbekend: even kijken';
+  if (ad.twijfel) why += (ad.stock === null ? ' · voorraad onbekend en maar 1 nodig: kijk even in het schap' : ' · minder dan 60% van een doos nodig: even kijken');
   else if (vr && vr.dag) why += ` · laatst geteld ${C.fmtDag(vr.dag)}: ${C.fmt(vr.aantal)}${vr.door ? ' (' + esc(ini(vr.door)) + ')' : ''}`;
   const kanSan = mag('saneren');
   const assKnop = kanSan ? (san ? '<button class="link" data-ass="terug">Terugzetten in assortiment</button>' : niet ? '<button class="link" data-ass="op">+ Opnemen in assortiment</button>' : a.uit ? '' : '<button class="link rood" data-ass="san">Saneren</button>') : '';
