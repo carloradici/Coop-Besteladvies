@@ -9,9 +9,13 @@ function kwNaamKassa(it) {
   if (it.variant) { const so = tel('so').slice(0, 2).map(x => x.toLowerCase()); if (so.length) it.naam = merk + ' ' + (so.length > 1 ? so[0] + (/ en /.test(so[1]) ? ', ' : ' en ') + so[1] : so[0]); }
   else if (!it.naam.toLowerCase().includes(merk.toLowerCase())) { const n = it.merk && it.naam.toLowerCase().startsWith(it.merk.toLowerCase() + ' ') ? it.naam.slice(it.merk.length + 1) : it.naam; it.naam = merk + ' ' + n.charAt(0).toLowerCase() + n.slice(1); }
 }
+// 1.54: na opnieuw groeperen kunnen twee blokken naar dezelfde actie wijzen: samenvoegen en de nieuwe naam geven
+function kwDubbelWeg(ind, vk) {
+  const eerst = {}; ind.items = (ind.items || []).filter(y => { if (!y.kw) return true; const it = vk.items.find(i => i.id === y.kw); if (it) y.naam = it.naam; const e = eerst[y.kw]; if (!e) { eerst[y.kw] = y; return true; } e.cellen = [...new Set([...(e.cellen || []), ...(y.cellen || [])])].sort((a, b) => a - b); e.nota = e.nota || y.nota; e.klaar = e.klaar && y.klaar; return false; });
+}
 function bewaarVoorkoop(vk, bron) {
   if (!vk || !vk.week || !vk.items.length) throw new Error('Geen voorkooplijst herkend');
-  vk.versie = 6; kwNaamKassa.b = null; vk.items.forEach(kwNaamKassa); const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
+  vk.versie = 7; kwNaamKassa.b = null; vk.items.forEach(kwNaamKassa); const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
   const plek = {}, notitie = {}, klaar = {};
   if (of && of.items) {
     const nieuw = vk.items.map(i => ({ i, s: kwNrsSet(i) }));
@@ -20,13 +24,13 @@ function bewaarVoorkoop(vk, bron) {
   }
   const plan = Object.assign({}, oud, { folder: vk, plek, notitie, klaar, soort: {}, bron: bron || '', geladen: new Date().toISOString() }); delete plan.week;
   write('kw_acties', [{ week: wk, data: plan }]); S.kwplan[wk] = Object.assign({ week: wk }, plan);
-  if (of && of.items && of.items.length) for (const x of kwPlekken()) { if (!x.tafel) continue; const ind = indelingVan(wk, x.tafel); if (!(ind.items || []).some(y => y.kw)) continue; const map = {}; for (const o of of.items) { const os = kwNrsSet(o); const hit = vk.items.find(n => [...kwNrsSet(n)].some(z => os.has(z))); if (hit) map[o.id] = hit.id; } const ni = JSON.parse(JSON.stringify(ind)); ni.items = (ni.items || []).map(y => y.kw ? Object.assign(y, { kw: map[y.kw] || y.kw }) : y); slaIndelingOp(wk, x.tafel, ni, true); }
+  if (of && of.items && of.items.length) for (const x of kwPlekken()) { if (!x.tafel) continue; const ind = indelingVan(wk, x.tafel); if (!(ind.items || []).some(y => y.kw)) continue; const map = {}; for (const o of of.items) { const os = kwNrsSet(o); const hit = vk.items.find(n => [...kwNrsSet(n)].some(z => os.has(z))); if (hit) map[o.id] = hit.id; } const ni = JSON.parse(JSON.stringify(ind)); ni.items = (ni.items || []).map(y => y.kw ? Object.assign(y, { kw: map[y.kw] || y.kw }) : y); kwDubbelWeg(ni, vk); slaIndelingOp(wk, x.tafel, ni, true); }
   rebuild(); return wk;
 }
 // 1.50: oudere voorkooplijsten één keer opnieuw inlezen (Dagwinkel-folder = folder)
 async function kwHerlees() {
   const al = kwHerlees.al = kwHerlees.al || new Set(); if (!magKwPlan()) return; let n = 0;
-  for (const wk of Object.keys(S.kwplan || {})) { const f = S.kwplan[wk].folder; if (!f || f.bron !== 'voorkoop' || f.versie >= 6 || wk < weekSleutel(C.today()) || al.has(wk)) continue; al.add(wk);
+  for (const wk of Object.keys(S.kwplan || {})) { const f = S.kwplan[wk].folder; if (!f || f.bron !== 'voorkoop' || f.versie >= 7 || wk < weekSleutel(C.today()) || al.has(wk)) continue; al.add(wk);
     try { const b = await pdfOphalen(wk, 'voorkoop'); if (!b) continue; const vk = C.parseVoorkoop(await C.pdfPages(await pdfjs(), b.slice(0))); if (vk && weekSleutel(vk.van) === wk) { bewaarVoorkoop(vk, S.kwplan[wk].bron); n++; } } catch (e) { console.warn('herlees', wk, e); } }
   if (n && ui.tab === 'kwacties') render(true);
 }

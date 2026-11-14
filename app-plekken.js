@@ -36,11 +36,11 @@ function kwBlokMenu(wk, tid, idx) {
   const ov = sheet(`<h2 style="margin:0">${esc(it.naam)}</h2><p class="small">${plekTekst(t, it.cellen)}${it.opm ? ' · ' + esc(it.opm) : ''}</p>
   <button class="belrij" data-bm="vak"><span class="ic">✏️</span><span><b>Vakjes aanpassen</b><small>Tik vakjes aan of uit</small></span></button>
   <button class="belrij" data-bm="klaar"><span class="ic">${it.klaar ? '↩️' : '✅'}</span><span><b>${it.klaar ? 'Staat er nog niet' : 'Staat erin'}</b><small>${it.klaar && it.door ? 'Afgevinkt door ' + esc(it.door) : 'Afvinken als het is opgebouwd'}</small></span></button>
-  <button class="belrij" data-bm="opm"><span class="ic">💬</span><span><b>Opmerking</b><small>${it.opm ? esc(it.opm) : 'Bijv. vullen vanuit restanten, 1 hoog, breed presenteren'}</small></span></button>
+  <button class="belrij" data-bm="opm"><span class="ic">💬</span><span><b>Opmerking</b><small>${it.nota ? esc(it.nota) : 'Bijv. vullen vanuit restanten, 1 hoog, breed presenteren'}</small></span></button>
   <button class="belrij" data-bm="weg"><span class="ic">🗑️</span><span><b>Weghalen van deze plek</b><small>De actie gaat terug naar "Nog geen plek"</small></span></button>
   <button class="btn sec" data-x style="width:100%;margin-top:10px">Sluiten</button>`, (e, o) => {
     const b = e.target.closest('[data-bm]'); if (!b) return; o.remove(); const k = b.dataset.bm; const p = S.kwplan[wk];
-    if (k === 'opm') return notitieKeuze(it.naam, it.opm || '', ['Vullen vanuit restanten', '1 hoog', 'Breed presenteren'], t => { it.opm = t; slaIndelingOp(wk, tid, ind); render(true); }, '💬 Opmerking');
+    if (k === 'opm') return notitieKeuze(it.naam, it.nota || '', ['Vullen vanuit restanten', '1 hoog', 'Breed presenteren'], t => { it.nota = t; slaIndelingOp(wk, tid, ind); render(true); }, '💬 Opmerking');
     if (k === 'vak') { ui.kwSel = { tafel: tid, idx }; }
     if (k === 'klaar') { it.klaar = !it.klaar; it.door = it.klaar ? mijnNaam() : null; it.om = it.klaar ? new Date().toISOString() : null; slaIndelingOp(wk, tid, ind); if (it.kw) { p.klaar = Object.assign({}, p.klaar || {}); if (it.klaar) p.klaar[it.kw] = mijnNaam(); else delete p.klaar[it.kw]; kwPlanOpslaan(wk); } }
     if (k === 'weg') { ind.items.splice(idx, 1); slaIndelingOp(wk, tid, ind); if (it.kw && p.plek) { p.plek = Object.assign({}, p.plek); delete p.plek[it.kw]; kwPlanOpslaan(wk); } }
@@ -132,7 +132,7 @@ function kwPrint(wk, pls, bc) {
     const t = S.tafels[x.tafel]; const ind = indelingVan(wk, x.tafel); const R = +t.rijen || 2, K = +t.kol || 3; const hoog = Math.min(150, R * 26);
     const teken = tafelTekening(t, ind).replace(/grid-template-rows:[^"]*"/, `grid-template-rows:repeat(${R},${(hoog / R).toFixed(1)}mm)"`);
     const rg = l => { const u = [...new Set(l)].sort((x, y) => x - y); return u.length === 1 ? String(u[0] + 1) : u[u.length - 1] - u[0] === u.length - 1 ? `${u[0] + 1}–${u[u.length - 1] + 1}` : u.map(x => x + 1).join(','); };
-    const regels = (ind.items || []).filter(it => (it.cellen || []).length).sort((x, y) => Math.min(...x.cellen) - Math.min(...y.cellen)).map(it => `<tr><td class="pl">${rg(it.cellen.map(c => Math.floor(c / K)))}</td><td class="n">☐ <b>${esc(it.naam)}</b> <span style="color:#555">· vak ${rg(it.cellen.map(c => c % K))}</span>${it.opm ? ` <b>· 💬 ${esc(it.opm)}</b>` : ''}${bc ? tafelArts(it).filter(a => /^\d{4,}$/.test(a.nr || '')).slice(0, 2).map(a => C.msi(a.nr, 22, true)).join('') : ''}</td></tr>`);
+    const regels = (ind.items || []).filter(it => (it.cellen || []).length).sort((x, y) => Math.min(...x.cellen) - Math.min(...y.cellen)).map(it => `<tr><td class="pl">${rg(it.cellen.map(c => Math.floor(c / K)))}</td><td class="n">☐ <b>${esc(it.naam)}</b> <span style="color:#555">· vak ${rg(it.cellen.map(c => c % K))}</span>${it.nota ? ` <b>· 💬 ${esc(it.nota)}</b>` : ''}${bc ? tafelArts(it).filter(a => /^\d{4,}$/.test(a.nr || '')).slice(0, 2).map(a => C.msi(a.nr, 22, true)).join('') : ''}</td></tr>`);
     return `<div class="pdfpagina kpb"><h1>${esc(x.naam)}</h1><p class="kpsub">Acties KW week ${f.week} · ${esc(wn)}</p>${teken}${regels.length ? `<table><tr><td class="pl">Plank</td><td class="n"><b>Wat</b></td></tr>${regels.join('')}</table>` : ''}</div>`;
   };
   const vak = (f.items || []).filter(it => (pl.notitie || {})[it.id] === 'In het vak');
