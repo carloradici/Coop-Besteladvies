@@ -261,9 +261,9 @@ C.parseVoorkoop = pages => {
     }
     if (it[0].x < x0 - 30 && !/^\d{8,14}$/.test(it[0].s.trim())) {
       if (/^Artikelen die op alle/i.test(txt)) { sec = 'folder'; mech = ''; }
-      else if (/^Artikelen die alleen/i.test(txt)) { sec = 'instore'; mech = ''; }
+      else if (/^Artikelen die alleen/i.test(txt)) { sec = 'folder'; mech = ''; }
       else if (/^Instore\b/i.test(txt)) { sec = 'instore'; mech = ''; }
-      else if (!/^overige afnemers/i.test(txt)) mech = txt.replace(/\s*zie info\s*$/i, '').trim();
+      else if (!/^(voor )?overige afnemers/i.test(txt)) mech = txt.replace(/\s*zie info\s*$/i, '').trim();
       continue;
     }
     if (!cur) continue;
@@ -279,7 +279,8 @@ C.parseVoorkoop = pages => {
   let y = uit ? +uit.slice(0, 4) : C.isoWeek(C.today()).y; if (uit && week < C.isoWeek(uit).w - 20) y++;
   const van = C.mondayOf(y, week);
   const groepen = [];
-  for (const a of arts) { const g = groepen[groepen.length - 1]; if (g && g.sec === a.sec && g.mech === a.mech && g.merk === a.merk && g.cvoor === a.cvoor) g.arts.push(a); else groepen.push({ sec: a.sec, mech: a.mech, merk: a.merk, cvoor: a.cvoor, arts: [a] }); }
+  const pk = a => a.cvan && a.cvoor && a.cvoor < a.cvan ? a.cvoor : 0; // 1.50: zonder korting op de lijst telt de prijs niet mee voor de groep
+  for (const a of arts) { const g = groepen[groepen.length - 1]; if (g && g.sec === a.sec && g.mech === a.mech && g.merk === a.merk && g.pk === pk(a)) g.arts.push(a); else groepen.push({ sec: a.sec, mech: a.mech, merk: a.merk, cvoor: a.cvoor, pk: pk(a), arts: [a] }); }
   const STOP = /^(\d.*|gr\.?|ml\.?|ltr\.?|l|cl\.?|kg|st\.?|x|st|stuks|\+|&|en|de|het|met)$/i;
   const woorden = n => n.toLowerCase().replace(/[^a-zà-ÿ0-9&+%\/ .-]/g, ' ').split(/[\s\/+.]+/).map(w => w.replace(/\.$/, '')).filter(w => w.length >= 3 && !STOP.test(w));
   const items = groepen.map((g, i) => {
@@ -287,7 +288,7 @@ C.parseVoorkoop = pages => {
     if (g.arts.length === 1) naam = C.mooiNaam(g.arts[0].naam);
     else { const ws = g.arts.map(a => woorden(a.naam)); const gem = ws[0].find(w => ws.every(x => x.includes(w))); const tel = {}; ws.forEach(x => [...new Set(x)].forEach(w => tel[w] = (tel[w] || 0) + 1)); const vaak = Object.keys(tel).sort((a, b) => tel[b] - tel[a])[0]; naam = gem ? `${C.mooiNaam(gem)} · ${g.arts.length} soorten` : vaak && tel[vaak] * 2 >= g.arts.length && g.arts.length > 3 ? `${C.mooiNaam(vaak)} e.a. · ${g.arts.length} soorten` : g.arts.slice(0, g.arts.length === 3 ? 3 : 2).map((a, j) => { const w = woorden(a.naam).slice(0, 2).join(' ') || a.naam; return j ? w : C.mooiNaam(w); }).join(' / ') + (g.arts.length > 3 ? ` +${g.arts.length - 2}` : ''); }
     const nrs = [...new Set(g.arts.flatMap(a => [a.nr, a.ean]).filter(Boolean))];
-    return { id: 'v' + (i + 1), naam, variant: g.arts.length > 1 ? g.arts.map(a => C.mooiNaam(a.naam)).join(', ') : '', merk: g.merk, nrs, inhoud: g.arts[0].verp, streep: [...new Set(g.arts.map(a => a.cvan).filter(x => x && x !== g.cvoor))], prijs: g.cvoor ? [g.cvoor] : [], mech: g.mech, bijz: '', pag: '', soort: 'kw', instore: g.sec === 'instore', bron: 'voorkoop', arts: g.arts.map(a => ({ naam: C.mooiNaam(a.naam), nr: a.nr, ean: a.ean, cvan: a.cvan, cvoor: a.cvoor, verp: a.verp })) };
+    return { id: 'v' + (i + 1), naam, variant: g.arts.length > 1 ? g.arts.map(a => C.mooiNaam(a.naam)).join(', ') : '', merk: g.merk, nrs, inhoud: g.arts[0].verp, streep: [...new Set(g.arts.filter(a => a.cvan && a.cvan !== a.cvoor).map(a => a.cvan))], prijs: (p => p.length > 1 ? [Math.min(...p), Math.max(...p)] : p)([...new Set(g.arts.map(a => a.cvoor).filter(Boolean))]), mech: g.mech, bijz: '', pag: '', soort: 'kw', instore: g.sec === 'instore', bron: 'voorkoop', arts: g.arts.map(a => ({ naam: C.mooiNaam(a.naam), nr: a.nr, ean: a.ean, cvan: a.cvan, cvoor: a.cvoor, verp: a.verp })) };
   });
   return { week, van, tm: C.add(van, 6), thema: '', items, bron: 'voorkoop', uitlevering: uit, besteltot: tot };
 };

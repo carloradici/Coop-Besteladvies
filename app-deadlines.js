@@ -57,6 +57,7 @@ function lijstMenu(od, cur, arts, bdSleutel) {
   const st = cur ? voortgang(od, cur) : null; const opties = [];
   const teller = !mag('bestellen') && !mag('afvinken');
   if (cur && mag('afvinken') && st && st.open) opties.push(['klaar', '✅', 'Alles afvinken als besteld', `De ${st.open} artikelen met advies in één keer`]);
+  if (cur && mag('afvinken') && terminalLijst(od, cur).length) opties.push(['term', '📲', 'Naar de terminal', `${terminalLijst(od, cur).length} afgevinkte artikelen als QR-code, om met de terminal te scannen`]);
   if (!teller) opties.push(['prt', '👁️', 'Bestellijst als pdf', 'Met barcodes, om te printen of te delen']);
   if (cur && mag('afvinken')) opties.push(['ctl', '🔍', 'Controle met terminal', 'Vrijwillig: vergelijk met je bestelgeschiedenis']);
   if (!beheerNamen().includes(mijnNaam())) opties.push(['bericht', '✉️', 'Bericht voor ' + beheerNamen().join(' of '), 'Bijvoorbeeld een tekort of iets wat niet klopt']);
@@ -67,6 +68,7 @@ function lijstMenu(od, cur, arts, bdSleutel) {
   const ov = sheet(`<h2 style="margin:0 0 4px">Meer opties</h2>${opties.map(o => `<button class="belrij" data-lm="${o[0]}"><span class="ic">${o[1]}</span><span><b>${o[2]}</b>${o[3] ? `<small>${o[3]}</small>` : ''}</span><span class="pijl">›</span></button>`).join('')}<button class="btn sec" data-x style="margin-top:10px">Sluiten</button>`, (e, o) => {
     const b = e.target.closest('[data-lm]'); if (!b) return; o.remove(); const k = b.dataset.lm;
     if (k === 'klaar') allesBesteld(od, cur);
+    if (k === 'term') terminalModus(od, cur);
     if (k === 'telB') telModus(od, arts.filter(a => !a.uit && assStatus(a) === 'in'), false, true);
     if (k === 'telS') telModus(od, [], true);
     if (k === 'prt') printOpties(od, lijstArtikelen(od));
@@ -115,7 +117,7 @@ function renderLijst(od, soft) {
   if (cur && ui.modus === 'todo' && !ui.q && kantoorMag()) { const tw = alleArts.filter(a => !a.uit && assStatus(a) === 'in' && (!ui.groep || groepVan(a) === ui.groep) && !S.bestel[a.key + '|' + cur.besteldag] && C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).twijfel); if (tw.length) { extraNaam = 'Even kijken'; nulVan = arts.length; if (ui.toonNul) arts = arts.concat(tw); else arts.nulN = tw.length; } }
   if (cur && ui.modus === 'alles' && !ui.q) { const nul = arts.filter(a => { if (a.uit || assStatus(a) !== 'in') return false; const be = S.bestel[a.key + '|' + cur.besteldag]; return !(be && (be.besteld || (be.aantal != null && be.aantal !== ''))) && !C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).adv; }); if (nul.length > 5) { const z = new Set(nul); arts = arts.filter(a => !z.has(a)); nulVan = arts.length; if (ui.toonNul) arts = arts.concat(nul); else arts.nulN = nul.length; } }
   html += `<div id="lst"></div>`;
-  if (cur && !leeg && st.nodig && mag('afvinken') && !ui.q) html += `<div class="klaarblok"><button class="btn klaarknop" id="klaarB">${st.open ? 'Klaar, alles besteld ✓' : '✓ Alles besteld'}</button><p class="small">${st.open ? `Vinkt de ${st.open} artikelen met advies in één keer af.` : 'Goed bezig 👍'}</p></div>`;
+  if (cur && !leeg && st.nodig && mag('afvinken') && !ui.q) html += `<div class="klaarblok"><button class="btn klaarknop" id="klaarB">${st.open ? 'Klaar, alles besteld ✓' : '✓ Alles besteld'}</button>${terminalLijst(od, cur).length ? `<button class="btn sec" id="termB" style="width:100%;margin-top:8px">📲 Naar de terminal (${terminalLijst(od, cur).length})</button>` : ''}<p class="small">${st.open ? `Vinkt de ${st.open} artikelen met advies in één keer af.` : 'Goed bezig 👍'}</p></div>`;
   if (!arts.length && !leeg) html += `<div class="empty">${ui.q ? `Niets gevonden voor "${esc(ui.q)}".` : teller ? 'Hier valt nu niets te tellen.' : ui.modus === 'todo' ? (st && st.nodig ? '✓ Alles is besteld voor deze dag.' : '') : 'Geen artikelen voor deze keuze.'}</div>`;
   zetHtml(v, html);
   const bv = $('#bdV'); if (bv) bv.onclick = () => { ui.bd[od] = lijst[ci - 1].besteldag; ui.blijf = null; render(); };
@@ -126,7 +128,7 @@ function renderLijst(od, soft) {
   const tv = $('#telV'); if (tv) tv.onclick = () => telModus(od, telKeuze(od, cur).open.map(k => M.art[k]).filter(Boolean));
   const q = $('#q'); q.oninput = () => { ui.q = q.value.trim(); clearTimeout(q._t); q._t = setTimeout(render, 250); };
   const at = $('#assT'); if (at) at.onclick = () => ga('assort');
-  const kb = $('#klaarB'); if (kb) kb.onclick = () => allesBesteld(od, cur);
+  const kb = $('#klaarB'); if (kb) kb.onclick = () => allesBesteld(od, cur); const tb = $('#termB'); if (tb) tb.onclick = () => terminalModus(od, cur);
   $('#scanB').onclick = () => scanStart(od);
   const kh = $('#klaarHome'); if (kh) kh.onclick = () => ga('home');
   const lst = $('#lst'); let pos = 0, lastG = null, lastP = -1; const ra = routeAan(od);

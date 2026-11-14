@@ -12,6 +12,7 @@ Web-app (PWA) van Coop Vogelenzang die per artikel een bestel-advies geeft (vers
 ## Opbouw
 - `index.html`: alleen HTML-geraamte + laadscript met `LADEN`.
 - `rekenkern.js`: rekenkern en inleesfuncties (`window.C`), los script.
+- `qrcode.min.js`: QR-bibliotheek (MIT, Kazuhiko Arase), los script vóór rekenkern; gebruikt door "Naar de terminal".
 - De `app-*.js`-bestanden zijn stukken van één script: het laadscript zet ze in volgorde van `LADEN` binnen `(function(){'use strict'; … })();` en voert ze als één geheel uit. Functies mogen naar elkaar verwijzen over bestanden heen. Zet géén eigen `'use strict'` of wrapper in die bestanden. Nieuw bestand? Zet het in `LADEN` (index.html) én in `APP` (sw.js).
 - `style.css`: alle opmaak. Coop-oranje #f17d04, grote knoppen, simpele Nederlandse teksten.
 
@@ -46,7 +47,8 @@ Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js`, `verkoop-export.js
 4. `index.html`: `?b=x.y` bij style.css en in het laadscript.
 
 ## Afspraken over de app (1.46)
-- Bestellen: Carlo voert eerst in op de terminal en vinkt daarna af. Knop heet "✓ Besteld · 2 dozen".
+- Bestellen: Carlo voert eerst in op de terminal en vinkt daarna af. Knop heet "✓ Besteld · 2 dozen". Andersom kan ook (1.50): eerst afvinken, dan "📲 Naar de terminal" toont per artikel een QR-code met het bestelnummer (terminal leest QR en EAN, geen Code128).
+- Voorkooplijst Van Tol: "alle folders" en "alleen Dagwinkel folder" = folder (Coop Vogelenzang staat op de Dagwinkel-folder); alleen het deel "Instore" = instore (inkoopvoordeel, niet naar de klant).
 - Teller (geen bestellen/afvinken): geen datumbalk, geen collo/Brood Opzet/actielabels, zoekresultaat opent telscherm.
 - Kop: Coop-oranje (--merk #f17d04) met donkere tekst. Oranje (--oranje #b85500) = hoofdactie.
 - Meer: groep 'snel' bovenaan (Overtypen, Leverdag-check); Kantoor › Geavanceerd alleen voor beheerder.

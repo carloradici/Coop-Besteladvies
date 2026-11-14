@@ -125,6 +125,33 @@ async function scanStart(od, opVondst) {
     await lezer.decodeFromConstraints({ video: { facingMode: 'environment' } }, $('video', ov), res => { if (!res) return; const t = res.getText(); if (t === laatst) return; laatst = t; gevonden(t); });
   } catch (e) { const m = $('#scM', ov); if (m) m.textContent = /Permission|NotAllowed/i.test(e && (e.name + e.message)) ? 'Geen toegang tot de camera. Typ het nummer hieronder.' : 'Camera lukt niet. Typ het nummer hieronder.'; }
 }
+/* ---------- 1.50: naar de terminal (QR per afgevinkt artikel) ---------- */
+function terminalLijst(od, cur) { return cur ? lijstArtikelen(od).filter(a => { const b = S.bestel[a.key + '|' + cur.besteldag]; return b && b.besteld && C.num(b.aantal) > 0; }) : []; }
+function terminalModus(od, cur) {
+  const arts = terminalLijst(od, cur); if (!arts.length) return toast('Vink eerst artikelen af als besteld');
+  const lk = 'cba-term-' + od + '-' + cur.besteldag; let i = Math.min(+(ls.get(lk) || 0), arts.length), wl = null;
+  try { navigator.wakeLock && navigator.wakeLock.request('screen').then(w => wl = w).catch(() => { }); } catch (e) { }
+  const ov = document.createElement('div'); ov.className = 'telmodus termm'; document.body.appendChild(ov);
+  const sluit = () => { try { wl && wl.release(); } catch (e) { } ov.remove(); render(true); };
+  const teken = () => {
+    ls.set(lk, i); const a = arts[i];
+    if (!a) { ov.innerHTML = `<div class="telkop"><span></span><button id="tmX">Sluiten</button></div><div class="tmeind">✅<b>Klaar</b><span>${arts.length} artikelen naar de terminal</span></div><div class="telacties tm2"><button id="tmV">‹ Vorige</button><button class="hoofd" id="tmK">Klaar</button></div>`; }
+    else {
+      const n = C.num(S.bestel[a.key + '|' + cur.besteldag].aantal), nr = a.eigen ? '' : String(a.nr || ''); let qr = '';
+      if (nr && window.qrcode) { const q = qrcode(0, 'M'); q.addData(nr); q.make(); qr = q.createSvgTag({ cellSize: 8, margin: 4, scalable: true }); }
+      ov.innerHTML = `<div class="telkop"><span>${i + 1} van ${arts.length}</span><button id="tmX">Sluiten</button></div><div class="telbalk"><div style="width:${i / arts.length * 100}%"></div></div>
+      <div class="tmqr">${qr || '<span class="small">Geen bestelnummer: typ het artikel zelf in</span>'}</div><div class="tmnr">${esc(nr)}</div><div class="tmuitleg">Scan de code met de terminal, typ het aantal en tik ✓. Daarna hier Volgende of veeg.</div>
+      <div class="telnaam">${esc(a.naam)}</div><div class="telsub">${esc(a.merk || '')}</div>
+      <div class="tmaantal">Aantal: <b>${C.fmt(n)}</b> <span>${ehTxt(a, n)}${kwDoos(a) ? ` · ${C.fmt(n * a.he)} ${stukMv(a, n * a.he)}` : ''}</span></div>
+      <div class="telacties tm2"><button id="tmV" ${i ? '' : 'disabled'}>‹ Vorige</button><button class="hoofd" id="tmN">Volgende ›</button></div>`;
+    }
+    const b = id => ov.querySelector(id); b('#tmX').onclick = sluit; if (b('#tmK')) b('#tmK').onclick = () => { ls.set(lk, 0); sluit(); };
+    if (b('#tmV')) b('#tmV').onclick = () => { if (i > 0) { i--; teken(); } }; if (b('#tmN')) b('#tmN').onclick = () => { i++; teken(); };
+  };
+  let x0 = null; ov.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  ov.addEventListener('touchend', e => { if (x0 === null) return; const d = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(d) < 60) return; if (d < 0 && i < arts.length) i++; else if (d > 0 && i > 0) i--; else return; teken(); });
+  teken();
+}
 /* ---------- tel-modus ---------- */
 function telDagen() { return +((S.inst || {}).telDagen || 28); }
 function telModus(od, arts, vrij, ronde) {

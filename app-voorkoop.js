@@ -2,7 +2,7 @@
 function kwNrsSet(it) { return new Set((it.nrs || []).map(n => /^\d{1,7}$/.test(n) ? n.padStart(6, '0') : n)); }
 function bewaarVoorkoop(vk, bron) {
   if (!vk || !vk.week || !vk.items.length) throw new Error('Geen voorkooplijst herkend');
-  vk.versie = 3; const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
+  vk.versie = 4; const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
   const plek = {}, notitie = {}, klaar = {};
   if (of && of.items) {
     const nieuw = vk.items.map(i => ({ i, s: kwNrsSet(i) }));
@@ -13,6 +13,13 @@ function bewaarVoorkoop(vk, bron) {
   write('kw_acties', [{ week: wk, data: plan }]); S.kwplan[wk] = Object.assign({ week: wk }, plan);
   if (of && of.items && of.items.length) for (const x of kwPlekken()) { if (!x.tafel) continue; const ind = indelingVan(wk, x.tafel); if (!(ind.items || []).some(y => y.kw)) continue; const map = {}; for (const o of of.items) { const os = kwNrsSet(o); const hit = vk.items.find(n => [...kwNrsSet(n)].some(z => os.has(z))); if (hit) map[o.id] = hit.id; } const ni = JSON.parse(JSON.stringify(ind)); ni.items = (ni.items || []).map(y => y.kw ? Object.assign(y, { kw: map[y.kw] || y.kw }) : y); slaIndelingOp(wk, x.tafel, ni, true); }
   rebuild(); return wk;
+}
+// 1.50: oudere voorkooplijsten één keer opnieuw inlezen (Dagwinkel-folder = folder)
+async function kwHerlees() {
+  const al = kwHerlees.al = kwHerlees.al || new Set(); if (!magKwPlan()) return; let n = 0;
+  for (const wk of Object.keys(S.kwplan || {})) { const f = S.kwplan[wk].folder; if (!f || f.bron !== 'voorkoop' || f.versie >= 4 || wk < weekSleutel(C.today()) || al.has(wk)) continue; al.add(wk);
+    try { const b = await pdfOphalen(wk, 'voorkoop'); if (!b) continue; const vk = C.parseVoorkoop(await C.pdfPages(await pdfjs(), b.slice(0))); if (vk && weekSleutel(vk.van) === wk) { bewaarVoorkoop(vk, S.kwplan[wk].bron); n++; } } catch (e) { console.warn('herlees', wk, e); } }
+  if (n && ui.tab === 'kwacties') render(true);
 }
 function folderBijVoorkoop(f) {
   const wk = folderWeek(f); const p = S.kwplan[wk]; if (!p || !p.folder || p.folder.bron !== 'voorkoop') return null;

@@ -77,7 +77,7 @@ function kwItemKaart(wk, p, it, kan) {
   </div>`;
 }
 function renderKwActies() {
-  kwMigreer();
+  kwMigreer(); kwHerlees();
   const v = $('#view'); const nu = weekSleutel(C.today()); const weken = Object.keys(S.kwplan || {}).sort();
   if (!ui.kwWeek || !S.kwplan[ui.kwWeek]) ui.kwWeek = weken.find(w => w >= nu) || weken[weken.length - 1] || null;
   const wk = ui.kwWeek; const p = wk ? kwPas(S.kwplan[wk]) : null; if (p) kwNormPlan(p); const f = p && p.folder; const kan = magKwPlan();
