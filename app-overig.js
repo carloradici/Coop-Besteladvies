@@ -233,7 +233,7 @@ function tafelTekening(t, ind, klein) {
     const cel = (it.cellen || []).filter(c => c < N); if (!cel.length) return;
     const rs = cel.map(c => Math.floor(c / K)), ks = cel.map(c => c % K); const r1 = Math.min(...rs), r2 = Math.max(...rs), k1 = Math.min(...ks), k2 = Math.max(...ks);
     const kleur = TKLEUR[(it.kleur ?? i) % TKLEUR.length];
-    const label = klein ? '' : `<b>${esc(it.naam)}</b>${it.aantal ? `<span>${C.fmt(+it.aantal)}×</span>` : ''}${it.klaar ? '<i>✓</i>' : ''}`;
+    const label = klein ? '' : `<b>${esc(it.naam)}</b>${it.opm ? `<small class="vakopm">💬 ${esc(it.opm)}</small>` : ''}${it.aantal ? `<span>${C.fmt(+it.aantal)}×</span>` : ''}${it.klaar ? '<i>✓</i>' : ''}`;
     if ((r2 - r1 + 1) * (k2 - k1 + 1) === cel.length) { const smal = !klein && ((k2 - k1 + 1) / K <= 0.25 || (K >= 4 && k2 === k1)); h += `<div class="vak bezet ${it.klaar ? 'klaar' : ''} ${smal ? 'smal' : ''}" data-ti="${i}" style="grid-area:${r1 + 1}/${k1 + 1}/${r2 + 2}/${k2 + 2};background:${kleur}">${label}</div>`; cel.forEach(c => gedaan.add(c)); }
     else { const eerste = Math.min(...cel); cel.forEach(c => { gedaan.add(c); h += `<div class="vak bezet ${it.klaar ? 'klaar' : ''}" data-ti="${i}" style="grid-area:${Math.floor(c / K) + 1}/${c % K + 1};background:${kleur}">${c === eerste ? label : ''}</div>`; }); }
   });

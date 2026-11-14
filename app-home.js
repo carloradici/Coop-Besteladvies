@@ -400,7 +400,7 @@ const HULP = {
   'tafels:in': ['Vers-acties · 2 Indelen', 'Tik op een koeltafel om hem in te delen. Met 👁️ Pdf bekijken krijg je per tafel een A4.'],
   'tafels:tafel': ['Koeltafel indelen', 'Tik een actie aan bij Nog plaatsen en daarna de vakken. Vink af wat klaar staat.'],
   'kwacties:sort': ['KW-acties · 1 Sorteren', 'Tik per actie op de kop waar hij komt of op 📝 voor een notitie. 🛒 is het voorkoop-advies.'],
-  'kwacties:in': ['KW-acties · 2 Indelen', 'Tik op een kop om de planken in te delen. Met 👁️ Pdf bekijken krijg je elke kop op een A4.'],
+  'kwacties:in': ['KW-acties · 2 Indelen', 'Tik op een kop om de planken in te delen. Tik op een blok voor 💬 Opmerking, bijvoorbeeld "Vullen vanuit restanten" of "1 hoog". Die staat ook in de pdf. Met 👁️ Pdf bekijken krijg je elke kop op een A4.'],
   'kwacties:kop': ['Kop indelen', 'Tik een actie aan bij Nog plaatsen en daarna de vakken op de plank.'],
   acties: ['Actie planning · 3 Bestellen', 'De acties van de komende week met per artikel het advies.'],
   leverancier: ['Overtypen', 'Alles wat je bestelt, per leverancier, om over te typen in de terminal. Met 🔍 Controle met terminal vergelijk je wat erin staat.'],

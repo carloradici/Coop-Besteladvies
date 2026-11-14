@@ -635,3 +635,6 @@ details.klap>.btn{margin-bottom:8px}
 .termm .tmaantal{font-size:20px;margin-top:10px}.termm .tmaantal b{font-size:44px;font-weight:900;color:var(--oranje)}.termm .tmaantal span{color:var(--grijs);font-size:16px}
 .termm .tm2{grid-template-columns:1fr 2fr;margin-top:auto}.termm .tm2 button:disabled{opacity:.35}
 .termm .tmeind{margin:auto;text-align:center;display:flex;flex-direction:column;gap:6px;font-size:48px}.termm .tmeind b{font-size:26px}.termm .tmeind span{font-size:17px;color:var(--grijs)}
+/* 1.53 opmerking in blok */
+.tafel .vak .vakopm{display:block;font-size:12px;font-weight:600;opacity:.95;margin-top:2px;overflow-wrap:anywhere}
+#printArea .kpb .tafel .vak .vakopm{font-size:9px!important}
