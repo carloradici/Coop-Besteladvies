@@ -280,7 +280,9 @@ C.parseVoorkoop = pages => {
   const van = C.mondayOf(y, week);
   const groepen = [];
   const pk = a => a.cvan && a.cvoor && a.cvoor < a.cvan ? a.cvoor : 0; // 1.50: zonder korting op de lijst telt de prijs niet mee voor de groep
-  for (const a of arts) { const g = groepen[groepen.length - 1]; if (g && g.sec === a.sec && g.mech === a.mech && g.merk === a.merk && g.pk === pk(a)) g.arts.push(a); else groepen.push({ sec: a.sec, mech: a.mech, merk: a.merk, cvoor: a.cvoor, pk: pk(a), arts: [a] }); }
+  const merken = new Set(arts.map(a => a.merk).filter(Boolean)); // 1.51: merk dat in de naam is geschoven (lange naam) terugzetten
+  for (const a of arts) if (!a.merk) { const w = a.naam.split(/\s+/), j = w.findIndex(x => x.length > 2 && merken.has(x)); if (j > 0) { a.merk = w[j]; w.splice(j, 1); a.naam = w.join(' '); } }
+  for (const a of arts) { const g = groepen.find(g => g.sec === a.sec && g.mech === a.mech && g.merk === a.merk && g.pk === pk(a)); if (g) g.arts.push(a); else groepen.push({ sec: a.sec, mech: a.mech, merk: a.merk, cvoor: a.cvoor, pk: pk(a), arts: [a] }); }
   const STOP = /^(\d.*|gr\.?|ml\.?|ltr\.?|l|cl\.?|kg|st\.?|x|st|stuks|\+|&|en|de|het|met)$/i;
   const woorden = n => n.toLowerCase().replace(/[^a-zà-ÿ0-9&+%\/ .-]/g, ' ').split(/[\s\/+.]+/).map(w => w.replace(/\.$/, '')).filter(w => w.length >= 3 && !STOP.test(w));
   const items = groepen.map((g, i) => {

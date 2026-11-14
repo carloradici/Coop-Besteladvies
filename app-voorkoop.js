@@ -1,8 +1,17 @@
 /* ---------- 1.23: voorkooplijst ---------- */
 function kwNrsSet(it) { return new Set((it.nrs || []).map(n => /^\d{1,7}$/.test(n) ? n.padStart(6, '0') : n)); }
+// 1.51: duidelijke naam uit het kassa-assortiment (merk voluit + soort)
+function kwNaamKassa(it) {
+  const perB = kwNaamKassa.b || (kwNaamKassa.b = Object.values(S.kassa || {}).reduce((m, r) => (r.b && (m[r.b] = r), m), {}));
+  const rs = (it.nrs || []).map(x => (S.kassa || {})[x] || perB[x]).filter(r => r && r.m); if (!rs.length) return;
+  const tel = k => Object.entries(rs.reduce((m, r) => (r[k] && (m[r[k]] = (m[r[k]] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  const merk = tel('m')[0].toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase());
+  if (it.variant) { const so = tel('so').slice(0, 2).map(x => x.toLowerCase()); if (so.length) it.naam = merk + ' ' + (so.length > 1 ? so[0] + (/ en /.test(so[1]) ? ', ' : ' en ') + so[1] : so[0]); }
+  else if (!it.naam.toLowerCase().includes(merk.toLowerCase())) { const n = it.merk && it.naam.toLowerCase().startsWith(it.merk.toLowerCase() + ' ') ? it.naam.slice(it.merk.length + 1) : it.naam; it.naam = merk + ' ' + n.charAt(0).toLowerCase() + n.slice(1); }
+}
 function bewaarVoorkoop(vk, bron) {
   if (!vk || !vk.week || !vk.items.length) throw new Error('Geen voorkooplijst herkend');
-  vk.versie = 4; const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
+  vk.versie = 5; kwNaamKassa.b = null; vk.items.forEach(kwNaamKassa); const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
   const plek = {}, notitie = {}, klaar = {};
   if (of && of.items) {
     const nieuw = vk.items.map(i => ({ i, s: kwNrsSet(i) }));
@@ -17,7 +26,7 @@ function bewaarVoorkoop(vk, bron) {
 // 1.50: oudere voorkooplijsten één keer opnieuw inlezen (Dagwinkel-folder = folder)
 async function kwHerlees() {
   const al = kwHerlees.al = kwHerlees.al || new Set(); if (!magKwPlan()) return; let n = 0;
-  for (const wk of Object.keys(S.kwplan || {})) { const f = S.kwplan[wk].folder; if (!f || f.bron !== 'voorkoop' || f.versie >= 4 || wk < weekSleutel(C.today()) || al.has(wk)) continue; al.add(wk);
+  for (const wk of Object.keys(S.kwplan || {})) { const f = S.kwplan[wk].folder; if (!f || f.bron !== 'voorkoop' || f.versie >= 5 || wk < weekSleutel(C.today()) || al.has(wk)) continue; al.add(wk);
     try { const b = await pdfOphalen(wk, 'voorkoop'); if (!b) continue; const vk = C.parseVoorkoop(await C.pdfPages(await pdfjs(), b.slice(0))); if (vk && weekSleutel(vk.van) === wk) { bewaarVoorkoop(vk, S.kwplan[wk].bron); n++; } } catch (e) { console.warn('herlees', wk, e); } }
   if (n && ui.tab === 'kwacties') render(true);
 }
