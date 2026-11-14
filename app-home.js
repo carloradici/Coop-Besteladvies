@@ -271,7 +271,9 @@ function renderAppInst() {
   <div class="it"><span><b>Korte lijst</b><br><span class="small">Eén regel per artikel: naam, advies en invullen</span></span><input type="checkbox" class="schak" data-pb="kort" ${p.kort ? 'checked' : ''}></div>
   <div class="it"><span><b>Verkooptabel altijd tonen</b><br><span class="small">Anders zie je die pas na een tik op "▾ Meer" bij een artikel</span></span><input type="checkbox" class="schak" data-pb="details" ${p.details ? 'checked' : ''}></div>
   <div class="it"><span><b>Eenvoudige modus</b><br><span class="small">Minder informatie en grotere knoppen</span></span><input type="checkbox" class="schak" data-pb="eenvoudig" ${p.eenvoudig ? 'checked' : ''}></div></div></div>
-  <div class="blk"><h2>Startpagina</h2><select id="pStart" style="width:100%">${starts.map(s => `<option value="${s[0]}" ${(p.start || 'home') === s[0] ? 'selected' : ''}>${s[1]}</option>`).join('')}</select><p class="small">Deze instellingen gelden alleen voor jou (${esc(mijnNaam())}) en werken op elk toestel waar je inlogt.</p></div>`;
+  <div class="blk"><h2>Startpagina</h2><select id="pStart" style="width:100%">${starts.map(s => `<option value="${s[0]}" ${(p.start || 'home') === s[0] ? 'selected' : ''}>${s[1]}</option>`).join('')}</select><p class="small">Deze instellingen gelden alleen voor jou (${esc(mijnNaam())}) en werken op elk toestel waar je inlogt.</p></div>
+  <div class="blk"><h2>Pincode opnieuw vragen</h2><div class="segment licht">${[[1, '1 min'], [10, '10 min'], [60, '1 uur'], [0, 'Bij opstarten']].map(o => `<button class="${slotMin() === o[0] ? 'aan' : ''}" data-slot="${o[0]}">${o[1]}</button>`).join('')}</div><p class="small">Na zo lang buiten beeld vraagt de app je pincode opnieuw. Geldt alleen voor deze telefoon. Na 12 uur moet je altijd opnieuw inloggen.</p></div>`;
+  v.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { ls.set('cba-slot', +b.dataset.slot); render(true); });
   v.querySelectorAll('[data-pk]').forEach(b => b.onclick = () => zetPref(b.dataset.pk, b.dataset.pv));
   v.querySelectorAll('[data-pb]').forEach(c => c.onchange = () => zetPref(c.dataset.pb, c.checked));
   $('#pStart').onchange = e => zetPref('start', e.target.value);
@@ -414,7 +416,7 @@ const HULP = {
   mwedit: ['Rechten', 'Kies Vakkenvuller, Afdelingsleider of Beheerder en pas daarna per vinkje aan. Beginnersmodus: alleen bestellen en tellen.'],
   winkel: ['Winkel', 'Met de koppelcode koppel je een toestel van de winkel. Een nieuwe code ontkoppelt alle toestellen.'],
   meldingen: ['Meldingen', 'Kies welke pushmeldingen dit toestel krijgt. Op de iPhone werkt dit alleen als de app op je beginscherm staat.'],
-  appinst: ['App-instellingen', 'Licht of donker, tekstgrootte en korte lijst.'],
+  appinst: ['App-instellingen', 'Licht of donker, tekstgrootte en korte lijst. Bij <b>Pincode opnieuw vragen</b> kies je hoe lang de app buiten beeld mag zijn voordat hij je pincode vraagt (alleen voor deze telefoon).'],
   route: ['Looproute', 'De bestellijst staat per pad in de volgorde waarin je loopt; de app leert bij elke bestelling waar een artikel staat. Pad zelf kiezen: open het artikel en tik op 🚶 Pad. Tik op een kopje met ▾ om het open of dicht te klappen.'],
   uitleg: ['Uitleg', 'Bovenaan de woordenlijst, daaronder uitleg per scherm.'],
   eigen: ['Eigen artikelen', 'Artikelen die niet in het bestelboek staan voeg je zelf toe met "+ Artikel toevoegen" onderaan de lijst. Vul de EAN of PLU in, dan koppelt de app de verkoop uit de dag-export en krijg je een advies zoals bij de rest. Tik op de naam om het aan te passen of te verwijderen. Komt het artikel later in het bestelboek, dan meldt de app dat en neem je het boekartikel over.'],

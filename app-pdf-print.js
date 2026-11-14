@@ -220,7 +220,7 @@ function naarBeheer(sec) { ui.bsub = sec; ga('beheer'); }
 function meerItems() {
   const kU = mag('upload'), kI = mag('instellingen'), kT = mag('team');
   const L = [
-    ['mij', 'mApp', '⚙️', 'App-instellingen', 'Licht of donker, tekstgrootte, korte lijst', 'weergave thema donker licht donkere modus lettergrootte tekst groot scherm', true, () => ga('appinst')],
+    ['mij', 'mApp', '⚙️', 'App-instellingen', 'Licht of donker, tekstgrootte, pincode', 'pincode vergrendelen uitloggen weergave thema donker licht donkere modus lettergrootte tekst groot scherm', true, () => ga('appinst')],
     ['mij', 'mMeld', '🔔', 'Pushmeldingen', 'Meldingen op dit toestel aan of uit', 'notificatie notificaties push bel herinnering melding', true, () => ga('meldingen')],
     ['mij', 'mPin', '🔑', kanFace() ? 'Pincode en Face ID' : 'Pincode wijzigen', 'Je eigen pincode', 'pincode wachtwoord code inloggen face id', !!mw, pinWijzigen],
     ['mij', 'mWis', '👤', 'Ander persoon', `Nu ingelogd: ${esc(mijnNaam())}`, 'wisselen andere medewerker uitloggen vergrendelen naam', !!mw, () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); }],

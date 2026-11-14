@@ -188,9 +188,10 @@ document.addEventListener('change', e => { if (e.target && e.target.matches && e
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('touchmove', e => { if (e.scale !== undefined && e.scale !== 1) e.preventDefault(); }, { passive: false });
 document.addEventListener('dblclick', e => e.preventDefault());
+function slotMin() { const v = ls.get('cba-slot'); return v === null || v === undefined ? 10 : +v; } // 1.56: standaard 10 min
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { verborgen = Date.now(); return; }
-  const lang = verborgen && Date.now() - verborgen > 15000; verborgen = 0;
+  const lang = verborgen && slotMin() && Date.now() - verborgen > slotMin() * 60000; verborgen = 0;
   if (kiestBestand || buitenApp > 0 || scanStop) { kiestBestand = false; return; }
   if (lang && OPEN && !OEFEN) inlogScherm();
 });
