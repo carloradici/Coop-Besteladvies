@@ -9,7 +9,8 @@ function kwPlekkenNorm(l) {
 }
 function kwPlekken() { const l = (S.inst || {}).kwPlekken; return Array.isArray(l) && l.length ? kwPlekkenNorm(l) : STD_PLEKKEN; }
 function kwNormPlan(p) {
-  let ander = false; if (!p) return false; const pl = Object.assign({}, p.plek || {}), no = Object.assign({}, p.notitie || {});
+  let ander = false; if (!p) return false; ((p.folder || {}).items || []).forEach(i => { if (i.pag && i.instore) i.instore = false; }); // 1.57: in de Coop-folder = folder
+  const pl = Object.assign({}, p.plek || {}), no = Object.assign({}, p.notitie || {});
   for (const id in pl) { const k = String(pl[id] || '').toLowerCase(); if (KW_OUD_NOTITIE[k]) { no[id] = no[id] || KW_OUD_NOTITIE[k]; delete pl[id]; ander = true; } else if (KW_OUD_NAAM[k]) { pl[id] = KW_OUD_NAAM[k]; ander = true; } }
   if (ander) { p.plek = pl; p.notitie = no; } return ander;
 }
@@ -92,7 +93,7 @@ function renderKwActies() {
     const klaarN = kwL.filter(i => kwStatus(p, i.id)).length; const items = ui.kwOpen ? alle.filter(i => !kwStatus(p, i.id)) : alle;
     h += `<div class="blk"><h2 style="margin:0">Week ${f.week}${f.thema ? ' · ' + esc(f.thema) : ''}</h2><p class="small">${f.van ? `${C.fmtDag(f.van)} t/m ${C.fmtDag(f.tm)} · ` : ''}<b class="${klaarN < kwL.length ? 'oranje' : 'groen'}">${kwL.length - klaarN ? `${kwL.length - klaarN} van ${kwL.length} nog sorteren` : `✓ alle ${kwL.length} gesorteerd`}</b></p>
     <p class="small">Tik bij elke actie op de kop waar hij komt, of 📝 voor een notitie zoals "In het vak". Daarna ga je naar <b>2 · Indelen</b>.</p>
-    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm ${ui.kwOpen ? '' : 'sec'}" id="kwOpen">${ui.kwOpen ? '✓ ' : ''}Alleen nog te doen</button>${anderN ? `<button class="btn sm sec" id="kwAlles">${toonAlles ? 'Alleen KW' : `+ vers, diepvries, brood (${anderN})`}</button>` : ''}<button class="btn sm sec" id="kwDeel">📤 Delen</button><button class="btn sm sec" id="pdfBk">📄 Bekijken</button></div></div>`;
+    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm ${ui.kwOpen ? '' : 'sec'}" id="kwOpen">${ui.kwOpen ? '✓ ' : ''}Alleen nog te doen</button>${anderN ? `<button class="btn sm sec" id="kwAlles">${toonAlles ? 'Alleen KW' : `+ vers, diepvries, brood (${anderN})`}</button>` : ''}<button class="btn sm sec" id="kwDeel">📤 Delen</button><button class="btn sm sec" id="pdfBk">📄 Bekijken</button>${kan && !DEMO ? '<button class="btn sm sec" id="kwHaalNu">🔄 Opnieuw ophalen</button>' : ''}</div></div>`;
     h += terugblikHtml(f.van, f.tm, kwL.filter(i => kwStatus(p, i.id)).map(i => [i.naam, kwKeys(i)]));
     const fl = items.filter(i => !i.instore), ins = items.filter(i => i.instore);
     if (f.bron === 'voorkoop') h += `<h3 class="meerkop">📰 Folder (${fl.length})</h3>`;
@@ -133,6 +134,8 @@ function renderKwActies() {
   const bk = $('#pdfBk'); if (bk) bk.onclick = () => pdfBekijkKeuze(wk, f && f.bron === 'voorkoop' ? ['folder', 'voorkoop'] : ['folder']);
   v.querySelectorAll('[data-kpag]').forEach(b => b.onclick = () => pdfBekijk(wk, 'folder', +b.dataset.kpag));
   const kpb = $('#kwPrint'); if (kpb) kpb.onclick = () => kwPrintKies(wk);
+  const hn = $('#kwHaalNu'); if (hn) hn.onclick = async () => { hn.disabled = true; hn.textContent = 'Ophalen…'; const [y, w] = wk.split('-').map(Number);
+    try { const r = await kwHaalOp(y, w); toast(r.folderFout ? `Voorkooplijst opgehaald · folderplanning: ${r.folderFout.message}` : '✓ Voorkooplijst en folderplanning opgehaald', 5000); } catch (e) { toast('Ophalen mislukt: ' + e.message, 5000); } render(true); };
   const ko = $('#kwOpen'); if (ko) ko.onclick = () => { ui.kwOpen = !ui.kwOpen; render(); };
   const ka = $('#kwAlles'); if (ka) ka.onclick = () => { ui.kwAlles = !ui.kwAlles; render(); };
   v.querySelectorAll('[data-ks]').forEach(b => b.onclick = () => kwSoortKies(wk, b.dataset.ks));

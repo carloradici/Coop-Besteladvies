@@ -15,11 +15,12 @@ function kwDubbelWeg(ind, vk) {
 }
 function bewaarVoorkoop(vk, bron) {
   if (!vk || !vk.week || !vk.items.length) throw new Error('Geen voorkooplijst herkend');
-  vk.versie = 7; kwNaamKassa.b = null; vk.items.forEach(kwNaamKassa); const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
+  vk.versie = 8; kwNaamKassa.b = null; vk.items.forEach(kwNaamKassa); const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
   const plek = {}, notitie = {}, klaar = {};
   if (of && of.items) {
     const nieuw = vk.items.map(i => ({ i, s: kwNrsSet(i) }));
     for (const o of of.items) { const os = kwNrsSet(o); const hit = nieuw.find(n => [...os].some(x => n.s.has(x))); if (!hit) continue; const id = hit.i.id; if ((oud.plek || {})[o.id] && !plek[id]) plek[id] = oud.plek[o.id]; if ((oud.notitie || {})[o.id] && !notitie[id]) notitie[id] = oud.notitie[o.id]; if ((oud.klaar || {})[o.id]) klaar[id] = oud.klaar[o.id]; if (!hit.i.pag && o.pag) hit.i.pag = o.pag; }
+    for (const n of vk.items) if (n.pag) n.instore = false;
     if (of.bron !== 'voorkoop' && of.thema) vk.thema = of.thema;
   }
   const plan = Object.assign({}, oud, { folder: vk, plek, notitie, klaar, soort: {}, bron: bron || '', geladen: new Date().toISOString() }); delete plan.week;
@@ -30,13 +31,14 @@ function bewaarVoorkoop(vk, bron) {
 // 1.50: oudere voorkooplijsten één keer opnieuw inlezen (Dagwinkel-folder = folder)
 async function kwHerlees() {
   const al = kwHerlees.al = kwHerlees.al || new Set(); if (!magKwPlan()) return; let n = 0;
-  for (const wk of Object.keys(S.kwplan || {})) { const f = S.kwplan[wk].folder; if (!f || f.bron !== 'voorkoop' || f.versie >= 7 || wk < weekSleutel(C.today()) || al.has(wk)) continue; al.add(wk);
+  for (const wk of Object.keys(S.kwplan || {})) { const f = S.kwplan[wk].folder; if (!f || f.bron !== 'voorkoop' || f.versie >= 8 || wk < weekSleutel(C.today()) || al.has(wk)) continue; al.add(wk);
     try { const b = await pdfOphalen(wk, 'voorkoop'); if (!b) continue; const vk = C.parseVoorkoop(await C.pdfPages(await pdfjs(), b.slice(0))); if (vk && weekSleutel(vk.van) === wk) { bewaarVoorkoop(vk, S.kwplan[wk].bron); n++; } } catch (e) { console.warn('herlees', wk, e); } }
   if (n && ui.tab === 'kwacties') render(true);
 }
 function folderBijVoorkoop(f) {
   const wk = folderWeek(f); const p = S.kwplan[wk]; if (!p || !p.folder || p.folder.bron !== 'voorkoop') return null;
   for (const it of p.folder.items) { if (it.pag) continue; const s = kwNrsSet(it); const o = f.items.find(x => [...kwNrsSet(x)].some(z => s.has(z))); if (o && o.pag) it.pag = o.pag; }
+  for (const it of p.folder.items) if (it.pag) it.instore = false; // 1.57: in de Coop-folder = folder
   if (f.thema) p.folder.thema = f.thema; kwPlanOpslaan(wk); return wk;
 }
 async function kwPdfLezen(buf, naam) {
@@ -46,13 +48,16 @@ async function kwPdfLezen(buf, naam) {
   const fp = C.parseFolder(await C.pdfVlakken(await pdfjs(), buf)); const al = folderBijVoorkoop(fp); if (al) pdfBewaar(al, 'folder', kopie); if (al) return { wk: al, tekst: `✓ Folder week ${fp.week} gebruikt voor paginanummers (de acties komen uit de voorkooplijst)` };
   const wk = bewaarFolder(fp, naam); pdfBewaar(wk, 'folder', kopie); return { wk, tekst: `✓ Week ${fp.week}: ${fp.items.filter(i => i.soort === 'kw').length} KW-acties` };
 }
+// 1.57: Coop-folderplanning ook ophalen als de voorkooplijst er al is (bepaalt folder of instore)
+async function kwFolderErbij(haal) { const buf = await haal(''); const kop = buf.slice(0); const wk = folderBijVoorkoop(C.parseFolder(await C.pdfVlakken(await pdfjs(), buf))); if (wk) pdfBewaar(wk, 'folder', kop); return wk; }
 async function kwHaalOp(jaar, week, alleenVk) {
   if (DEMO) throw new Error('In de testversie kun je de pdf zelf kiezen');
   const haal = async soort => { const r = await fetch(`${SB_URL}/functions/v1/folder?jaar=${jaar}&week=${week}${soort ? '&soort=' + soort : ''}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } if (r.status === 404 && !/staat nog niet/.test(t)) t = 'De functie "folder" staat nog niet in Supabase'; const e = new Error(t); e.status = r.status; throw e; } return r.arrayBuffer(); };
-  let vkFout = null;
-  try { const buf = await haal('voorkoop'); const pages = await C.pdfPages(await pdfjs(), buf.slice(0)); if (C.detectPdf(pages) === 'voorkoop') { const vk = C.parseVoorkoop(pages); if (!vk || weekSleutel(vk.van) !== weekSleutel(C.mondayOf(jaar, week))) throw new Error(`Voorkooplijst week ${week} staat nog niet online`); const wkv = bewaarVoorkoop(vk, 'opgehaald'); pdfBewaar(wkv, 'voorkoop', buf); return { wk: wkv, soort: 'voorkoop' }; } } catch (e) { vkFout = e; }
+  let vkFout = null, wkv = null;
+  try { const buf = await haal('voorkoop'); const pages = await C.pdfPages(await pdfjs(), buf.slice(0)); if (C.detectPdf(pages) === 'voorkoop') { const vk = C.parseVoorkoop(pages); if (!vk || weekSleutel(vk.van) !== weekSleutel(C.mondayOf(jaar, week))) throw new Error(`Voorkooplijst week ${week} staat nog niet online`); wkv = bewaarVoorkoop(vk, 'opgehaald'); pdfBewaar(wkv, 'voorkoop', buf); } } catch (e) { vkFout = e; }
+  const k = weekSleutel(C.mondayOf(jaar, week)); const p = S.kwplan[k];
+  if (wkv || (p && p.folder && p.folder.bron === 'voorkoop')) { let folderFout = null; try { await kwFolderErbij(haal); } catch (e) { folderFout = e; } return { wk: wkv || k, soort: wkv ? 'voorkoop' : 'folder', folderFout, nieuwVk: !!wkv }; }
   if (alleenVk) throw vkFout || new Error('Geen voorkooplijst');
-  const k = weekSleutel(C.mondayOf(jaar, week)); const p = S.kwplan[k]; if (p && p.folder && p.folder.bron === 'voorkoop') return { wk: k, soort: 'voorkoop' };
   const buf = await haal(''); const kop = buf.slice(0); const fp = C.parseFolder(await C.pdfVlakken(await pdfjs(), buf)); const wkf = bewaarFolder(fp, 'opgehaald'); pdfBewaar(wkf, 'folder', kop); return { wk: wkf, soort: 'folder' };
 }
 function kwSplits(wk, id) {

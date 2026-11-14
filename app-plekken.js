@@ -144,8 +144,8 @@ function kwPrint(wk, pls, bc, zonderVak) {
 async function kwAutoHaal() {
   if (DEMO || OEFEN || !mag('o_kw') || !magKwPlan() || !navigator.onLine) return; const vandaag = C.today();
   for (let n = 1; n <= 6; n++) {
-    const d = C.add(C.monday(vandaag), 7 * n - 7); const x = C.isoWeek(d); const k = weekSleutel(d); const oud = S.kwplan[k]; if (oud && oud.folder && oud.folder.bron === 'voorkoop') continue; if (!oud && n === 1) continue;
+    const d = C.add(C.monday(vandaag), 7 * n - 7); const x = C.isoWeek(d); const k = weekSleutel(d); const oud = S.kwplan[k]; if (oud && oud.folder && oud.folder.bron === 'voorkoop' && oud.folder.items.some(i => i.pag)) continue; if (!oud && n === 1) continue;
     const lk = `cba-kwhaal-${W}-${k}`; if (ls.get(lk) === vandaag) continue; ls.set(lk, vandaag);
-    try { const oudF = oud && oud.folder; const r = await kwHaalOp(x.y, x.w, !!oudF); const wat = r.soort === 'voorkoop' ? 'Voorkooplijst' : 'Folderplanning'; toast(`📣 ${wat} week ${x.w} automatisch opgehaald`, 4000); log('acties', `${wat} week ${x.w} automatisch opgehaald`); if (ui.tab === 'home' || ui.tab === 'kwacties') render(true); } catch (e) { }
+    try { const oudF = oud && oud.folder; const r = await kwHaalOp(x.y, x.w, !!oudF); if (r.folderFout && !r.nieuwVk) continue; const wat = r.nieuwVk ? (r.folderFout ? 'Voorkooplijst' : 'Voorkooplijst en folderplanning') : 'Folderplanning'; toast(`📣 ${wat} week ${x.w} automatisch opgehaald`, 4000); log('acties', `${wat} week ${x.w} automatisch opgehaald`); if (ui.tab === 'home' || ui.tab === 'kwacties') render(true); } catch (e) { }
   }
 }
