@@ -11,7 +11,7 @@ function kwNaamKassa(it) {
 }
 function bewaarVoorkoop(vk, bron) {
   if (!vk || !vk.week || !vk.items.length) throw new Error('Geen voorkooplijst herkend');
-  vk.versie = 5; kwNaamKassa.b = null; vk.items.forEach(kwNaamKassa); const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
+  vk.versie = 6; kwNaamKassa.b = null; vk.items.forEach(kwNaamKassa); const wk = weekSleutel(vk.van); const oud = S.kwplan[wk] || {}; const of = oud.folder;
   const plek = {}, notitie = {}, klaar = {};
   if (of && of.items) {
     const nieuw = vk.items.map(i => ({ i, s: kwNrsSet(i) }));
@@ -26,7 +26,7 @@ function bewaarVoorkoop(vk, bron) {
 // 1.50: oudere voorkooplijsten één keer opnieuw inlezen (Dagwinkel-folder = folder)
 async function kwHerlees() {
   const al = kwHerlees.al = kwHerlees.al || new Set(); if (!magKwPlan()) return; let n = 0;
-  for (const wk of Object.keys(S.kwplan || {})) { const f = S.kwplan[wk].folder; if (!f || f.bron !== 'voorkoop' || f.versie >= 5 || wk < weekSleutel(C.today()) || al.has(wk)) continue; al.add(wk);
+  for (const wk of Object.keys(S.kwplan || {})) { const f = S.kwplan[wk].folder; if (!f || f.bron !== 'voorkoop' || f.versie >= 6 || wk < weekSleutel(C.today()) || al.has(wk)) continue; al.add(wk);
     try { const b = await pdfOphalen(wk, 'voorkoop'); if (!b) continue; const vk = C.parseVoorkoop(await C.pdfPages(await pdfjs(), b.slice(0))); if (vk && weekSleutel(vk.van) === wk) { bewaarVoorkoop(vk, S.kwplan[wk].bron); n++; } } catch (e) { console.warn('herlees', wk, e); } }
   if (n && ui.tab === 'kwacties') render(true);
 }

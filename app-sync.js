@@ -71,12 +71,12 @@ async function sync(full) {
     try { const ro = await rest(wq('voorkeuren?wie=eq.route')); if (ro[0] && ro[0].data) { S.route = ro[0].data; ls.set('cba-route', S.route); } } catch (e) { }
     try { const pr = await rest(wq(`voorkeuren?wie=eq.${encodeURIComponent(wieSleutel())}`)); if (pr[0] && pr[0].data) { S.pref = pr[0].data; ls.set('cba-pref', S.pref); pasPrefToe(); } } catch (e) { }
     applyOutboxLocal();
-    await saveCache(); online = true; setSync();
+    online = true; syncFout = ''; await saveCache().catch(e => syncFout = 'Opslaan op toestel: ' + e.message); setSync();
     rebuild();
     if (!mw || !mwLijst().some(m => m.id === mw.id)) { inlogScherm(); return; }
     if (!document.body.classList.contains('inlog')) render();
   } catch (e) {
-    console.warn(e); online = false; setSync();
+    console.warn(e); netFout(e); setSync();
     if (/niet ingelogd|refresh|Invalid Refresh|401|JWT/i.test(e.message) && navigator.onLine) { sess = null; ls.del('cba-sess'); showLogin('Je sessie is verlopen. Log opnieuw in of koppel het toestel opnieuw.'); }
   }
 }
@@ -128,9 +128,12 @@ async function flush() {
     }
     online = true;
   }
-  catch (e) { online = false; }
+  catch (e) { netFout(e); }
   finally { flushing = false; }
 }
+// 1.52: alleen echt offline bij een netwerkfout; andere fouten tonen we bovenin
+let syncFout = '';
+function netFout(e) { const net = !navigator.onLine || e instanceof TypeError || /fetch|Load failed|network/i.test(e.message); online = !net; if (!net) syncFout = String(e.message || e).slice(0, 300); }
 function setSync(t) {
   const el = $('#sync'); if (!el) return;
   if (DEMO) { el.textContent = 'Testversie – voorbeelddata'; el.className = 'sync'; return; }
@@ -139,6 +142,8 @@ function setSync(t) {
   const w = outbox.length;
   el.textContent = !online ? (w ? `Offline – ${w} ${w === 1 ? 'wijziging wacht' : 'wijzigingen wachten'}` : 'Offline – je ziet de laatst opgehaalde gegevens') : (w ? `Opslaan… ${w} wacht` : 'Online – alle toestellen gelijk');
   el.className = 'sync' + (online ? '' : ' off');
+  if (online && syncFout) { el.textContent = '⚠️ Ophalen mislukt · tik voor details'; el.className = 'sync off'; }
+  el.onclick = online && syncFout ? () => sheet(`<h2 style="margin:0">Ophalen mislukt</h2><p class="small">Je internet werkt, maar er ging iets anders mis. Maak een screenshot en stuur dit naar Claude.</p><p style="word-break:break-word"><b>${esc(syncFout)}</b></p><p class="small">Versie ${VERSIE}</p><button class="btn" style="width:100%" id="sfOpn">Opnieuw proberen</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Sluiten</button>`, (e, ov) => { if (e.target.id === 'sfOpn') { ov.remove(); sync(); } }) : null;
 }
 window.addEventListener('online', () => { online = true; sync(); });
 window.addEventListener('offline', () => { online = false; setSync(); });
