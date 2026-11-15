@@ -646,3 +646,14 @@ details.klap>.btn{margin-bottom:8px}
 /* 1.62 venster midden in beeld */
 .sheet.midden{align-items:center;justify-content:center;z-index:90}
 .sheet.midden .sheetIn{border-radius:18px;margin:16px;max-width:420px;width:calc(100% - 32px)}
+/* 1.63 bestellijst per leverancier: QR, 15 per A4, grote tekst */
+.qrlijst h1{font-size:16px;margin:0 0 6px}.qrlijst h1 small{font-weight:400;color:#555}
+.qrlijst table{width:100%;border-collapse:collapse;table-layout:fixed}
+.qrlijst th{font-size:11px;text-align:left;border-bottom:2px solid #000;padding:2px 4px}
+.qrlijst th:nth-child(1){width:66px}.qrlijst th:nth-child(3){width:120px}.qrlijst th:nth-child(4){width:70px}
+.qrlijst td{border-bottom:1px solid #999;height:62px;padding:2px 6px;vertical-align:middle}
+.qrlijst td.qr svg{width:58px;height:58px;display:block}
+.qrlijst td.n b{display:block;font-size:19px;letter-spacing:.5px}.qrlijst td.n span{display:block;font-size:15px;line-height:1.2;overflow:hidden;max-height:37px}
+.qrlijst td.aa{font-size:14px;white-space:nowrap}.qrlijst td.aa b{font-size:26px}
+.qrlijst td.bst{border:2px solid #000}
+@media print{.qrlijst .pdfpagina{page-break-after:always}}
