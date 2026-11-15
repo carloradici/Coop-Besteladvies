@@ -460,7 +460,9 @@ function toonUpdateBalk() {
 }
 async function werkBij() {
   toast('Bijwerken…');
-  try { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (e) { }
+  // 1.59: eerst wachten tot de nieuwe versie klaar is (anders breekt iOS het laden af: "Load failed")
+  try { const reg = await navigator.serviceWorker.getRegistration(); if (reg) { await reg.update(); const sw = reg.installing || reg.waiting;
+    if (sw) await new Promise(ok => { const t = setTimeout(ok, 8000); const k = () => { if (sw.state === 'activated' || sw.state === 'redundant') { clearTimeout(t); ok(); } }; sw.addEventListener('statechange', k); k(); }); } } catch (e) { }
   location.reload();
 }
 if (!DEMO) { setInterval(() => { if (!document.hidden) zoekUpdate(true); }, 30 * 60000); setTimeout(() => zoekUpdate(true), 8000); }
