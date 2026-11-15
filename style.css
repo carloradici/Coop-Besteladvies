@@ -643,3 +643,6 @@ details.klap>.btn{margin-bottom:8px}
 .tafel.kies .vak{min-height:52px}
 /* 1.60 verplaatsen vanuit Nog plaatsen */
 .verplrij{display:flex;gap:8px;align-items:center}.verplrij .it{flex:1;min-width:0}.verplrij>.btn{flex:none;min-height:44px}
+/* 1.62 venster midden in beeld */
+.sheet.midden{align-items:center;justify-content:center;z-index:90}
+.sheet.midden .sheetIn{border-radius:18px;margin:16px;max-width:420px;width:calc(100% - 32px)}

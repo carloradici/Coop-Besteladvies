@@ -443,15 +443,21 @@ function tour(i = 0) {
 
 /* ---------- updates ---------- */
 let nieuweVersie = null;
-async function zoekUpdate(stil) {
+async function zoekUpdate(stil, forceer) {
   if (DEMO) { if (!stil) toast(`✓ Je hebt de nieuwste versie (${VERSIE})`); return; }
   if (!navigator.onLine) { if (!stil) toast('Geen internet – probeer het straks nog eens'); return; }
   if (!stil) toast('Controleren…');
   try {
     const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }); const j = await r.json();
-    if (j.versie && j.versie !== VERSIE) { nieuweVersie = j.versie; toonUpdateBalk(); if (!stil && ask(`Versie ${j.versie} staat klaar. Nu bijwerken?`)) werkBij(); }
+    if (j.versie && j.versie !== VERSIE) { nieuweVersie = j.versie; toonUpdateBalk(); if (!stil || forceer || ls.get('cba-updvenster') !== j.versie + '|' + C.today()) updateVenster(j.versie); }
     else if (!stil) toast(`✓ Je hebt de nieuwste versie (${VERSIE})`);
   } catch (e) { if (!stil) toast('Controleren lukt nu niet'); }
+}
+// 1.62: venster midden in beeld als er een nieuwe versie klaarstaat
+function updateVenster(v) {
+  if (document.querySelector('.updvenster')) return; ls.set('cba-updvenster', v + '|' + C.today());
+  const ov = sheet(`<h2 style="margin:0">📲 Nieuwe versie</h2><p>Versie <b>${esc(v)}</b> staat klaar. Je huidige versie is ${VERSIE}.</p><div class="row"><button class="btn sec" data-x style="flex:1">Sluiten</button><button class="btn" id="updNu" style="flex:1">Nu bijwerken</button></div>`, e => { if (e.target.id === 'updNu') { ov.remove(); werkBij(); } });
+  ov.classList.add('midden', 'updvenster');
 }
 function toonUpdateBalk() {
   if (!nieuweVersie || $('#updBalk') || document.body.classList.contains('inlog')) return;
@@ -467,7 +473,8 @@ async function werkBij() {
 }
 if (!DEMO) { setInterval(() => { if (!document.hidden) zoekUpdate(true); }, 30 * 60000); setTimeout(() => zoekUpdate(true), 8000); }
 // 1.61: via de pushmelding "Nieuwe versie" meteen bijwerken
-async function updateVanMelding() { try { const j = await (await fetch('version.json?t=' + Date.now(), { cache: 'no-store' })).json(); if (j.versie && j.versie !== VERSIE) werkBij(); } catch (e) { } }
+function updateVanMelding() { zoekUpdate(true, true); }
+let updLaatst = 0; document.addEventListener('visibilitychange', () => { if (!DEMO && !document.hidden && Date.now() - updLaatst > 60000) { updLaatst = Date.now(); zoekUpdate(true); } });
 if (!DEMO && /[?&]update=1/.test(location.search)) { history.replaceState(null, '', location.pathname); setTimeout(updateVanMelding, 500); }
 if (!DEMO && 'serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.update) updateVanMelding(); });
 
