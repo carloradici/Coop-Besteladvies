@@ -49,7 +49,7 @@ function kwBlokMenu(wk, tid, idx) {
 }
 function kwSelTekening(t, ind, idx) {
   const R = Math.max(1, +t.rijen || 2), K = Math.max(1, +t.kol || 3); const eig = new Array(R * K).fill(-1); (ind.items || []).forEach((it, i) => (it.cellen || []).forEach(c => { if (c < R * K) eig[c] = i; })); const vast = new Set(t.vast || []);
-  return `<div class="tafel kies" style="grid-template-columns:repeat(${K},1fr);grid-template-rows:repeat(${R},48px)">${eig.map((o, c) => vast.has(c) && o < 0 ? `<div class="vak vast"><span>🔒</span></div>` : `<button type="button" class="vak ${o === idx ? 'selaan' : o >= 0 ? 'bezetander' : 'leeg'}" data-sc="${c}" style="${o >= 0 ? 'background:' + TKLEUR[(ind.items[o].kleur ?? o) % TKLEUR.length] : ''}">${o === idx ? '✓' : ''}</button>`).join('')}</div>`;
+  return `<div class="tafel kies" style="grid-template-columns:repeat(${K},1fr);grid-template-rows:repeat(${R},56px)">${eig.map((o, c) => vast.has(c) && o < 0 ? `<div class="vak vast"><span>🔒</span></div>` : `<button type="button" class="vak ${o === idx ? 'selaan' : o >= 0 ? 'bezetander' : 'leeg'}" data-sc="${c}" style="${o >= 0 ? 'background:' + TKLEUR[(ind.items[o].kleur ?? o) % TKLEUR.length] : ''}">${o === idx ? '✓' : ''}</button>`).join('')}</div>`;
 }
 function kwTekeningen(wk, kan, enkel) {
   const p = S.kwplan[wk]; const pls = kwPlekken().filter(x => x.tafel && S.tafels[x.tafel] && !S.tafels[x.tafel].weg && (!enkel || x.naam === enkel)); if (!pls.length) return kan && mag('instellingen') ? '<div class="blk"><p class="small">Tip: geef een kop een tekening (⚙️ Plekken instellen onderaan). Dan kun je per vakje invullen wat erin komt.</p></div>' : '';
@@ -78,18 +78,33 @@ function kwVorigeIndeling(wk, tid, alleenCheck) {
   const pl = kwPlekVanTafel(tid); const ind = { items: nieuw.map(([it, cel], i) => ({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: cel, aantal: '', opm: [it.mech, it.variant].filter(Boolean).join(' · '), kleur: i % TKLEUR.length, klaar: false, kw: it.id })) };
   slaIndelingOp(wk, tid, ind); p.plek = Object.assign({}, p.plek || {}); nieuw.forEach(([it]) => p.plek[it.id] = pl.naam); kwPlanOpslaan(wk); return nieuw.length;
 }
+// 1.58: vakje aan/uit; aan = null wisselt. Slepen over een rij zet meerdere vakjes tegelijk.
+let kwScroll = 0; window.addEventListener('scroll', () => { kwScroll = Date.now(); }, { passive: true });
+function kwCelZet(ind, sc, aan) {
+  const c = +sc.dataset.sc, it = ind.items[ui.kwSel.idx]; if (!it) return false; it.cellen = it.cellen || []; const nu = it.cellen.includes(c); if (aan === null) aan = !nu; if (aan === nu) return false;
+  if (!aan) it.cellen = it.cellen.filter(x => x !== c); else { ind.items.forEach(x => { x.cellen = (x.cellen || []).filter(y => y !== c); }); it.cellen.push(c); }
+  sc.className = 'vak ' + (aan ? 'selaan' : 'leeg'); sc.style.background = aan ? TKLEUR[(it.kleur ?? ui.kwSel.idx) % TKLEUR.length] : ''; sc.textContent = aan ? '✓' : ''; if (navigator.vibrate) navigator.vibrate(15); return true;
+}
+function kwSleep(v, wk) {
+  v.querySelectorAll('.tafel.kies').forEach(g => {
+    let st = null; const tid = () => (g.closest('[data-kt]') || {}).dataset && g.closest('[data-kt]').dataset.kt;
+    g.onpointerdown = e => { const sc = e.target.closest('[data-sc]'); if (!sc || !ui.kwSel || ui.kwSel.tafel !== tid()) return; kwSleep.net = false; st = { sc, ind: JSON.parse(JSON.stringify(indelingVan(wk, tid()))), aan: null, gedaan: new Set(), x: e.clientX }; };
+    g.onpointermove = e => { if (!st) return; const el = document.elementFromPoint(e.clientX, e.clientY); const sc = el && el.closest && el.closest('[data-sc]'); if (!sc || !g.contains(sc)) return;
+      if (st.aan === null) { if (sc === st.sc || Math.abs(e.clientX - st.x) < 12) return; st.aan = !(st.ind.items[ui.kwSel.idx].cellen || []).includes(+st.sc.dataset.sc); kwCelZet(st.ind, st.sc, st.aan); st.gedaan.add(st.sc); }
+      if (!st.gedaan.has(sc)) { st.gedaan.add(sc); kwCelZet(st.ind, sc, st.aan); } };
+    const stop = () => { if (st && st.aan !== null) { slaIndelingOp(wk, tid(), st.ind, true); kwSleep.net = true; setTimeout(() => kwSleep.net = false, 350); } st = null; };
+    g.onpointerup = stop; g.onpointercancel = stop;
+  });
+}
 function kwTekenEvents(v, wk, kan) {
+  if (kan) kwSleep(v, wk);
   v.querySelectorAll('[data-kt]').forEach(bl => bl.onclick = e => {
     if (!kan) return; const tid = bl.dataset.kt;
     if (e.target.closest('[data-kwklaar]')) { ui.kwSel = null; return render(true); }
     const vo = e.target.closest('[data-kvo]'); if (vo) { const n = kwVorigeIndeling(wk, tid); toast(`✓ ${n} acties op dezelfde plek gezet`); return render(true); }
     const sc = e.target.closest('[data-sc]'); if (sc && ui.kwSel && ui.kwSel.tafel === tid) {
-      const c = +sc.dataset.sc; const ind = JSON.parse(JSON.stringify(indelingVan(wk, tid))); const it = ind.items[ui.kwSel.idx]; if (!it) return;
-      const aan = !(it.cellen || []).includes(c);
-      if (!aan) it.cellen = it.cellen.filter(x => x !== c); else { ind.items.forEach(x => { x.cellen = (x.cellen || []).filter(y => y !== c); }); it.cellen.push(c); }
-      slaIndelingOp(wk, tid, ind, true);
-      sc.className = 'vak ' + (aan ? 'selaan' : 'leeg'); sc.style.background = aan ? TKLEUR[(it.kleur ?? ui.kwSel.idx) % TKLEUR.length] : ''; sc.textContent = aan ? '✓' : '';
-      if (navigator.vibrate) navigator.vibrate(15); return;
+      if (kwSleep.net || Date.now() - kwScroll < 300) return; // 1.58: geen tik direct na scrollen of slepen
+      const ind = JSON.parse(JSON.stringify(indelingVan(wk, tid))); if (kwCelZet(ind, sc, null)) slaIndelingOp(wk, tid, ind, true); return;
     }
     const lc = e.target.closest('[data-vc]'); if (lc) return kwVakKies(wk, tid, +lc.dataset.vc);
     const ti = e.target.closest('[data-ti]'); if (ti) return kwBlokMenu(wk, tid, +ti.dataset.ti);

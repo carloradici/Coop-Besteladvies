@@ -638,3 +638,6 @@ details.klap>.btn{margin-bottom:8px}
 /* 1.53 opmerking in blok */
 .tafel .vak .vakopm{display:block;font-size:12px;font-weight:600;opacity:.95;margin-top:2px;overflow-wrap:anywhere}
 #printArea .kpb .tafel .vak .vakopm{font-size:9px!important}
+/* 1.58 vakjes aanvinken: groter, slepen over een rij */
+.tafel.kies{gap:6px;padding:6px;touch-action:pan-y}
+.tafel.kies .vak{min-height:52px}

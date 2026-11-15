@@ -36,7 +36,7 @@ async function pdfPerPagina(el, titel, opt) {
   const doc = new jsPDF({ orientation: st ? 'p' : 'l', unit: 'mm', format: 'a4' }); const beelden = [];
   const pags = [...el.querySelectorAll('.pdfpagina')];
   for (let i = 0; i < pags.length; i++) {
-    const pg = pags[i]; const cv = await window.html2canvas(pg, { scale: 2, backgroundColor: '#ffffff', logging: false });
+    const pg = pags[i]; const cv = await window.html2canvas(pg, { scale: 3, backgroundColor: '#ffffff', logging: false });
     const bw = PW - 2 * M, bh = PH - 2 * M; let w = bw, h = cv.height / cv.width * bw; if (h > bh) { w = w * bh / h; h = bh; }
     const k = 4; const c = document.createElement('canvas'); c.width = Math.round(PW * k * 2.5); c.height = Math.round(PH * k * 2.5); const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
     const sc = c.width / PW; cx.drawImage(cv, Math.round(M * sc), Math.round(M * sc), Math.round(w * sc), Math.round(h * sc));
@@ -53,7 +53,7 @@ async function toonPdf(titel, aanpassen, opt = {}) {
   wacht.innerHTML = `<div class="pdfkop"><b>${esc(r.naam)}</b><span>${r.beelden.length} ${r.beelden.length === 1 ? 'pagina' : "pagina's"}</span><span class="pdfzoom"><button data-z="-1">−</button><button data-z="1">+</button></span></div><div class="pdfpag">${r.beelden.map(u => `<img src="${u}" alt="">`).join('')}</div>
   <div class="pdfvoet"><button class="btn" id="pdfDeel">🖨️ Afdrukken / Delen</button>${aanpassen ? '<button class="btn sec" id="pdfAanp">⚙️ Aanpassen</button>' : ''}<button class="btn sec" id="pdfSluit">Sluiten</button></div>`;
   const pg = wacht.querySelector('.pdfpag');
-  wacht.querySelectorAll('[data-z]').forEach(b => b.onclick = () => { zoom = Math.max(1, Math.min(3, zoom + (+b.dataset.z) * 0.5)); pg.querySelectorAll('img').forEach(i => i.style.width = (zoom * 100) + '%'); });
+  wacht.querySelectorAll('[data-z]').forEach(b => b.onclick = () => { zoom = Math.max(1, Math.min(4, zoom + (+b.dataset.z) * 0.5)); pg.querySelectorAll('img').forEach(i => i.style.width = (zoom * 100) + '%'); });
   wacht.querySelector('#pdfSluit').onclick = () => wacht.remove();
   const ap = wacht.querySelector('#pdfAanp'); if (ap) ap.onclick = () => { wacht.remove(); aanpassen(); };
   wacht.querySelector('#pdfDeel').onclick = async () => {
