@@ -1,4 +1,4 @@
-const V = 'cba-1.60';
+const V = 'cba-1.61';
 const APP = ['style.css', 'qrcode.min.js', 'rekenkern.js', 'app-basis.js', 'app-sync.js', 'app-login.js', 'app-home.js', 'app-deadlines.js', 'app-beheer.js', 'app-uploaden.js', 'app-pdf-print.js', 'app-extra.js', 'app-advies.js', 'app-acties.js', 'app-plekken.js', 'app-voorkoop.js', 'app-overig.js', 'app-brood.js', 'app-route.js', 'app-kantoor.js', 'app-start.js'].map(f => './' + f + '?b=' + V.split('-')[1]);
 const SHELL = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', ...APP];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
@@ -21,5 +21,5 @@ self.addEventListener('push', e => {
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(l => { for (const c of l) if ('focus' in c) return c.focus(); return clients.openWindow(e.notification.data && e.notification.data.url || './'); }));
+  const u = e.notification.data && e.notification.data.url || './'; e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(l => { for (const c of l) if ('focus' in c) { if (/update=1/.test(u)) c.postMessage({ update: 1 }); return c.focus(); } return clients.openWindow(u); }));
 });

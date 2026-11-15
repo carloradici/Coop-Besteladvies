@@ -1,7 +1,7 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
 // Wordt door de korte stuur-push in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
-// Soorten: test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
-export const FUNCTIE_VERSIE = '1.27';
+// Soorten: update (nieuwe app-versie op GitHub, per versie één keer; ook in cron), test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
+export const FUNCTIE_VERSIE = '1.28';
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };
 const ONDERDELEN = [['agf', 'AGF'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries'], ['kw', 'KW']];
 const STD_OPEN = [['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['', '']];
@@ -36,6 +36,13 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date(), haal 
   const wil = (a, s) => !(a.uit || []).includes(s);
   const eenmalig = async sleutel => { const { data } = await sb.from('push_log').select('sleutel').eq('sleutel', sleutel); if (data && data.length) return false; await sb.from('push_log').insert({ sleutel }); return true; };
 
+  // 1.28: nieuwe app-versie melden. Veilig zonder sleutel: de versie komt van GitHub zelf en elke versie gaat maar één keer.
+  const updateCheck = async () => {
+    const r = await haal('https://carloradici.github.io/Coop-Besteladvies/version.json?t=' + nu.getTime(), { cache: 'no-store' }); if (!r.ok) return null;
+    const v = String((await r.json()).versie || ''); if (!/^\d+\.\d+$/.test(v) || !(await eenmalig('update-' + v))) return null;
+    await stuur((abos || []).filter(a => wil(a, 'update')), { titel: '📲 Nieuwe versie', tekst: `Versie ${v} staat klaar · tik om bij te werken`, tag: 'update', url: './?update=1' }); return v;
+  };
+  if (soort === 'update') { const v = await updateCheck(); return { status: 200, versie: FUNCTIE_VERSIE, app: v, ...verstuurd }; }
   if (soort === 'test') {
     const a = (abos || []).filter(x => x.endpoint === body.endpoint);
     if (!a.length) return { status: 404, fout: 'Dit toestel is niet aangemeld voor meldingen' };
@@ -65,6 +72,7 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date(), haal 
   }
 
   if (soort === 'cron') {
+    try { await updateCheck(); } catch (e) { }
     const { dag, tijd } = lokaleTijd(nu);
     const { data: winkels } = await sb.from('winkels').select('id,naam');
     const gedaan = [];

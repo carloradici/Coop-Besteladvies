@@ -68,4 +68,5 @@ Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js`, `verkoop-export.js
 - Na "bouwen" en testen: **zelf committen en pushen naar main** (versienummer in de commit-boodschap). Carlo uploadt niets meer.
 - Lukt pushen niet, dan als terugval een zip `coop-besteladvies-X.Y-github.zip` met alleen de gewijzigde bestanden (plat, geen mappen).
 - Supabase: SQL als platte tekst in de chat, compacte delen zonder commentaar (max ~5 KB per deel), altijd met link naar de juiste Supabase-pagina. Nooit "vervang één regel": altijd het hele bestand. Niets nodig? Zeg: "Voor Supabase hoef je niets te doen".
+- Pushmelding "Nieuwe versie": `.github/workflows/update-melding.yml` roept na elke versie stuur-push (soort update) aan; de cron doet het ook als reserve.
 - Na oplevering alleen: wat nieuw is, dat het op GitHub staat, of Supabase iets nodig heeft (SQL, of Deploy tikken bij een gewijzigde Edge Function).

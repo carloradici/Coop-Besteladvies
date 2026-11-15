@@ -1,0 +1,18 @@
+# Na een nieuwe versie: wachten tot GitHub Pages hem toont, dan de pushmelding "Nieuwe versie" laten sturen.
+name: update-melding
+on:
+  push:
+    branches: [main]
+    paths: [version.json]
+jobs:
+  melding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          V=$(jq -r .versie version.json)
+          for i in $(seq 1 40); do
+            O=$(curl -s "https://carloradici.github.io/Coop-Besteladvies/version.json?t=$(date +%s)" | jq -r .versie 2>/dev/null)
+            [ "$O" = "$V" ] && break; sleep 15
+          done
+          curl -s -X POST "https://qgrexmttlceegavnkmkx.supabase.co/functions/v1/stuur-push" -H "Content-Type: application/json" -H "apikey: sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me" -H "Authorization: Bearer sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me" -d '{"soort":"update"}'
