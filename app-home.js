@@ -403,7 +403,7 @@ const HULP = {
   'tafels:tafel': ['Koeltafel indelen', 'Tik een actie aan bij Nog plaatsen en daarna de vakken. Vink af wat klaar staat.'],
   'kwacties:sort': ['KW-acties · 1 Sorteren', 'Tik per actie op de kop waar hij komt of op 📝 voor een notitie. 🛒 is het voorkoop-advies. Folder = staat in je Coop-folder of op de folder van de voorkooplijst; Instore = alleen inkoopvoordeel. Met <b>🔄 Opnieuw ophalen</b> haal je de voorkooplijst en folderplanning van deze week meteen opnieuw op; je indeling blijft staan.'],
   'kwacties:in': ['KW-acties · 2 Indelen', 'Tik op een kop om de planken in te delen. Tik op een blok voor 💬 Opmerking, bijvoorbeeld "Vullen vanuit restanten" of "1 hoog". Die staat ook in de pdf. Met 👁️ Pdf bekijken krijg je elke kop op een A4.'],
-  'kwacties:kop': ['Kop indelen', 'Tik een actie aan bij Nog plaatsen en daarna de vakken op de plank. Veeg met je vinger over een rij om meerdere vakjes tegelijk aan of uit te zetten.'],
+  'kwacties:kop': ['Kop indelen', 'Tik een actie aan bij Nog plaatsen en daarna de vakken op de plank. Past iets niet meer? Tik op <b>↪ Verplaats</b> om het naar een andere kop, het vak of terug naar sorteren te sturen. Veeg met je vinger over een rij om meerdere vakjes tegelijk aan of uit te zetten.'],
   acties: ['Actie planning · 3 Bestellen', 'De acties van de komende week met per artikel het advies.'],
   leverancier: ['Overtypen', 'Alles wat je bestelt, per leverancier, om over te typen in de terminal. Met 🔍 Controle met terminal vergelijk je wat erin staat.'],
   levering: ['Leverdag-check', 'Vink bij het uitpakken af wat er is. Wat ontbreekt geef je met één tik door.'],

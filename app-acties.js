@@ -62,6 +62,16 @@ function notitieKeuze(sub, nu, vast, zet, titel) {
   ov.querySelector('#ntS').onclick = () => { const t = ov.querySelector('#ntT').value.trim(); if (t.length < 2) return toast('Typ een korte notitie'); z(t); };
   const w = ov.querySelector('#ntW'); if (w) w.onclick = () => z('');
 }
+// 1.60: actie vanuit Nog plaatsen naar een andere kop, het vak of terug naar sorteren
+function kwVerplaats(wk, id, van) {
+  const p = S.kwplan[wk]; const it = p.folder.items.find(i => i.id === id); if (!it) return;
+  const ov = sheet(`<h2 style="margin:0">↪ Verplaatsen</h2><p class="small">${esc(it.naam)}</p>${kwPlekken().filter(x => x.naam !== van).map(x => `<button class="belrij" data-vn="${esc(x.naam)}"><span class="ic">🧭</span><span><b>${esc(x.naam)}</b></span></button>`).join('')}<button class="belrij" data-vt="In het vak"><span class="ic">📝</span><span><b>In het vak</b></span></button><button class="belrij" data-vt=""><span class="ic">↩</span><span><b>Terug naar sorteren</b></span></button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`, (e, ov) => {
+    const n = e.target.closest('[data-vn]'), t = e.target.closest('[data-vt]'); if (!n && !t) return; ov.remove();
+    if (n) { kwZetPlek(wk, id, n.dataset.vn); toast(`→ ${n.dataset.vn}`); }
+    else { kwZetPlek(wk, id, ''); if (t.dataset.vt) { const q = S.kwplan[wk]; q.notitie = Object.assign({}, q.notitie || {}); q.notitie[id] = t.dataset.vt; kwPlanOpslaan(wk); toast('→ In het vak'); } else toast('Terug bij sorteren'); }
+    render(true);
+  });
+}
 function kwNotitieKies(wk, id) {
   const p = S.kwplan[wk]; const it = p.folder.items.find(i => i.id === id); const nu = (p.notitie || {})[id] || '';
   notitieKeuze(it.naam, nu, ['In het vak', 'Niet besteld'], t => { p.notitie = Object.assign({}, p.notitie || {}); if (t) p.notitie[id] = t; else delete p.notitie[id]; if (t && /^(In het vak|Niet besteld)$/.test(t) && (p.plek || {})[id]) { const oud = p.plek[id]; p.plek = Object.assign({}, p.plek); delete p.plek[id]; kwNaarTafel(wk, it, oud, ''); } kwPlanOpslaan(wk); render(true); });
@@ -116,7 +126,7 @@ function renderKwActies() {
         h += kwTekeningen(wk, kan, x.naam);
         const ind = indelingVan(wk, x.tafel); const l = f.items.filter(i => (p.plek || {})[i.id] === x.naam); const open = l.filter(i => !(ind.items || []).some(y => y.kw === i.id && (y.cellen || []).length));
         const sel = ui.kwSel && ui.kwSel.tafel === x.tafel;
-        h += `<div class="blk"><h2>Nog plaatsen (${open.length})</h2>${open.length ? `<p class="small">Tik een actie aan en daarna de vakjes in de tekening.</p><div class="list">${open.map(i => `<button class="it rijtik" data-plaats="${i.id}"><span style="flex:1;text-align:left"><b>${esc(i.naam)}</b><br><span class="small">${esc([i.variant, i.mech].filter(Boolean).join(' · '))}</span></span><span class="pijl">›</span></button>`).join('')}</div>` : `<p class="small">${l.length ? '✓ Alles van deze kop staat in de tekening.' : 'Nog geen acties naar deze kop gesorteerd (stap 1).'}</p>`}
+        h += `<div class="blk"><h2>Nog plaatsen (${open.length})</h2>${open.length ? `<p class="small">Tik een actie aan en daarna de vakjes in de tekening.</p><div class="list">${open.map(i => `<div class="verplrij"><button class="it rijtik" data-plaats="${i.id}"><span style="flex:1;text-align:left"><b>${esc(i.naam)}</b><br><span class="small">${esc([i.variant, i.mech].filter(Boolean).join(' · '))}</span></span><span class="pijl">›</span></button><button class="btn sm sec" data-verpl="${i.id}" data-van="${esc(x.naam)}">↪ Verplaats</button></div>`).join('')}</div>` : `<p class="small">${l.length ? '✓ Alles van deze kop staat in de tekening.' : 'Nog geen acties naar deze kop gesorteerd (stap 1).'}</p>`}
         ${(x.lijst || []).length ? `<details class="hbd" ${sel ? '' : ''}><summary>Uit de keuzelijst (${x.lijst.length})</summary><input type="search" id="kplQ" placeholder="🔍 Zoek" style="width:100%"><div class="list" id="kplL">${x.lijst.map((a, i) => `<button class="it rijtik" data-plaatsl="${i}"><span style="flex:1;text-align:left">${esc(a.naam)}<br><span class="small">${esc(a.nr || '')}</span></span><span class="pijl">›</span></button>`).join('')}</div></details>` : ''}
         </div>`;
       }
@@ -147,6 +157,7 @@ function renderKwActies() {
   const mt = $('#kwMaakT'); if (mt) mt.onclick = () => kwPlekBewerk(ui.kwKop);
   kwTekenEvents(v, wk, kan);
   const x = kwPlekken().find(y => y.naam === ui.kwKop);
+  v.querySelectorAll('[data-verpl]').forEach(b => b.onclick = () => kwVerplaats(wk, b.dataset.verpl, b.dataset.van));
   v.querySelectorAll('[data-plaats]').forEach(b => b.onclick = () => { const it = f.items.find(i => i.id === b.dataset.plaats); const ind = JSON.parse(JSON.stringify(indelingVan(wk, x.tafel))); ind.items = ind.items || []; let j = ind.items.findIndex(y => y.kw === it.id); if (j < 0) { ind.items.push({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: [], aantal: '', opm: [it.mech, it.variant].filter(Boolean).join(' · '), kleur: ind.items.length % TKLEUR.length, klaar: false, kw: it.id }); j = ind.items.length - 1; slaIndelingOp(wk, x.tafel, ind); } ui.kwSel = { tafel: x.tafel, idx: j }; render(true); window.scrollTo(0, 0); });
   v.querySelectorAll('[data-plaatsl]').forEach(b => b.onclick = () => { const a = x.lijst[+b.dataset.plaatsl]; const key = a.nr && M.art['kw:' + a.nr] ? 'kw:' + a.nr : null; const ind = JSON.parse(JSON.stringify(indelingVan(wk, x.tafel))); ind.items = ind.items || []; let j = ind.items.findIndex(y => y.lijst && y.naam === a.naam); if (j < 0) { ind.items.push({ naam: a.naam, artikelen: key ? [{ key, naam: M.art[key].naam, nr: M.art[key].nr }] : a.nr ? [{ naam: a.naam, nr: a.nr }] : [], cellen: [], aantal: '', opm: '', kleur: ind.items.length % TKLEUR.length, klaar: false, lijst: true }); j = ind.items.length - 1; slaIndelingOp(wk, x.tafel, ind); } ui.kwSel = { tafel: x.tafel, idx: j }; render(true); window.scrollTo(0, 0); });
   const kq = $('#kplQ'); if (kq) kq.oninput = e => { const q = e.target.value.toLowerCase(); v.querySelectorAll('#kplL [data-plaatsl]').forEach(y => y.style.display = !q || y.textContent.toLowerCase().includes(q) ? '' : 'none'); };

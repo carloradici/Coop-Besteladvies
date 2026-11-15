@@ -641,3 +641,5 @@ details.klap>.btn{margin-bottom:8px}
 /* 1.58 vakjes aanvinken: groter, slepen over een rij */
 .tafel.kies{gap:6px;padding:6px;touch-action:pan-y}
 .tafel.kies .vak{min-height:52px}
+/* 1.60 verplaatsen vanuit Nog plaatsen */
+.verplrij{display:flex;gap:8px;align-items:center}.verplrij .it{flex:1;min-width:0}.verplrij>.btn{flex:none;min-height:44px}
