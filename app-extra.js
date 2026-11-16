@@ -110,20 +110,26 @@ function naarArtikel(a) {
 let scanStop = null;
 async function scanStart(od, opVondst) {
   const ov = document.createElement('div'); ov.className = 'scanner';
-  ov.innerHTML = `<video playsinline muted></video><div class="scankader"></div><div class="scanbalk"><div id="scM">Houd de barcode recht in het kader, ongeveer 15 cm van de camera</div><div class="row" style="width:100%;max-width:400px"><input type="text" id="scI" inputmode="numeric" placeholder="Of typ het nummer" style="flex:1"><button class="btn sm" id="scZ">Zoek</button></div><button class="btn sec" id="scX" style="background:#fff">Sluiten</button></div>`;
+  ov.innerHTML = `<video playsinline muted></video><div class="scankader"></div><div class="scanbalk"><div id="scM">Houd de telefoon 20 tot 30 cm van de barcode, recht in het kader</div><div class="row" style="width:100%;max-width:400px"><input type="text" id="scI" inputmode="numeric" placeholder="Of typ het nummer" style="flex:1"><button class="btn sm" id="scZ">Zoek</button></div><label class="btn" style="text-align:center">📸 Lukt het niet? Maak een foto<input type="file" id="scF" accept="image/*" capture="environment" class="hide"></label><button class="btn sec" id="scX" style="background:#fff">Sluiten</button></div>`;
   document.body.appendChild(ov);
-  let lezer = null; const stop = () => { try { lezer && lezer.reset(); } catch (e) { } ov.remove(); scanStop = null; scanHook = null; };
+  let strm = null; const stop = () => { try { strm && strm.getTracks().forEach(t => t.stop()); } catch (e) { } ov.remove(); scanStop = null; scanHook = null; };
   scanStop = stop;
   const gevonden = code => { const a = vindCode(code); if (!a) { $('#scM', ov).textContent = `Niet gevonden: ${code}`; return false; } stop(); if (navigator.vibrate) navigator.vibrate(60); if (opVondst) opVondst(a); else naarArtikel(a); return true; };
   scanHook = c => gevonden(c);
   $('#scX', ov).onclick = stop; $('#scZ', ov).onclick = () => gevonden($('#scI', ov).value.trim()); $('#scI', ov).onkeydown = e => { if (e.key === 'Enter') gevonden(e.target.value.trim()); };
-  try {
-    await loadScript(LIB.zxing); const Z = window.ZXing;
-    // 1.70: alleen productbarcodes, grondig zoeken, hoge resolutie en scherpstellen
-    const hints = new Map(); hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E]); hints.set(Z.DecodeHintType.TRY_HARDER, true);
-    lezer = new Z.BrowserMultiFormatReader(hints, 250);
+  try { // 1.71: zxing-cpp (WebAssembly) via BarcodeDetector; leest ook lastige barcodes op zakken en flessen. Alleen het kader wordt bekeken.
+    await loadScript(LIB.bcd); const F = ['ean_13', 'ean_8', 'upc_a', 'upc_e']; let BD = window.BarcodeDetectionAPI.BarcodeDetector;
+    try { if (window.BarcodeDetector && (await window.BarcodeDetector.getSupportedFormats()).includes('ean_13')) BD = window.BarcodeDetector; } catch (e) { }
+    const det = new BD({ formats: F }), v = $('video', ov);
+    // foto met de gewone camera (scherpstellen werkt daar altijd) en die foto uitlezen
+    $('#scF', ov).onchange = async e => { const f = e.target.files[0]; if (!f) return; const m = $('#scM', ov); m.textContent = 'Foto bekijken…'; try { const r = await det.detect(await createImageBitmap(f)); if (r.length) gevonden(r[0].rawValue); else m.textContent = 'Geen barcode op de foto gevonden. Probeer opnieuw: recht en scherp.'; } catch (x) { m.textContent = 'Foto lukt niet. Typ het nummer hieronder.'; } e.target.value = ''; };
+    const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+    strm = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } }); v.srcObject = strm; await v.play();
+    try { const tr = strm.getVideoTracks()[0], cp = tr.getCapabilities ? tr.getCapabilities() : {}; if (cp.zoom) await tr.applyConstraints({ advanced: [{ zoom: Math.min(2, cp.zoom.max) }] }); } catch (e) { } // 2× inzoomen: verder weg houden = scherp
     let laatst = '';
-    await lezer.decodeFromConstraints({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } }, $('video', ov), res => { if (!res) return; const t = res.getText(); if (t === laatst) return; laatst = t; gevonden(t); });
+    const kijk = async () => { if (!ov.isConnected) return; try { const W = v.videoWidth, H = v.videoHeight; if (W) { const w = Math.round(W * 0.9), h = Math.round(H * 0.6); cv.width = w; cv.height = h; cx.drawImage(v, (W - w) / 2, (H - h) / 2, w, h, 0, 0, w, h);
+      const r = await det.detect(cv); if (r.length) { const t = r[0].rawValue; if (t !== laatst) { laatst = t; if (gevonden(t)) return; } } } } catch (e) { } setTimeout(kijk, 150); };
+    kijk();
   } catch (e) { const m = $('#scM', ov); if (m) m.textContent = /Permission|NotAllowed/i.test(e && (e.name + e.message)) ? 'Geen toegang tot de camera. Typ het nummer hieronder.' : 'Camera lukt niet. Typ het nummer hieronder.'; }
 }
 /* ---------- 1.50: naar de terminal (QR per afgevinkt artikel) ---------- */
