@@ -57,8 +57,8 @@ function lijstMenu(od, cur, arts, bdSleutel) {
   const st = cur ? voortgang(od, cur) : null; const opties = [];
   const teller = !mag('bestellen') && !mag('afvinken');
   if (cur && mag('afvinken') && st && st.open) opties.push(['klaar', '✅', 'Alles afvinken als besteld', `De ${st.open} artikelen met advies in één keer`]);
-  if (cur && mag('afvinken') && terminalLijst(od, cur).length) opties.push(['term', '📲', 'Naar de terminal', `${terminalLijst(od, cur).length} afgevinkte artikelen als QR-code, om met de terminal te scannen`]);
-  if (!teller) opties.push(['prt', '👁️', 'Bestellijst als pdf', 'Met barcodes, om te printen of te delen']);
+  if (cur && mag('afvinken')) { const tn = terminalLijst(od, cur).length; opties.push(['term', '📲', 'Naar de terminal', tn ? `${tn} afgevinkte artikelen als QR-code, om met de terminal te scannen` : 'Vink eerst artikelen af als besteld; daarna zie je ze hier als QR-code']); }
+  if (!teller) opties.push(['prt', '👁️', 'Bestellijst als pdf', 'Met QR-codes, om te printen of te delen']);
   if (cur && mag('afvinken')) opties.push(['ctl', '🔍', 'Controle met terminal', 'Vrijwillig: vergelijk met je bestelgeschiedenis']);
   if (!beheerNamen().includes(mijnNaam())) opties.push(['bericht', '✉️', 'Bericht voor ' + beheerNamen().join(' of '), 'Bijvoorbeeld een tekort of iets wat niet klopt']);
   if (cur && S.notities[bdSleutel]) opties.push(['bdNot', '📝', 'Notitie bij deze besteldag', '']);

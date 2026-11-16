@@ -5,6 +5,8 @@ function pdfCss() {
   for (const sh of document.styleSheets) { let rules; try { rules = sh.cssRules; } catch (e) { continue; } const neem = x => { if (x.selectorText && x.selectorText.includes('#printArea') && x.selectorText.trim() !== '#printArea') css += x.cssText.replace(/#printArea/g, '.pdfrender') + '\n'; }; for (const r of rules) { if (r.media && /print/.test(r.media.mediaText || '')) [...r.cssRules].forEach(neem); else if (!r.media) neem(r); } }
   const st = document.createElement('style'); st.textContent = '.pdfrender{position:fixed;left:-20000px;top:0;width:1123px;background:#fff;color:#000;font-size:9px;padding:30px;box-sizing:border-box;display:block!important}.pdfrender *{-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#000}.pdfrender td.a{color:#d02a1e}.pdfrender .tafel .vak:not(.leeg){color:#fff}.pdfrender.staand{width:794px;padding:0}.pdfrender .pdfpagina{width:718px;padding:0;margin:0 0 40px;background:#fff}.pdfrender .kpsub{margin:0 0 3mm;font-size:11px;color:#555}' + css; document.head.appendChild(st);
 }
+// 1.64: QR-code als svg (voor printlijsten)
+function qrSvg(nr, cls) { if (!/^\d{4,}$/.test(nr || '') || !window.qrcode) return ''; const q = qrcode(0, 'M'); q.addData(String(nr)); q.make(); return q.createSvgTag({ cellSize: 2, margin: 2, scalable: true }).replace('<svg ', `<svg class="${cls || ''}" `); }
 async function maakPdf(titel, opt = {}) {
   await Promise.all([loadScript(LIB.h2c), loadScript(LIB.jspdf)]); pdfCss();
   const el = document.createElement('div'); el.className = 'pdfrender' + (opt.staand ? ' staand' : ''); el.innerHTML = $('#printArea').innerHTML; document.body.appendChild(el);
@@ -20,13 +22,21 @@ async function maakPdf(titel, opt = {}) {
       if (nieuw) eind = nieuw; else if (eind < H) { const ok = kand.filter(k => k.b <= eind && k.b > start + pageH * 0.5).map(k => k.b); if (ok.length) eind = Math.max(...ok); }
       pag.push([start, eind]); start = eind;
     }
-    const canvas = await window.html2canvas(el, { scale: 2, backgroundColor: '#ffffff', logging: false, windowWidth: W });
-    const s = canvas.width / W; const { jsPDF } = window.jspdf; const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' }); const beelden = [];
-    pag.forEach(([a, b], i) => {
-      const c = document.createElement('canvas'); c.width = canvas.width; c.height = Math.round(pageH * s); const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
-      cx.drawImage(canvas, 0, Math.round(a * s), canvas.width, Math.round((b - a) * s), 0, 0, canvas.width, Math.round((b - a) * s));
-      const url = c.toDataURL('image/jpeg', 0.9); beelden.push(url); if (i) doc.addPage(); doc.addImage(url, 'JPEG', 0, 0, 297, 210);
-    });
+    if (pag.length > 80) throw new Error(`dat worden ${pag.length} pagina's, te veel voor de telefoon. Kies "Alleen met advies" of "Alleen ingevuld"`);
+    // 1.64: elke pagina als eigen klein stuk tekenen; het lange origineel gaat eerst uit de pagina (html2canvas kopieert anders steeds alles en dan loopt een iPhone vast)
+    const { jsPDF } = window.jspdf; const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' }); const beelden = []; const sc = pag.length > 25 ? 1.5 : 2;
+    const pos = new Map(); el.querySelectorAll('tr, h1, h2, p, .kpb, .tafel').forEach(x => pos.set(x, x.getBoundingClientRect().top - top0)); el.remove();
+    const binnen = (x, a, b) => { const t = pos.get(x); return t !== undefined && t >= a - 1 && t < b - 1; };
+    for (let i = 0; i < pag.length; i++) { const [a, b] = pag[i]; if (opt.voortgang) opt.voortgang(i + 1, pag.length);
+      const pg = document.createElement('div'); pg.className = el.className; pg.style.width = W + 'px'; if (i) pg.style.paddingTop = '12px';
+      for (const ch of el.children) {
+        if (ch.tagName === 'TABLE') { const t = ch.cloneNode(false); [...ch.children].forEach(d => { if (d.tagName === 'COLGROUP') t.appendChild(d.cloneNode(true)); else { const d2 = d.cloneNode(false); [...d.children].forEach(r => { if (binnen(r, a, b)) d2.appendChild(r.cloneNode(true)); }); if (d2.children.length) t.appendChild(d2); } }); if (t.querySelector('tr')) pg.appendChild(t); }
+        else if (binnen(ch, a, b)) pg.appendChild(ch.cloneNode(true));
+      }
+      document.body.appendChild(pg); await new Promise(r => setTimeout(r, 20));
+      const cv = await window.html2canvas(pg, { scale: sc, backgroundColor: '#ffffff', logging: false, windowWidth: W }); pg.remove();
+      const c = document.createElement('canvas'); c.width = Math.round(W * sc); c.height = Math.round(pageH * sc); const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height); const f = Math.min(1, c.height / cv.height); cx.drawImage(cv, 0, 0, cv.width * f, cv.height * f);
+      const url = c.toDataURL('image/jpeg', 0.85); beelden.push(url); if (i) doc.addPage(); doc.addImage(url, 'JPEG', 0, 0, 297, 210); cv.width = cv.height = c.width = c.height = 0; }
     const blob = doc.output('blob'); const naam = (titel || 'Besteladvies').replace(/[\\/:*?"<>|]/g, '-') + '.pdf';
     return { file: new File([blob], naam, { type: 'application/pdf' }), beelden, naam };
   } finally { el.remove(); }
@@ -47,7 +57,7 @@ async function pdfPerPagina(el, titel, opt) {
 }
 async function toonPdf(titel, aanpassen, opt = {}) {
   const wacht = document.createElement('div'); wacht.className = 'pdfview'; wacht.innerHTML = '<div class="pdfwacht">📄 Pdf maken…</div>'; document.body.appendChild(wacht);
-  let r; try { r = await maakPdf(titel, opt); } catch (e) { wacht.remove(); return toast('Pdf maken lukt niet: ' + e.message, 5000); }
+  let r; try { r = await maakPdf(titel, Object.assign({ voortgang: (i, n) => { if (n > 3) wacht.innerHTML = `<div class="pdfwacht">📄 Pagina ${i} van ${n}…</div>`; } }, opt)); } catch (e) { wacht.remove(); return toast('Pdf maken lukt niet: ' + e.message, 5000); }
   window.__laatstePdf = { naam: r.naam, paginas: r.beelden.length, grootte: r.file.size };
   let zoom = 1;
   wacht.innerHTML = `<div class="pdfkop"><b>${esc(r.naam)}</b><span>${r.beelden.length} ${r.beelden.length === 1 ? 'pagina' : "pagina's"}</span><span class="pdfzoom"><button data-z="-1">−</button><button data-z="1">+</button></span></div><div class="pdfpag">${r.beelden.map(u => `<img src="${u}" alt="">`).join('')}</div>
@@ -316,7 +326,7 @@ const WOORDEN = [['Advies', 'hoeveel de app voorstelt om te bestellen, op basis 
 function printOpties(od, arts) {
   const p = Object.assign({ keuze: 'alles', pagina: false }, ls.get('cba-print') || {});
   const ch = (k, l) => `<button class="${p.keuze === k ? 'aan' : ''}" data-pk="${k}">${l}</button>`;
-  sheet(`<h2 style="margin:0">Printen</h2><p class="small">Bestellijst ${odNaam(od)} met barcodes zoals in het bestelboek.</p><label class="small"><b>Welke artikelen</b></label><div class="chips2" id="pKeuze">${ch('alles', 'Alles')}${ch('advies', 'Alleen met advies')}${ch('ingevuld', 'Alleen ingevuld')}</div>
+  sheet(`<h2 style="margin:0">Printen</h2><p class="small">Bestellijst ${odNaam(od)} met QR-codes die de terminal kan scannen.</p><label class="small"><b>Welke artikelen</b></label><div class="chips2" id="pKeuze">${ch('alles', 'Alles')}${ch('advies', 'Alleen met advies')}${ch('ingevuld', 'Alleen ingevuld')}</div>
   <div class="it" style="display:flex;align-items:center;justify-content:space-between;margin:14px 0"><span>Elke groep op een nieuwe pagina</span><input type="checkbox" class="schak" id="pPag" ${p.pagina ? 'checked' : ''}></div>
   <div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" data-pr style="flex:1">👁️ Pdf bekijken</button></div>`, (e, ov) => {
     const k = e.target.closest('[data-pk]'); if (k) { p.keuze = k.dataset.pk; ov.querySelectorAll('[data-pk]').forEach(x => x.classList.toggle('aan', x === k)); return; }
@@ -329,7 +339,7 @@ function printLijst(od, arts, opt) {
   const mon = C.monday(C.today()); const wkn = [3, 2, 1].map(w => C.isoWeek(C.add(mon, -7 * w)).w);
   const kolommen = 3 + 28 + 3;
   const titel = `Bestellijst ${odNaam(od)} · ${esc((WINKEL && WINKEL.naam) || 'Coop')}${cur ? ` · bestellen ${C.DAGNAAM[C.wd(cur.besteldag)]} ${C.fmtDag(cur.besteldag).split(' ')[1]} · levering ${C.DAGNAAM[C.wd(cur.L)]} ${C.fmtDag(cur.L).split(' ')[1]} t/m ${C.DAGEN[C.wd(C.add(cur.L2, -1))]}` : ''} · verkoop week ${wkn.join(', ')} + Gd · rood = actie · geprint ${C.fmtDag(C.today())}`;
-  let h = `<table class="vast"><colgroup><col style="width:54mm"><col style="width:9mm"><col style="width:8mm">${'<col>'.repeat(28)}<col style="width:10mm"><col style="width:10mm"><col style="width:14mm"></colgroup><thead><tr class="pkop"><th colspan="${kolommen}">${titel}</th></tr><tr><th rowspan="2">Artikel</th><th rowspan="2">Eh</th><th rowspan="2">Gwt</th>${C.DAGEN.map(d => `<th colspan="4">${d}</th>`).join('')}<th rowspan="2">Advies</th><th rowspan="2">Ingev.</th><th rowspan="2">Besteld</th></tr><tr>${C.DAGEN.map(() => wkn.map(w => `<th>${w}</th>`).join('') + '<th>Gd</th>').join('')}</tr></thead>`;
+  let h = `<table class="vast"><colgroup><col style="width:54mm"><col style="width:9mm"><col style="width:8mm">${'<col>'.repeat(28)}<col style="width:10mm"><col style="width:10mm"><col style="width:14mm"></colgroup><thead><tr class="pkop"><th colspan="${kolommen}">${titel}</th></tr><tr><th rowspan="2">Artikel</th><th rowspan="2">Eh</th><th rowspan="2">Gwt</th>${C.DAGEN.map(d => `<th colspan="4">${d}</th>`).join('')}<th rowspan="2">Advies</th><th rowspan="2">Ingev.</th><th rowspan="2">Besteld</th></tr><tr>${C.DAGEN.map(() => wkn.map(w => `<th>${w}</th>`).join('') + '<th>Gem.</th>').join('')}</tr></thead>`;
   let lastG = null, n = 0, eerste = true;
   for (const a of arts) {
     if (a.uit || assStatus(a) !== 'in') continue;
@@ -341,7 +351,7 @@ function printLijst(od, arts, opt) {
     if (g !== lastG) { h += `${eerste ? '' : '</tbody>'}<tbody class="${opt.pagina && !eerste ? 'nieuwepagina' : ''}"><tr class="grpr"><td colspan="${kolommen}">${esc(g)}</td></tr>`; lastG = g; eerste = false; }
     const wt = C.weekTabel(M, a.key); const lbl = C.actieLabel(M, a.key);
     const nt = S.notities['a:' + a.key]; const nr = a.eigen ? a.artNr : a.nr;
-    h += `<tr><td class="n"><b>${esc(nr || '')}</b> ${esc(a.naam)}${a.eigen ? ' <i>(eigen)</i>' : ''}${nt ? ` <i>📝 ${esc(nt.tekst)}</i>` : ''}${lbl ? ` <i>(actie ${lbl[0].t} wk, ${lbl[0].folder ? 'folder' : 'instore'})</i>` : ''}${/^\d{4,}$/.test(nr || '') ? C.msi(nr, 40, true) : ''}</td><td>${a.eh}${a.perHE ? ' ' + C.fmt(a.he) : ''}</td><td class="g">${C.fmt(wt.gwt)}</td>`;
+    h += `<tr><td class="n"><b>${esc(nr || '')}</b> ${esc(a.naam)}${a.eigen ? ' <i>(eigen)</i>' : ''}${nt ? ` <i>📝 ${esc(nt.tekst)}</i>` : ''}${lbl ? ` <i>(actie ${lbl[0].t} wk, ${lbl[0].folder ? 'folder' : 'instore'})</i>` : ''}${qrSvg(nr, 'qrk')}</td><td>${a.eh}${a.perHE ? ' ' + C.fmt(a.he) : ''}</td><td class="g">${C.fmt(wt.gwt)}</td>`;
     for (let d = 0; d < 7; d++) { for (let w = 0; w < 3; w++) { const c = wt.rows[w].cells[d]; h += `<td class="${c.actie ? 'a' : ''}">${c.v === null || c.v === 0 ? '' : C.fmt(c.v)}</td>`; } h += `<td class="g">${C.fmt(wt.gd[d]) === '0' ? '' : C.fmt(wt.gd[d])}</td>`; }
     h += `<td class="g pad">${ad.adv || ''}</td><td>${ing === null ? '' : C.fmt(ing)}</td><td class="bst"></td></tr>`; n++;
   }

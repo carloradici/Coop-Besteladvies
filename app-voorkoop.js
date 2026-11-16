@@ -228,7 +228,7 @@ function controleSheet(od, cur) {
     ov.querySelector('#ctlO').innerHTML = rest.map(a => `<div class="it"><span style="flex:1">${esc(a.naam)} <span class="small">${a.nr} · ${C.fmt(aantal(a))}</span></span></div>`).join('');
   };
   ov.querySelector('#ctlQ').oninput = teken;
-  ov.onclick = e => { const c = e.target.closest('[data-cok]'); if (c) { ok.add(c.dataset.cok); const q = ov.querySelector('#ctlQ'); q.value = ''; q.focus(); teken(); } const g = e.target.closest('[data-cga]'); if (g) { ov.remove(); naarArtikel(M.art[g.dataset.cga]); } };
+  ov.onclick = e => { if (e.target === ov || e.target.closest('[data-x]')) return ov.remove(); const c = e.target.closest('[data-cok]'); if (c) { ok.add(c.dataset.cok); const q = ov.querySelector('#ctlQ'); q.value = ''; q.focus(); teken(); } const g = e.target.closest('[data-cga]'); if (g) { ov.remove(); naarArtikel(M.art[g.dataset.cga]); } };
   teken(); setTimeout(() => ov.querySelector('#ctlQ').focus(), 50);
 }
 /* ---------- 1.28: vers-bestellijst ophalen + volle collo ---------- */

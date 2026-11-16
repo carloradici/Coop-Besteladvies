@@ -657,3 +657,5 @@ details.klap>.btn{margin-bottom:8px}
 .qrlijst td.aa{font-size:14px;white-space:nowrap}.qrlijst td.aa b{font-size:26px}
 .qrlijst td.bst{border:2px solid #000}
 @media print{.qrlijst .pdfpagina{page-break-after:always}}
+/* 1.64 QR in bestellijst-pdf */
+svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
