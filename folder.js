@@ -1,10 +1,10 @@
 // Coop Besteladvies – folderplanning ophalen (Supabase Edge Function "folder").
 // De telefoon mag de pdf niet rechtstreeks laden (andere website); deze functie haalt hem op en geeft hem door.
-export const FUNCTIE_VERSIE = '1.29';
+export const FUNCTIE_VERSIE = '1.30';
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type', 'Access-Control-Allow-Methods': 'GET, OPTIONS' };
 export function urls(jaar, week, soort) {
   const w = String(week).padStart(2, '0'); const uit = [];
-  if (soort === 'vers') { for (const map of [jaar, jaar - 1]) for (const ww of [String(+week), w]) uit.push(`https://static.reto.media/ordervantolversuniecom/upload-${map}/folder-coop-week-${ww}-vers-bestellijst.pdf`); return [...new Set(uit)]; }
+  if (soort === 'vers') { for (const map of [jaar, jaar - 1]) for (const ww of [String(+week), w]) uit.push(`https://static.reto.media/ordervantolversuniecom/upload-${map}/folder-coop-week-${ww}-vers-bestellijst.pdf`, `https://static.reto.media/ordervantolversuniecom/upload-${map}/folder-coop-week-${ww}.pdf`); return [...new Set(uit)]; }
   if (soort === 'voorkoop') { for (const map of [jaar, jaar - 1]) for (const ww of [String(+week), w]) uit.push(`https://static.reto.media/ordervantolversuniecom/upload-${map}/voorkoop-${ww}.pdf`); return [...new Set(uit)]; }
   for (const map of [jaar, jaar - 1, jaar + 1]) for (const ww of [w, String(+week)]) uit.push(`https://static.reto.media/ordervantolversuniecom/upload-${map}/folderplanning-${jaar}-coop-wk-${ww}.pdf`);
   return [...new Set(uit)];
