@@ -662,3 +662,4 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 /* 1.65 groepen inklappen */
 .grp.klapbaar{cursor:pointer}.grp .gpijl{font-style:normal;display:inline-block;width:1.1em;color:var(--oranje)}
 .klapalles{width:100%;margin-top:8px}
+.termm .tmpad{text-align:center;color:var(--oranje);font-weight:800;font-size:15px;margin:2px 0 4px}

@@ -110,7 +110,7 @@ function naarArtikel(a) {
 let scanStop = null;
 async function scanStart(od, opVondst) {
   const ov = document.createElement('div'); ov.className = 'scanner';
-  ov.innerHTML = `<video playsinline muted></video><div class="scankader"></div><div class="scanbalk"><div id="scM">Richt de camera op de barcode</div><div class="row" style="width:100%;max-width:400px"><input type="text" id="scI" inputmode="numeric" placeholder="Of typ het nummer" style="flex:1"><button class="btn sm" id="scZ">Zoek</button></div><button class="btn sec" id="scX" style="background:#fff">Sluiten</button></div>`;
+  ov.innerHTML = `<video playsinline muted></video><div class="scankader"></div><div class="scanbalk"><div id="scM">Houd de barcode recht in het kader, ongeveer 15 cm van de camera</div><div class="row" style="width:100%;max-width:400px"><input type="text" id="scI" inputmode="numeric" placeholder="Of typ het nummer" style="flex:1"><button class="btn sm" id="scZ">Zoek</button></div><button class="btn sec" id="scX" style="background:#fff">Sluiten</button></div>`;
   document.body.appendChild(ov);
   let lezer = null; const stop = () => { try { lezer && lezer.reset(); } catch (e) { } ov.remove(); scanStop = null; scanHook = null; };
   scanStop = stop;
@@ -119,37 +119,42 @@ async function scanStart(od, opVondst) {
   $('#scX', ov).onclick = stop; $('#scZ', ov).onclick = () => gevonden($('#scI', ov).value.trim()); $('#scI', ov).onkeydown = e => { if (e.key === 'Enter') gevonden(e.target.value.trim()); };
   try {
     await loadScript(LIB.zxing); const Z = window.ZXing;
-    const hints = new Map(); hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E, Z.BarcodeFormat.CODE_128, Z.BarcodeFormat.ITF]);
-    lezer = new Z.BrowserMultiFormatReader(hints);
+    // 1.70: alleen productbarcodes, grondig zoeken, hoge resolutie en scherpstellen
+    const hints = new Map(); hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E]); hints.set(Z.DecodeHintType.TRY_HARDER, true);
+    lezer = new Z.BrowserMultiFormatReader(hints, 250);
     let laatst = '';
-    await lezer.decodeFromConstraints({ video: { facingMode: 'environment' } }, $('video', ov), res => { if (!res) return; const t = res.getText(); if (t === laatst) return; laatst = t; gevonden(t); });
+    await lezer.decodeFromConstraints({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } }, $('video', ov), res => { if (!res) return; const t = res.getText(); if (t === laatst) return; laatst = t; gevonden(t); });
   } catch (e) { const m = $('#scM', ov); if (m) m.textContent = /Permission|NotAllowed/i.test(e && (e.name + e.message)) ? 'Geen toegang tot de camera. Typ het nummer hieronder.' : 'Camera lukt niet. Typ het nummer hieronder.'; }
 }
 /* ---------- 1.50: naar de terminal (QR per afgevinkt artikel) ---------- */
 function terminalLijst(od, cur) { return cur ? lijstArtikelen(od).filter(a => { const b = S.bestel[a.key + '|' + cur.besteldag]; return b && b.besteld && C.num(b.aantal) > 0; }) : []; }
-function terminalModus(od, cur) {
-  const arts = terminalLijst(od, cur); if (!arts.length) return toast('Vink eerst artikelen af als besteld');
-  const lk = 'cba-term-' + od + '-' + cur.besteldag; let i = Math.min(+(ls.get(lk) || 0), arts.length), wl = null;
+function terminalModus(od, cur, alles) {
+  // 1.70: per artikel onthouden wat al op de terminal staat; opnieuw openen = alleen de rest
+  const dk = 'cba-termok-' + od + '-' + cur.besteldag, ok = new Set(ls.get(dk) || []), bewaar = () => ls.set(dk, [...ok]);
+  if (alles) { ok.clear(); bewaar(); }
+  const totaal = terminalLijst(od, cur); if (!totaal.length) return toast('Vink eerst artikelen af als besteld');
+  const arts = totaal.filter(a => !ok.has(a.key)); let i = 0, wl = null;
   try { navigator.wakeLock && navigator.wakeLock.request('screen').then(w => wl = w).catch(() => { }); } catch (e) { }
   const ov = document.createElement('div'); ov.className = 'telmodus termm'; document.body.appendChild(ov);
   const sluit = () => { try { wl && wl.release(); } catch (e) { } ov.remove(); render(true); };
+  const verder = () => { if (arts[i]) { ok.add(arts[i].key); bewaar(); } i++; teken(); };
   const teken = () => {
-    ls.set(lk, i); const a = arts[i];
-    if (!a) { ov.innerHTML = `<div class="telkop"><span></span><button id="tmX">Sluiten</button></div><div class="tmeind">✅<b>Klaar</b><span>${arts.length} artikelen naar de terminal</span></div><div class="telacties tm2"><button id="tmV">‹ Vorige</button><button class="hoofd" id="tmK">Klaar</button></div>`; }
+    const a = arts[i], al = totaal.filter(x => ok.has(x.key)).length;
+    if (!a) { ov.innerHTML = `<div class="telkop"><span></span><button id="tmX">Sluiten</button></div><div class="tmeind">✅<b>${arts.length ? 'Klaar' : 'Alles staat al op de terminal'}</b><span>${al} van ${totaal.length} artikelen op de terminal</span></div><div class="telacties tm2"><button id="tmA">Alles opnieuw tonen</button><button class="hoofd" id="tmK">Klaar</button></div>`; }
     else {
-      const n = C.num(S.bestel[a.key + '|' + cur.besteldag].aantal), nr = a.eigen ? '' : String(a.nr || ''); let qr = '';
-      if (nr && window.qrcode) { const q = qrcode(0, 'M'); q.addData(nr); q.make(); qr = q.createSvgTag({ cellSize: 8, margin: 4, scalable: true }); }
-      ov.innerHTML = `<div class="telkop"><span>${i + 1} van ${arts.length}</span><button id="tmX">Sluiten</button></div><div class="telbalk"><div style="width:${i / arts.length * 100}%"></div></div>
+      const n = C.num(S.bestel[a.key + '|' + cur.besteldag].aantal), nr = a.eigen ? '' : String(a.nr || ''), qr = qrSvg(nr), pad = routePad(a);
+      ov.innerHTML = `<div class="telkop"><span>${i + 1} van ${arts.length}${al ? ` · ${al} al ingevoerd` : ''}</span><button id="tmX">Sluiten</button></div><div class="telbalk"><div style="width:${i / arts.length * 100}%"></div></div>
+      <div class="tmpad">${pad ? `Pad ${pad} · ` : ''}${esc(groepVan(a) || '')}</div>
       <div class="tmqr">${qr || '<span class="small">Geen bestelnummer: typ het artikel zelf in</span>'}</div><div class="tmnr">${esc(nr)}</div><div class="tmuitleg">Scan de code met de terminal, typ het aantal en tik ✓. Daarna hier Volgende of veeg.</div>
       <div class="telnaam">${esc(a.naam)}</div><div class="telsub">${esc(a.merk || '')}</div>
       <div class="tmaantal">Aantal: <b>${C.fmt(n)}</b> <span>${ehTxt(a, n)}${kwDoos(a) ? ` · ${C.fmt(n * a.he)} ${stukMv(a, n * a.he)}` : ''}</span></div>
       <div class="telacties tm2"><button id="tmV" ${i ? '' : 'disabled'}>‹ Vorige</button><button class="hoofd" id="tmN">Volgende ›</button></div>`;
     }
-    const b = id => ov.querySelector(id); b('#tmX').onclick = sluit; if (b('#tmK')) b('#tmK').onclick = () => { ls.set(lk, 0); sluit(); };
-    if (b('#tmV')) b('#tmV').onclick = () => { if (i > 0) { i--; teken(); } }; if (b('#tmN')) b('#tmN').onclick = () => { i++; teken(); };
+    const b = id => ov.querySelector(id); b('#tmX').onclick = sluit; if (b('#tmK')) b('#tmK').onclick = sluit; if (b('#tmA')) b('#tmA').onclick = () => { ov.remove(); terminalModus(od, cur, true); };
+    if (b('#tmV')) b('#tmV').onclick = () => { if (i > 0) { i--; teken(); } }; if (b('#tmN')) b('#tmN').onclick = verder;
   };
   let x0 = null; ov.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
-  ov.addEventListener('touchend', e => { if (x0 === null) return; const d = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(d) < 60) return; if (d < 0 && i < arts.length) i++; else if (d > 0 && i > 0) i--; else return; teken(); });
+  ov.addEventListener('touchend', e => { if (x0 === null) return; const d = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(d) < 60) return; if (d < 0 && i < arts.length) verder(); else if (d > 0 && i > 0) { i--; teken(); } });
   teken();
 }
 /* ---------- tel-modus ---------- */
