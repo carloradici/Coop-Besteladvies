@@ -389,7 +389,7 @@ const HULP = {
   'meer:data': ['Gegevens uploaden', 'Bestanden uploaden, automatisch uploaden, controleren en koppelen met Brood Opzet.'],
   'meer:winkel': ['Winkel', 'Koppelcode, openingstijden en afdelingen.'],
   'meer:hulp': ['Hulp', 'Uitleg met woordenlijst, de rondleiding, oefenen zonder dat er iets echt verandert, en wat er gebruikt wordt.'],
-  'beheer:upload': ['Bestanden uploaden', 'Kies dag-exports, bestelboeken, actie-pdf\'s of lijsten; de app herkent zelf wat het is. Met 🔗 Link plakken haal je een bestand op via een link.'],
+  'beheer:upload': ['Bestanden uploaden', 'Kies dag-exports, bestelboeken, actie-pdf\'s of lijsten; de app herkent zelf wat het is. Met 🔗 Link plakken haal je een bestand op via een link. De bestelboeken Vers en KW haalt de app elke dag zelf op als er een nieuwer boek online staat; met <b>🔄 Bestelboeken nu ophalen</b> doe je dat meteen.'],
   'beheer:auto': ['Automatisch uploaden', 'Een pc in de winkel stuurt de dag-exports vanzelf, elke 5 minuten. Tik op <b>Nieuw script</b>, pak het uit in C:\\Besteladvies en start 2-installeren.cmd.'],
   'beheer:controle': ['Controleren', 'Artikelen die verkocht worden maar niet in het bestelboek staan: koppel ze of negeer ze. Bij Besteleenheid tik je Klopt of pas je het aan. Tik op een kopje met ▾ om het open of dicht te klappen.'],
   'beheer:verwijderen': ['Uploads verwijderen', 'Verwijder een verkeerd geüpload bestand en upload daarna het goede.'],

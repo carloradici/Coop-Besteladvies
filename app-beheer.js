@@ -14,7 +14,7 @@ function renderBeheer() {
   const schemaRij = (bron, r, i) => `<div class="f"><label>Bestellen <select data-sch="${bron}" data-i="${i}" data-f="b">${C.DAGNAAM.map((d, j) => `<option value="${j}" ${j === r.b ? 'selected' : ''}>${d}</option>`).join('')}</select></label><label>levering <select data-sch="${bron}" data-i="${i}" data-f="l">${C.DAGNAAM.map((d, j) => `<option value="${j}" ${j === r.l ? 'selected' : ''}>${d}</option>`).join('')}</select></label><button class="btn sm sec" data-schdel="${bron}" data-i="${i}" aria-label="Verwijderen">🗑️</button></div>`;
   v.innerHTML = `${kU ? `
   <div class="blk" data-sec="upload"><h2>Bestanden uploaden</h2><p class="small">Kies één of meer bestanden tegelijk: dag-exports uit CasPos (.xls), bestelboek Vers of KW (.pdf) en de actie-pdf. De app herkent zelf wat het is.</p>
-  <label class="btn" style="display:block;text-align:center">Bestanden kiezen<input type="file" id="up" multiple accept=".xls,.xlsx,.pdf" class="hide"></label><button class="btn sec" id="upLink" style="width:100%;margin-top:8px">🔗 Link plakken</button><div class="log hide" id="upLog"></div></div>
+  <label class="btn" style="display:block;text-align:center">Bestanden kiezen<input type="file" id="up" multiple accept=".xls,.xlsx,.pdf" class="hide"></label><button class="btn sec" id="upLink" style="width:100%;margin-top:8px">🔗 Link plakken</button>${DEMO ? '' : '<button class="btn sec" id="upBoek" style="width:100%;margin-top:8px">🔄 Bestelboeken nu ophalen</button>'}<div class="log hide" id="upLog"></div></div>
   <div class="blk" data-sec="upload"><h2>Dag-exports laatste 8 weken</h2>${(() => { const m = ontbrekend(); return m.length ? `<p class="small rood">⚠️ ${ontbrekendTekst(m)}</p>` : '<p class="small groen">✓ Geen dagen ontbreken</p>'; })()}${kalenderHtml()}</div>
   <div class="blk" data-sec="upload"><h2>Status</h2><div class="kv">
   <span>Verkoopdagen</span><b>${dagen.length ? `${dagen.length} dagen · ${C.fmtDag(dagen[0])} t/m ${C.fmtDag(last)}` : 'nog geen'}</b>
@@ -64,6 +64,7 @@ function renderBeheer() {
   <div class="blk" data-sec="controle"><h2>Besteleenheid controleren (${chk.length})</h2><p class="small">Bij deze artikelen is de besteleenheid uit de naam afgeleid. Pas aan als het niet klopt.</p>${chk.length ? klap('chk', `${chk.length} artikelen bekijken`, `<div class="list">${chk.map(a => `<div class="it" style="flex-wrap:wrap"><span style="flex:1 1 200px">${esc(a.naam)} <span class="small">${a.nr} · ${a.eh}</span></span><label class="small">per doos <input type="checkbox" data-he="${a.key}" data-f="perHE" ${a.perHE ? 'checked' : ''}></label><input type="number" step="0.1" data-he="${a.key}" data-f="he" value="${a.he}" style="width:80px"><button class="btn sm sec" data-heok="${a.key}">Klopt</button></div>`).join('')}</div>`) : '<div class="small">Niets te controleren.</div>'}</div>` : ''}`;
   // events
   const ul = $('#upLink'); if (ul) ul.onclick = linkPlakken;
+  const ub = $('#upBoek'); if (ub) ub.onclick = async () => { ub.disabled = true; ub.textContent = 'Zoeken…'; await boekAutoHaal(true); ub.disabled = false; ub.textContent = '🔄 Bestelboeken nu ophalen'; };
   const upI = $('#up'); if (upI) upI.onchange = e => { if (OEFEN) return toast('Uploaden kan niet tijdens oefenen'); uploads([...e.target.files]); };
   v.querySelectorAll('[data-delac]').forEach(b => b.onclick = async () => { if (!await bevestig('Weet je het zeker?', 'Deze actieweek wordt verwijderd.', 'Verwijderen', 'Annuleren')) return; await adminDo(async () => { if (!DEMO) await remove('acties', `id=eq.${b.dataset.delac}&winkel_id=eq.${W}`); S.acties = S.acties.filter(a => a.id !== b.dataset.delac); }); });
   v.querySelectorAll('[data-deldag]').forEach(b => b.onclick = async () => { if (!await bevestig('Weet je het zeker?', 'De dag-export van ' + C.fmtDag(b.dataset.deldag) + ' wordt verwijderd.', 'Verwijderen', 'Annuleren')) return; await adminDo(async () => { const d = b.dataset.deldag; if (!DEMO) await remove('dagverkoop', `dag=eq.${d}&winkel_id=eq.${W}`); delete S.dagen[d]; delete S.dagMeta[d]; await idel('d:' + W + ':' + d); }); });
@@ -114,9 +115,9 @@ function saveAgenda(row) { return adminDo(async () => { if (!DEMO) await upW('ag
 const libs = {};
 function loadScript(src) { return libs[src] || (libs[src] = new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Kon onderdeel niet laden (offline?)')); document.head.appendChild(s); })); }
 async function pdfjs() { await loadScript(LIB.pdf); const p = window.pdfjsLib; if (!p.GlobalWorkerOptions.workerSrc) p.GlobalWorkerOptions.workerSrc = LIB.pdfw; return p; }
-async function uploads(files) {
-  const ulog = $('#upLog'); ulog.classList.remove('hide'); ulog.innerHTML = '';
-  const L = (t, c = '') => { ulog.insertAdjacentHTML('beforeend', `<div class="${c}">${esc(t)}</div>`); ulog.scrollTop = 1e9; };
+async function uploads(files, regels) {
+  const ulog = $('#upLog') || document.createElement('div'); ulog.classList.remove('hide'); ulog.innerHTML = '';
+  const L = (t, c = '') => { if (regels) regels.push(t); ulog.insertAdjacentHTML('beforeend', `<div class="${c}">${esc(t)}</div>`); ulog.scrollTop = 1e9; };
   if (!DEMO && !navigator.onLine) return L('Je bent offline. Uploaden kan alleen met internet.', 'err');
   files.sort((a, b) => (/\.pdf$/i.test(a.name) ? 0 : 1) - (/\.pdf$/i.test(b.name) ? 0 : 1) || a.name.localeCompare(b.name));
   let n = 0;
@@ -164,6 +165,20 @@ async function uploads(files) {
 }
 
 
+
+/* ---------- 1.67: bestelboeken zelf ophalen van Reto (Vers: bestelboek-wk-NN.pdf, KW: JJJJMMDD-bestelboek.pdf) ---------- */
+async function boekAutoHaal(nu) {
+  if (DEMO || OEFEN || !navigator.onLine || !mag('upload')) return; const dk = 'cba-boekhaal-' + W; if (!nu && ls.get(dk) === C.today()) return; ls.set(dk, C.today());
+  const B = 'https://static.reto.media/ordervantolversuniecom/bestelboeken/', files = [];
+  const haal = async naam => { try { const r = await fetch(`${SB_URL}/functions/v1/folder?url=${encodeURIComponent(B + naam)}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (!r.ok) return null; const b = await r.arrayBuffer(); return b.byteLength > 1000 ? new File([b], naam, { type: 'application/pdf' }) : null; } catch (e) { return null; } };
+  const vOud = (S.boeken.vers || {}).datum || '';
+  for (const d of [C.add(C.today(), 7), C.today()]) { const iw = C.isoWeek(d); if (C.mondayOf(iw.y, iw.w) <= vOud) continue; const f = await haal(`bestelboek-wk-${iw.w}.pdf`) || (iw.w < 10 ? await haal(`bestelboek-wk-0${iw.w}.pdf`) : null); if (f) { files.push(f); break; } }
+  const kOud = (S.boeken.kw || {}).datum || '';
+  for (let k = 6; k >= -35; k--) { const d = C.add(C.today(), k); if (d <= kOud) break; const f = await haal(d.replace(/-/g, '') + '-bestelboek.pdf'); if (f) { files.push(f); break; } }
+  if (!files.length) { if (nu) toast('Geen nieuwer bestelboek gevonden', 4000); return; }
+  const r = []; await uploads(files, r); log('upload', 'Automatisch opgehaald: ' + files.map(f => f.name).join(', '));
+  toast(r.filter(t => /^[✓✗]/.test(t)).join(' · ') || 'Bestelboek opgehaald', 7000); if (ui.tab === 'beheer') render(true);
+}
 
 /* ---------- 1.13: telvragen ---------- */
 function telMax() { const n = (S.inst || {}).telMax; return n === undefined || n === null ? 5 : +n; }
