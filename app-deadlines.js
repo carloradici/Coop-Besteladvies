@@ -145,7 +145,7 @@ function renderLijst(od, soft) {
   };
   if (lazy) lazy.disconnect();
   chunk();
-  { const dy = soft ? y : window.__doelY || 0; if (dy) { while (pos < arts.length && document.body.scrollHeight < dy + innerHeight + 400) chunk(); window.scrollTo(0, dy); } else window.scrollTo(0, 0); }
+  { const dy = soft ? y : window.__doelY || 0; if (dy) { while (pos < arts.length && document.body.scrollHeight < dy + innerHeight + 400) chunk(); window.scrollTo(0, Math.min(dy, maxY())); } else window.scrollTo(0, 0); }
   lst.onclick = e => { if (e.target.closest('[data-nul]')) { ui.toonNul = !ui.toonNul; return render(true); } const gr = e.target.closest('[data-grp]'); if (gr && !ui.q) { const k = gr.dataset.grp; dicht.has(k) ? dicht.delete(k) : dicht.add(k); bewaarDicht(); return render(true); } onKaartKlik(e); };
   const ka = $('#klapA'); if (ka) { const alleDicht = Object.keys(tel).length > 0 && Object.keys(tel).every(k => dicht.has(k)); ka.textContent = alleDicht ? '▾ Alles uitklappen' : '▸ Alles inklappen'; ka.onclick = () => { if (alleDicht) dicht.clear(); else Object.keys(tel).forEach(k => dicht.add(k)); bewaarDicht(); render(true); }; } lst.onchange = onKaartWijzig;
   lst.onfocusin = e => { if (e.target.dataset && e.target.dataset.in) e.target.select(); };

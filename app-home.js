@@ -2,10 +2,15 @@
 // Inklapbaar blok; open/dicht wordt onthouden tot de app sluit
 const klap = (k, kop, inh) => `<details class="klap" data-k="${esc(k)}" ${(ui.klap || {})[k] ? 'open' : ''}><summary>${kop}</summary>${inh}</details>`;
 document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.klap')) (ui.klap = ui.klap || {})[d.dataset.k] = d.open; }, true);
+// 1.69: nooit verder scrollen dan de pagina lang is (anders gaat de onderste balk op de iPhone zweven)
+const maxY = () => Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+const rechtZetten = () => { if (window.scrollY > maxY()) window.scrollTo(0, maxY()); else if (window.scrollY > 0) window.scrollTo(0, window.scrollY); };
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(rechtZetten, 300); });
+if (window.visualViewport) window.visualViewport.addEventListener('resize', () => setTimeout(rechtZetten, 100));
 function render(soft) {
   if (!M) return; const sl = schermSleutel(), zelfde = sl === scrollSleutel, doelY = zelfde ? window.scrollY : (SCROLL[sl] || 0); scrollSleutel = ''; window.__doelY = doelY;
   renderScherm(soft); telGebruik();
-  scrollSleutel = sl; if (!BESTEL_OD.includes(ui.tab)) window.scrollTo(0, Math.min(doelY, document.body.scrollHeight)); SCROLL[sl] = window.scrollY; plekBewaar();
+  scrollSleutel = sl; if (!BESTEL_OD.includes(ui.tab)) window.scrollTo(0, Math.min(doelY, maxY())); SCROLL[sl] = window.scrollY; plekBewaar();
 }
 function renderScherm(soft) {
   const kan = { agf: mag('o_agf'), vers: mag('o_vers'), brood: mag('o_brood'), diep: mag('o_diep'), kw: mag('o_kw'), overig: mag('o_overig'), beheer: mag('upload') || mag('instellingen'), medewerkers: mag('team'), mwedit: mag('team'), winkel: mag('team'), vandaag: mag('team'), export: mag('upload') || mag('bestellen'), hoegoed: mag('bestellen'), rapport: kantoorMag(), gebruik: kantoorMag(), leverancier: mag('bestellen') || mag('afvinken'), acties: mag('bestellen') };
