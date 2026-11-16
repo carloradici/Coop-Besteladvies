@@ -241,7 +241,9 @@ async function bewaarActie(pages, naam, buf) {
 }
 async function versHaalOp(jaar, week) {
   if (DEMO) throw new Error('In de testversie kun je de pdf zelf kiezen');
-  const r = await fetch(`${SB_URL}/functions/v1/folder?jaar=${jaar}&week=${week}&soort=vers`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } });
+  const hd = { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }; let r = await fetch(`${SB_URL}/functions/v1/folder?jaar=${jaar}&week=${week}&soort=vers`, hd);
+  // 1.68: Reto noemt hem nu folder-coop-week-NN.pdf
+  for (const ww of [String(week), String(week).padStart(2, '0')]) { if (r.ok) break; const r2 = await fetch(`${SB_URL}/functions/v1/folder?url=${encodeURIComponent(`https://static.reto.media/ordervantolversuniecom/upload-${jaar}/folder-coop-week-${ww}.pdf`)}`, hd); if (r2.ok) r = r2; }
   if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } throw new Error(t); }
   const buf = await r.arrayBuffer(); const pages = await C.pdfPages(await pdfjs(), buf.slice(0)); if (C.detectPdf(pages) !== 'actie') throw new Error('Geen vers-bestellijst');
   const a = await bewaarActie(pages, 'opgehaald', buf); if (a.week !== +week) throw new Error(`Vers-bestellijst week ${week} staat nog niet online`); return a;
