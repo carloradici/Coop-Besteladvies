@@ -222,7 +222,7 @@ function plekSegment() {
   const d = document.createElement('div'); d.className = 'plekseg';
   d.innerHTML = `<div class="segment licht">${[['tafel', '🥬 Vers'], ['kop', '🥫 KW']].filter(x => x[0] === 'tafel' || mag('o_kw')).map(([k, n]) => `<button class="${ui.plekSoort === k ? 'aan' : ''}" data-pls="${k}">${n}</button>`).join('')}</div>`;
   v.prepend(d);
-  d.querySelectorAll('[data-pls]').forEach(b => b.onclick = () => { ui.plekSoort = b.dataset.pls; ga(b.dataset.pls === 'kop' ? 'kwacties' : 'tafels'); });
+  d.querySelectorAll('[data-pls]').forEach(b => b.onclick = () => { ui.plekSoort = b.dataset.pls; ls.set('cba-apsoort', b.dataset.pls); ga(b.dataset.pls === 'kop' ? 'kwacties' : 'tafels'); });
 }
 /* meer: groepen + slim zoeken */
 const MEER_GROEPEN = [['indeling', '✏️', 'Indeling aanpassen', 'Volgorde en plek van de menu-items, voor iedereen'], ['kantoor', '🏢', 'Kantoor', 'Planning, bestanden en instellingen'], ['mij', '👤', 'Mijn app', 'Weergave, pincode en ander persoon'], ['bestellen', '🛒', 'Bestellen instellen', 'Looproute, rapporten, besteldagen, advies'], ['team', '👥', 'Medewerkers', 'Pincodes, rechten, nieuwe medewerker, wie deed wat'], ['plekken', '📅', 'Actie planning', 'Vers op de koeltafels, KW op de koppen'], ['data', '📤', 'Gegevens uploaden', 'Bestanden, automatisch uploaden, controleren'], ['winkel', '🏪', 'Winkel', 'Koppelcode, openingstijden, afdelingen'], ['geav', '🧰', 'Geavanceerd', 'Techniek en zeldzame instellingen, alleen voor de beheerder'], ['hulp', '❓', 'Hulp', 'Uitleg, rondleiding en oefenen']];
@@ -243,8 +243,7 @@ function meerItems() {
     ['bestellen', 'bAdv', '⚠️', 'Advies, waarschuwingen en even tellen', 'Waarschuwing bij veel bestellen, even tellen, buffer', 'waarschuwing hoog advies telvragen tellen buffer instellingen houdbaarheid weer', kI, () => naarBeheer('advies')],
     ['team', 'mMw', '👥', 'Medewerkers en rechten', 'Namen, pincode resetten, rechten, beginnersmodus', 'medewerker personeel collega team rechten pincode reset resetten beginner', kT, () => ga('medewerkers')],
     ['team', 'mVan', '🕘', 'Wie deed wat', 'Per persoon wat er is gedaan, met tijden', 'vandaag gedaan activiteit log wie wat overzicht', kT, () => ga('vandaag')],
-    ['plekken', 'pTaf', '🥬', 'Vers', 'Vers-acties op de koeltafels', 'tafel koeltafel actietafel vers indelen plek', tegelZichtbaar('plekken'), () => { ui.plekSoort = 'tafel'; ga('tafels'); }],
-    ['plekken', 'pKop', '🥫', 'KW', 'KW-acties op de koppen', 'kop koppen stelling meter kw folder actie plek', mag('o_kw') && tegelZichtbaar('plekken'), () => { ui.plekSoort = 'kop'; ga('kwacties'); }],
+    ['snel', 'pAct', '📋', 'Actieplanning', 'Vers- en KW-acties per week', 'actieplanning actie acties folder vers kw tafel koeltafel kop koppen indelen plek', tegelZichtbaar('plekken'), () => { const kw = mag('o_kw') && (ls.get('cba-apsoort') === 'kop' || !(mag('tafels') || tafelLijst().length)); ui.plekSoort = kw ? 'kop' : 'tafel'; ga(kw ? 'kwacties' : 'tafels'); }],
     ['data', 'bUp', '📤', 'Bestanden uploaden', 'Dag-exports, bestelboeken en acties', 'upload uploaden bestand export kassa caspos excel pdf bestelboek dag-export', kU, () => naarBeheer('upload')],
     ['geav', 'bAuto', '📡', 'Automatisch uploaden', 'Dag-export elke dag vanzelf vanaf een computer', 'automatisch computer script sleutel elke dag', kU && isBeheer(), () => naarBeheer('auto')],
     ['data', 'bCtl', '🔍', 'Controleren', 'Niet gekoppelde artikelen en besteleenheden', 'controleren niet gekoppeld koppelen eenheid', kU || kI, () => naarBeheer('controle')],
@@ -266,7 +265,7 @@ function meerItems() {
     ['hulp', 'mOef', '🎓', OEFEN ? 'Stoppen met oefenen' : 'Oefenen', 'Alles uitproberen zonder dat er iets echt verandert', 'oefenen oefenronde proberen test leren', true, () => OEFEN ? stopOefenen() : startOefenen()]
   ];
   const m = (S.inst || {}).menu || {};
-  return L.filter(x => x[6]).map((x, i) => { const o = m[x[1]] || {}; return { g: o.g || x[0], id: x[1], ic: x[2], t: x[3], s: x[4], syn: x[5], go: x[7], o: o.o ?? i * 10 }; }).sort((a, b) => a.o - b.o);
+  return L.filter(x => x[6]).map((x, i) => { const o = m[x[1]] || (x[1] === 'pAct' && (m.pKop || m.pTaf)) || {}; return { g: o.g || x[0], id: x[1], ic: x[2], t: x[3], s: x[4], syn: x[5], go: x[7], o: o.o ?? i * 10 }; }).sort((a, b) => a.o - b.o);
 }
 function renderMeer() {
   const v = $('#view'); const items = meerItems(); const q = ui.meerQ || '';
