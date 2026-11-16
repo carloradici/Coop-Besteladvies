@@ -218,7 +218,13 @@ async function start() {
   if (!M) { rebuild(); render(); }
   tourAlsNodig(); setTimeout(kwAutoHaal, 4000); setTimeout(versAutoHaal, 6000); setTimeout(pdfOpruimen, 8000);
 }
-function startTab() { const s = (S.pref && S.pref.start) || 'home'; return s === 'home' || (BESTEL_OD.includes(s) && mag('o_' + s)) || (s === 'overig' && mag('o_overig')) ? s : 'home'; }
+// 1.65: verder waar je was (per persoon, max 12 uur)
+function plekBewaar() { if (!OPEN || !mw || !M) return; const u = {}; for (const k in ui) if (k !== 'q' && ['string', 'number', 'boolean'].includes(typeof ui[k])) u[k] = ui[k]; ls.set('cba-plek-' + wieSleutel(), { u, y: Math.round(window.scrollY), ts: Date.now() }); }
+let plekT = 0; window.addEventListener('scroll', () => { clearTimeout(plekT); plekT = setTimeout(plekBewaar, 400); }, { passive: true });
+document.addEventListener('visibilitychange', () => { if (document.hidden) plekBewaar(); });
+function startTab() { const s = (S.pref && S.pref.start) || 'waar';
+  if (s === 'waar') { const p = ls.get('cba-plek-' + wieSleutel()); if (p && p.u && p.u.tab && Date.now() - p.ts < 12 * 3600000) { Object.assign(ui, p.u); ui.blijf = null; SCROLL[schermSleutel()] = p.y; return p.u.tab; } return 'home'; }
+  return s === 'home' || (BESTEL_OD.includes(s) && mag('o_' + s)) || (s === 'overig' && mag('o_overig')) ? s : 'home'; }
 function shell() {
   document.body.classList.remove('inlog', 'vast'); $('#kop').classList.remove('hide'); $('nav.tabs').classList.remove('hide');
   if (!$('#view')) $('#app').innerHTML = '<div id="view"></div>';

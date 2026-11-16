@@ -659,3 +659,6 @@ details.klap>.btn{margin-bottom:8px}
 @media print{.qrlijst .pdfpagina{page-break-after:always}}
 /* 1.64 QR in bestellijst-pdf */
 svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
+/* 1.65 groepen inklappen */
+.grp.klapbaar{cursor:pointer}.grp .gpijl{font-style:normal;display:inline-block;width:1.1em;color:var(--oranje)}
+.klapalles{width:100%;margin-top:8px}
