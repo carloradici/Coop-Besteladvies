@@ -132,7 +132,8 @@ async function scanStart(od, opVondst) {
   document.body.appendChild(ov);
   let strm = null; const stop = () => { try { strm && strm.getTracks().forEach(t => t.stop()); } catch (e) { } ov.remove(); scanStop = null; scanHook = null; };
   scanStop = stop;
-  const gevonden = code => { const a = vindCode(code); if (!a) { $('#scM', ov).textContent = `Niet gevonden: ${code}`; return false; } stop(); if (navigator.vibrate) navigator.vibrate(60); if (opVondst) opVondst(a); else naarArtikel(a); return true; };
+  geluidKlaar();
+  const gevonden = code => { const a = vindCode(code), m = $('#scM', ov), k = $('.scankader', ov); if (!a) { m.textContent = `❌ Onbekend artikel: ${code}`; m.className = 'fout'; k.classList.remove('fout'); void k.offsetWidth; k.classList.add('fout'); klank(false); return false; } klank(true); stop(); if (opVondst) opVondst(a); else naarArtikel(a); return true; };
   scanHook = c => gevonden(c);
   $('#scX', ov).onclick = stop; $('#scZ', ov).onclick = () => gevonden($('#scI', ov).value.trim()); $('#scI', ov).onkeydown = e => { if (e.key === 'Enter') gevonden(e.target.value.trim()); };
   try { // 1.71: zxing-cpp (WebAssembly) via BarcodeDetector; leest ook lastige barcodes op zakken en flessen. Alleen het kader wordt bekeken.
@@ -140,7 +141,7 @@ async function scanStart(od, opVondst) {
     try { if (window.BarcodeDetector && (await window.BarcodeDetector.getSupportedFormats()).includes('ean_13')) BD = window.BarcodeDetector; } catch (e) { }
     const det = new BD({ formats: F }), v = $('video', ov);
     // foto met de gewone camera (scherpstellen werkt daar altijd) en die foto uitlezen
-    $('#scF', ov).onchange = async e => { const f = e.target.files[0]; if (!f) return; const m = $('#scM', ov); m.textContent = 'Foto bekijken…'; try { const bm = await createImageBitmap(f), r = await det.detect(bm); if (!r.length) { const s = Math.min(1, 1600 / bm.width), w = Math.round(bm.width * s), h = Math.round(bm.height * s); cv.width = w; cv.height = h; cx.drawImage(bm, 0, 0, w, h); const ms = msiLees(cx.getImageData(0, 0, w, h).data, w, h, true); if (ms) r.push({ rawValue: ms }); } if (r.length) gevonden(r[0].rawValue); else m.textContent = 'Geen barcode op de foto gevonden. Probeer opnieuw: recht en scherp.'; } catch (x) { m.textContent = 'Foto lukt niet. Typ het nummer hieronder.'; } e.target.value = ''; };
+    $('#scF', ov).onchange = async e => { const f = e.target.files[0]; if (!f) return; const m = $('#scM', ov); m.textContent = 'Foto bekijken…'; m.className = ''; try { const bm = await createImageBitmap(f), r = await det.detect(bm); if (!r.length) { const s = Math.min(1, 1600 / bm.width), w = Math.round(bm.width * s), h = Math.round(bm.height * s); cv.width = w; cv.height = h; cx.drawImage(bm, 0, 0, w, h); const ms = msiLees(cx.getImageData(0, 0, w, h).data, w, h, true); if (ms) r.push({ rawValue: ms }); } if (r.length) gevonden(r[0].rawValue); else m.textContent = 'Geen barcode op de foto gevonden. Probeer opnieuw: recht en scherp.'; } catch (x) { m.textContent = 'Foto lukt niet. Typ het nummer hieronder.'; } e.target.value = ''; };
     const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
     strm = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } }); v.srcObject = strm; await v.play();
     try { const tr = strm.getVideoTracks()[0], cp = tr.getCapabilities ? tr.getCapabilities() : {}; if (cp.zoom) await tr.applyConstraints({ advanced: [{ zoom: Math.min(2, cp.zoom.max) }] }); } catch (e) { } // 2× inzoomen: verder weg houden = scherp

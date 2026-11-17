@@ -663,3 +663,8 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 .grp.klapbaar{cursor:pointer}.grp .gpijl{font-style:normal;display:inline-block;width:1.1em;color:var(--oranje)}
 .klapalles{width:100%;margin-top:8px}
 .termm .tmpad{text-align:center;color:var(--oranje);font-weight:800;font-size:15px;margin:2px 0 4px}
+
+/* 1.75: onbekend artikel bij scannen */
+.scanner .scankader.fout{border-color:#e53935;box-shadow:0 0 0 2000px rgba(198,40,40,.45);animation:scFout .5s 2}
+@keyframes scFout{50%{box-shadow:0 0 0 2000px rgba(198,40,40,.75)}}
+#scM.fout{background:#c62828;color:#fff;font-weight:700;font-size:1.2em;padding:10px 14px;border-radius:12px}

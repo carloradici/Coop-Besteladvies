@@ -275,12 +275,13 @@ function renderAppInst() {
   <div class="list"><div class="it"><span><b>Compacte lijst</b><br><span class="small">Alleen vorige week en het gemiddelde per dag</span></span><input type="checkbox" class="schak" data-pb="compact" ${p.compact ? 'checked' : ''}></div>
   <div class="it"><span><b>Korte lijst</b><br><span class="small">Eén regel per artikel: naam, advies en invullen</span></span><input type="checkbox" class="schak" data-pb="kort" ${p.kort ? 'checked' : ''}></div>
   <div class="it"><span><b>Verkooptabel altijd tonen</b><br><span class="small">Anders zie je die pas na een tik op "▾ Meer" bij een artikel</span></span><input type="checkbox" class="schak" data-pb="details" ${p.details ? 'checked' : ''}></div>
-  <div class="it"><span><b>Eenvoudige modus</b><br><span class="small">Minder informatie en grotere knoppen</span></span><input type="checkbox" class="schak" data-pb="eenvoudig" ${p.eenvoudig ? 'checked' : ''}></div></div></div>
+  <div class="it"><span><b>Eenvoudige modus</b><br><span class="small">Minder informatie en grotere knoppen</span></span><input type="checkbox" class="schak" data-pb="eenvoudig" ${p.eenvoudig ? 'checked' : ''}></div>
+  <div class="it"><span><b>Geluid bij scannen</b><br><span class="small">Zachte tik bij gevonden, lage toon bij onbekend</span></span><input type="checkbox" class="schak" id="pGel" ${p.stil ? '' : 'checked'}></div></div></div>
   <div class="blk"><h2>Startpagina</h2><select id="pStart" style="width:100%">${starts.map(s => `<option value="${s[0]}" ${(p.start || 'waar') === s[0] ? 'selected' : ''}>${s[1]}</option>`).join('')}</select><p class="small">Deze instellingen gelden alleen voor jou (${esc(mijnNaam())}) en werken op elk toestel waar je inlogt.</p></div>
   <div class="blk"><h2>Pincode opnieuw vragen</h2><div class="segment licht">${[[1, '1 min'], [10, '10 min'], [60, '1 uur'], [0, 'Bij opstarten']].map(o => `<button class="${slotMin() === o[0] ? 'aan' : ''}" data-slot="${o[0]}">${o[1]}</button>`).join('')}</div><p class="small">Na zo lang buiten beeld vraagt de app je pincode opnieuw. Geldt alleen voor deze telefoon. Na 12 uur moet je altijd opnieuw inloggen.</p></div>`;
   v.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { ls.set('cba-slot', +b.dataset.slot); render(true); });
   v.querySelectorAll('[data-pk]').forEach(b => b.onclick = () => zetPref(b.dataset.pk, b.dataset.pv));
-  v.querySelectorAll('[data-pb]').forEach(c => c.onchange = () => zetPref(c.dataset.pb, c.checked));
+  v.querySelectorAll('[data-pb]').forEach(c => c.onchange = () => zetPref(c.dataset.pb, c.checked)); $('#pGel').onchange = e => zetPref('stil', !e.target.checked);
   $('#pStart').onchange = e => zetPref('start', e.target.value);
 }
 

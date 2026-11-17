@@ -284,7 +284,14 @@ function linkPlakken() {
 /* ---------- 1.14: bluetooth-scanner ---------- */
 let telHook = null, scanHook = null, scannerGezien = false;
 let piepCtx = null;
-function piep() { try { piepCtx = piepCtx || new (window.AudioContext || window.webkitAudioContext)(); const o = piepCtx.createOscillator(), g = piepCtx.createGain(); o.frequency.value = 220; o.type = 'square'; g.gain.value = 0.08; o.connect(g); g.connect(piepCtx.destination); o.start(); o.stop(piepCtx.currentTime + 0.25); } catch (e) { } if (navigator.vibrate) navigator.vibrate([80, 60, 80]); }
+function geluidKlaar() { try { piepCtx = piepCtx || new (window.AudioContext || window.webkitAudioContext)(); if (piepCtx.state === 'suspended') piepCtx.resume(); } catch (e) { } }
+/* 1.75: zacht geluid (ok = korte tik, fout = lage dong die wegsterft) en een tikje voelen */
+function klank(ok) {
+  if (!(S.pref || {}).stil) try { geluidKlaar(); const t = piepCtx.currentTime; for (const [f, v] of ok ? [[1100, 0.05]] : [[330, 0.14], [495, 0.05]]) { const o = piepCtx.createOscillator(), g = piepCtx.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + (ok ? 0.06 : 0.6)); o.connect(g); g.connect(piepCtx.destination); o.start(t); o.stop(t + (ok ? 0.07 : 0.62)); } } catch (e) { }
+  voel(); if (!ok) setTimeout(voel, 180);
+}
+function voel() { if (navigator.vibrate) return navigator.vibrate(40); try { const l = document.createElement('label'); l.innerHTML = '<input type="checkbox" switch>'; l.style.cssText = 'position:fixed;opacity:0;pointer-events:none'; document.body.appendChild(l); l.click(); setTimeout(() => l.remove(), 200); } catch (e) { } }
+function piep() { klank(false); }
 function scannerCode(code) {
   scannerGezien = true;
   if (telHook) return telHook(code);
