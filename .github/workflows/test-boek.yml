@@ -5,7 +5,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          B=https://static.reto.media/ordervantolversuniecom/bestelboeken/
-          mkdir b; for n in bestelboek-wk-46.pdf bestelboek-wk-47.pdf 20261006-bestelboek.pdf 20261102-bestelboek.pdf; do curl -s -o b/$n $B$n; done; ls -la b
-      - uses: actions/upload-artifact@v4
-        with: {name: boeken, path: b}
+          sudo apt-get install -y -qq poppler-utils >/dev/null
+          curl -s -o k.pdf https://static.reto.media/ordervantolversuniecom/bestelboeken/20261006-bestelboek.pdf
+          pdftotext -layout k.pdf - | grep -oE '\b[0-9]{5,9}\b' | sort -u | tr '\n' ' ' | sed 's/^/NRS /'
