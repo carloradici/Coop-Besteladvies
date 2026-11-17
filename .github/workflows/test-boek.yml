@@ -1,0 +1,10 @@
+name: test-boek
+on: workflow_dispatch
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          B=https://static.reto.media/ordervantolversuniecom/bestelboeken/
+          for w in 30 35 38 40 42 44 45 46 47 48; do echo "wk$w $(curl -s -o /dev/null -w '%{http_code} %{size_download}' ${B}bestelboek-wk-$w.pdf)"; done
+          for i in $(seq 0 120); do d=$(date -d "-$i day" +%Y%m%d); c=$(curl -s -o /dev/null -w '%{http_code} %{size_download}' ${B}$d-bestelboek.pdf); case $c in 200*) echo "kw $d $c";; esac; done
