@@ -383,7 +383,7 @@ C.buildModel = (S) => {
   const st = C.settings(S.inst);
   const vandaag = S.vandaag || C.today();
   const dagLijst = Object.keys(S.dagen).sort();
-  const M = { st, vandaag, dagLijst, keys: {}, art: {}, kassa: S.kassa, boeken: S.boeken, onbekend: [], acties: [] };
+  const M = { st, vandaag, dagLijst, keys: {}, art: {}, kassa: S.kassa, boeken: S.boeken, onbekend: [], acties: [], arch: {} };
   if (!dagLijst.length) { M.start = vandaag; } else M.start = dagLijst[0];
   M.N = C.diff(M.start, vandaag) + 1;
   M.heeftData = new Uint8Array(Math.max(M.N, 1)); dagLijst.forEach(d => { const i = C.diff(M.start, d); if (i >= 0 && i < M.N) M.heeftData[i] = 1; });
@@ -391,7 +391,7 @@ C.buildModel = (S) => {
   for (const bron of ['vers', 'kw']) {
     const b = S.boeken[bron]; if (!b) continue;
     for (const a of b.artikelen) { const key = bron + ':' + a.nr; const ov = st.he[key]; M.art[key] = Object.assign({ key, bron }, a, ov || {}); }
-    for (const a of (b.uit || [])) { const key = bron + ':' + a.nr; if (!M.art[key]) M.art[key] = Object.assign({ key, bron, uit: true }, a); }
+    for (const a of (b.uit || [])) { const key = bron + ':' + a.nr; if (a.arch) { M.arch[key] = 1; continue; } if (!M.art[key]) M.art[key] = Object.assign({ key, bron, uit: true }, a); }
     for (const nr of (b.nieuw || [])) { const k = bron + ':' + nr; if (M.art[k]) M.art[k].nieuw = true; }
   }
   // eigen artikelen
@@ -410,7 +410,7 @@ C.buildModel = (S) => {
     if (eigenEan[ean]) continue;
     const k = S.kassa[ean]; const kl = C.klasse(k); if (!kl) continue;
     let key;
-    if (kl.soort === 'normaal') { key = kl.bron + ':' + k.b; if (!M.art[key] && koppel[key] && M.art[koppel[key]]) key = koppel[key]; if (!M.art[key]) { if (!negeer.has(key)) M.onbekend.push({ ean, ...k, bron: kl.bron }); key = 'o:' + kl.bron + ':' + k.b; } }
+    if (kl.soort === 'normaal') { key = kl.bron + ':' + k.b; if (!M.art[key] && koppel[key] && M.art[koppel[key]]) key = koppel[key]; if (!M.art[key]) { if (!negeer.has(key) && !M.arch[key] && !/^9+$/.test(k.b)) M.onbekend.push({ ean, ...k, bron: kl.bron }); key = 'o:' + kl.bron + ':' + k.b; } }
     else key = 'e:' + ean;
     eanKey[ean] = { key, kl };
   }
@@ -614,11 +614,12 @@ C.overig = (M, key, io) => {
   return out;
 };
 // assortiment vergelijken
+C.archA = a => ({ nr: a.nr, naam: a.naam, groep: a.groep, arch: 1 }); /* 1.73: oud artikel, alleen om verkoop te herkennen */
 C.vergelijk = (oud, nieuw, ok) => {
   const o = new Map((oud ? oud.artikelen : []).map(a => [a.nr, a])); const n = new Set(nieuw.artikelen.map(a => a.nr));
   const nieuwL = oud ? nieuw.artikelen.filter(a => !o.has(a.nr)).map(a => a.nr) : [];
   const uit = [];
-  if (oud) { for (const a of oud.artikelen) if (!n.has(a.nr)) uit.push(Object.assign({}, a, { uitSinds: nieuw.datum || null })); for (const a of (oud.uit || [])) if (!n.has(a.nr) && !uit.some(x => x.nr === a.nr) && !(ok && ok.has(nieuw.bron + ':' + a.nr))) uit.push(a); }
+  if (oud) { for (const a of oud.artikelen) if (!n.has(a.nr)) uit.push(Object.assign({}, a, { uitSinds: nieuw.datum || null })); for (const a of (oud.uit || [])) if (!n.has(a.nr) && !uit.some(x => x.nr === a.nr)) uit.push(a.arch || !(ok && ok.has(nieuw.bron + ':' + a.nr)) ? a : C.archA(a)); }
   return { nieuw: nieuwL, uit };
 };
 

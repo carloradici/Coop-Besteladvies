@@ -140,7 +140,7 @@ function assStatus(a) {
 }
 function assortTelling() {
   let nieuw = 0, uit = 0, san = 0;
-  for (const bron of ['vers', 'kw']) { const bk = S.boeken[bron]; if (!bk) continue; nieuw += (bk.nieuw || []).length; uit += (bk.uit || []).filter(a => !S.schapOk.has(bron + ':' + a.nr)).length; }
+  for (const bron of ['vers', 'kw']) { const bk = S.boeken[bron]; if (!bk) continue; nieuw += (bk.nieuw || []).length; uit += (bk.uit || []).filter(a => !a.arch && !S.schapOk.has(bron + ':' + a.nr)).length; }
   for (const k in S.assort) { const r = S.assort[k]; if (r.status === 'gesaneerd' && !r.schap_ok && M.art[k]) san++; if (r.status === 'in' && r.opgenomen && !r.schap_ok && M.art[k]) nieuw++; }
   return { nieuw, uit, san };
 }
@@ -157,7 +157,7 @@ function renderAssort() {
     if (!mag('o_' + od)) continue; const bron = bronVan(od); const b = S.boeken[bron]; if (!b) continue;
     const inOd = a => a && onderdeelVan(a) === od;
     const nieuw = (b.nieuw || []).map(nr => M.art[bron + ':' + nr]).filter(inOd);
-    const uit = (b.uit || []).filter(a => !S.schapOk.has(bron + ':' + a.nr)).map(a => M.art[bron + ':' + a.nr] || Object.assign({ key: bron + ':' + a.nr, bron }, a)).filter(inOd);
+    const uit = (b.uit || []).filter(a => !a.arch && !S.schapOk.has(bron + ':' + a.nr)).map(a => M.art[bron + ':' + a.nr] || Object.assign({ key: bron + ':' + a.nr, bron }, a)).filter(inOd);
     const san = Object.values(S.assort).filter(r => r.bron === bron && r.status === 'gesaneerd' && !r.schap_ok).map(r => M.art[r.bron + ':' + r.nr]).filter(inOd);
     const opg = Object.values(S.assort).filter(r => r.bron === bron && r.status === 'in' && r.opgenomen && !r.schap_ok).map(r => M.art[r.bron + ':' + r.nr]).filter(inOd);
     if (!nieuw.length && !uit.length && !san.length && !opg.length) continue;
