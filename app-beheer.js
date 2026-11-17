@@ -168,7 +168,7 @@ async function uploads(files, regels) {
 
 /* ---------- 1.67: bestelboeken zelf ophalen van Reto (Vers: bestelboek-wk-NN.pdf, KW: JJJJMMDD-bestelboek.pdf) ---------- */
 async function boekAutoHaal(nu) {
-  if (DEMO || OEFEN || !navigator.onLine || !mag('upload')) return; const dk = 'cba-boekhaal-' + W; if (!nu && ls.get(dk) === C.today()) return; ls.set(dk, C.today());
+  if (DEMO || OEFEN || !navigator.onLine || !mag('upload')) return; const dk = 'cba-boekhaal-' + W; if (!nu && ls.get(dk) === C.today()) return boekArchHaal(); ls.set(dk, C.today());
   const haal = boekHaal, files = [];
   const vOud = (S.boeken.vers || {}).datum || '';
   for (const d of [C.add(C.today(), 7), C.today()]) { const iw = C.isoWeek(d); if (C.mondayOf(iw.y, iw.w) <= vOud) continue; const f = await haal(`bestelboek-wk-${iw.w}.pdf`) || (iw.w < 10 ? await haal(`bestelboek-wk-0${iw.w}.pdf`) : null); if (f) { files.push(f); break; } }
@@ -181,11 +181,12 @@ const BOEK_URL = 'https://static.reto.media/ordervantolversuniecom/bestelboeken/
 async function boekHaal(naam) { try { const r = await fetch(`${SB_URL}/functions/v1/folder?url=${encodeURIComponent(BOEK_URL + naam)}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (!r.ok) return null; const b = await r.arrayBuffer(); return b.byteLength > 1000 ? new File([b], naam, { type: 'application/pdf' }) : null; } catch (e) { return null; } }
 /* 1.73: eenmalig oudere bestelboeken ophalen; hun artikelen herkennen verkoop die niet meer in het boek staat */
 async function boekArchHaal() {
-  const k = 'cba-boekarch-' + W; if (ls.get(k) || !S.boeken.vers || !S.boeken.kw) return; ls.set(k, C.today()); let n = 0;
+  const k = 'cba-boekarch2-' + W; if (boekArchHaal.bezig || ls.get(k) || !S.boeken.vers || !S.boeken.kw) return; boekArchHaal.bezig = 1; let n = 0; toast('Oude bestelboeken zoeken…', 3000);
   const lees = async (soort, f) => { try { const pages = await C.pdfPages(await pdfjs(), await f.arrayBuffer()); if (C.detectPdf(pages) === soort) n += await boekArch(soort, (soort === 'vers' ? C.parseVers(pages) : C.parseKw(pages)).artikelen); } catch (e) {} };
   const vw = S.boeken.vers.datum; for (let i = 1; i <= 4; i++) { const w = C.isoWeek(C.add(vw, -7 * i)).w; const f = await boekHaal(`bestelboek-wk-${w}.pdf`) || (w < 10 ? await boekHaal(`bestelboek-wk-0${w}.pdf`) : null); if (f) await lees('vers', f); }
   let g = 0; for (let i = 1; i <= 70 && g < 3; i++) { const d = C.add(S.boeken.kw.datum || C.today(), -i); const f = await boekHaal(d.replace(/-/g, '') + '-bestelboek.pdf'); if (f) { g++; await lees('kw', f); } }
-  if (n) { await saveCache(); rebuild(); log('upload', `Oude bestelboeken: ${n} artikelen herkend`); toast(`${n} oude artikelen uit eerdere bestelboeken herkend`, 6000); if (ui.tab === 'beheer') render(true); }
+  ls.set(k, C.today()); boekArchHaal.bezig = 0;
+  if (n) { await saveCache(); rebuild(); log('upload', `Oude bestelboeken: ${n} artikelen herkend`); toast(`${n} oude artikelen uit eerdere bestelboeken herkend`, 6000); if (ui.tab === 'beheer') render(true); } else toast('Oude bestelboeken: niets extra gevonden', 4000);
 }
 async function boekArch(soort, arts) {
   const b = S.boeken[soort]; if (!b) return 0; const ken = new Set(b.artikelen.concat(b.uit || []).map(a => a.nr));
