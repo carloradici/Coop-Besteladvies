@@ -123,7 +123,7 @@ function vindCode(code) {
 function naarArtikel(a) {
   const od = onderdeelVan(a); if (!mag('o_' + od)) return toast('Dit artikel hoort bij ' + odNaam(od) + ', dat mag je niet zien');
   if (!mag('bestellen') && !mag('afvinken') && mag('tellen')) return telModus(od, [a]);
-  ga(od); ui.q = a.eigen ? a.naam : a.nr; ui.modus = 'alles'; if (assStatus(a) !== 'in' || a.uit) ui.fAlles = true; ui.fAdv = false; ui.fOpen = false; ui.fActie = false; render();
+  const vorig = ui.vanScan ? { m: ui.vanScan.m, fA: ui.vanScan.fA } : ui.tab === od && !ui.q ? { m: ui.modus, fA: ui.fAlles } : null; ga(od); ui.spring = null; ui.vanScan = Object.assign({ key: a.key, m: ui.modus, fA: ui.fAlles }, vorig); ui.q = a.eigen ? a.naam : a.nr; ui.modus = 'alles'; if (assStatus(a) !== 'in' || a.uit) ui.fAlles = true; ui.fAdv = false; ui.fOpen = false; ui.fActie = false; render();
 }
 let scanStop = null;
 async function scanStart(od, opVondst) {

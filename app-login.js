@@ -240,7 +240,7 @@ function zoekKruis(root) { (root || document).querySelectorAll('input[type=searc
 document.addEventListener('input', e => { if (e.target.matches && e.target.matches('input[type=search]') && e.target.parentNode.classList.contains('zwrap')) e.target.parentNode.classList.toggle('vol', !!e.target.value); });
 new MutationObserver(() => zoekKruis()).observe(document.documentElement, { childList: true, subtree: true });
 addEventListener('scroll', () => { if (scrollSleutel) SCROLL[scrollSleutel] = window.scrollY; }, { passive: true });
-function ga(tab) { const u = $('#undoBalk'); if (u) u.remove(); if (tab === 'plekken') tab = ui.plekSoort === 'kop' ? 'kwacties' : 'tafels'; if (BESTEL_OD.includes(tab) && ui.tab !== tab && !window.__E2E_ALLES) ui.modus = 'todo'; ui.tab = tab; ui.q = ''; ui.groep = ''; ui.blijf = null; render(); }
+function ga(tab) { const u = $('#undoBalk'); if (u) u.remove(); if (tab === 'plekken') tab = ui.plekSoort === 'kop' ? 'kwacties' : 'tafels'; if (BESTEL_OD.includes(tab) && ui.tab !== tab && !window.__E2E_ALLES) { ui.modus = (ls.get('cba-modus-' + wieSleutel()) || {})[tab] || 'todo'; ui.spring = true; ui.vanScan = null; } ui.tab = tab; ui.q = ''; ui.groep = ''; ui.blijf = null; render(); }
 async function logout() {
   if (!ask(sess && sess.kind === 'anon' ? 'Dit toestel ontkoppelen? Daarna is de koppelcode weer nodig.' : 'Uitloggen op dit apparaat?')) return;
   sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); OPEN = false; outbox = []; await iset('outbox', []); showLogin();

@@ -81,6 +81,8 @@ function lijstMenu(od, cur, arts, bdSleutel) {
     if (k === 'telA') { ui.telAlle = !ui.telAlle; saveUi(); render(); }
   });
 }
+/* 1.76: na scannen terug naar de lijst, bij het gescande artikel */
+function terugNaLijst(key) { const t = ui.vanScan; ui.vanScan = null; if (!t) return; ui.q = ''; ui.fAlles = t.fA; ui.modus = t.m; ui.fOpen = t.m === 'todo'; ui.fAdv = false; ui.fActie = false; ui.spring = key; render(); }
 let lazy = null;
 function renderLijst(od, soft) {
   const v = $('#view'); const bron = bronVan(od);
@@ -93,7 +95,7 @@ function renderLijst(od, soft) {
   const groepen = [...new Set(alleArts.filter(a => ui.fAlles || assStatus(a) === 'in').map(groepVan))];
   const bdSleutel = cur ? `b:${od}:${cur.besteldag}` : '';
   if (!ui.modus) ui.modus = ui.fOpen ? 'todo' : ui.fAdv ? 'advies' : ui.fActie ? 'acties' : 'alles';
-  const zetModus = m => { ui.modus = m; ui.fOpen = m === 'todo'; ui.fAdv = m === 'advies'; ui.fActie = m === 'acties'; ui.groep = ''; saveUi(); };
+  const zetModus = m => { ui.modus = m; ui.fOpen = m === 'todo'; ui.fAdv = m === 'advies'; ui.fActie = m === 'acties'; ui.groep = ''; saveUi(); if ((m === 'todo' || m === 'alles') && !ui.q && !beginner() && mag('bestellen')) { const k = 'cba-modus-' + wieSleutel(); ls.set(k, Object.assign(ls.get(k) || {}, { [od]: m })); } };
   if ((beginner() || !mag('bestellen')) && !ui.q) { if (!window.__E2E_ALLES) ui.modus = 'todo'; }
   zetModus(ui.modus);
   const ci = cur ? lijst.indexOf(cur) : -1;
@@ -128,7 +130,7 @@ function renderLijst(od, soft) {
   const nb = $('#naarBeheer'); if (nb) nb.onclick = () => naarBeheer('upload');
   $('#lijstMenu').onclick = () => lijstMenu(od, cur, arts, bdSleutel);
   const tv = $('#telV'); if (tv) tv.onclick = () => telModus(od, telKeuze(od, cur).open.map(k => M.art[k]).filter(Boolean));
-  const q = $('#q'); q.oninput = () => { ui.q = q.value.trim(); clearTimeout(q._t); q._t = setTimeout(render, 250); };
+  const q = $('#q'); q.oninput = () => { if (!q.value.trim() && ui.vanScan) return terugNaLijst(ui.vanScan.key); ui.q = q.value.trim(); clearTimeout(q._t); q._t = setTimeout(render, 250); };
   const at = $('#assT'); if (at) at.onclick = () => ga('assort');
   const kb = $('#klaarB'); if (kb) kb.onclick = () => allesBesteld(od, cur); const tb = $('#termB'); if (tb) tb.onclick = () => terminalModus(od, cur);
   $('#scanB').onclick = () => scanStart(od);
@@ -146,6 +148,11 @@ function renderLijst(od, soft) {
   if (lazy) lazy.disconnect();
   chunk();
   { const dy = soft ? y : window.__doelY || 0; if (dy) { while (pos < arts.length && document.body.scrollHeight < dy + innerHeight + 400) chunk(); window.scrollTo(0, Math.min(dy, maxY())); } else window.scrollTo(0, 0); }
+  /* 1.76: terugspringen naar het laatst bestelde artikel (of het gescande artikel) */
+  if (ui.spring && !ui.q) { const sp = ui.spring; ui.spring = null; let i = -1;
+    if (typeof sp === 'string') { i = arts.findIndex(a => a.key === sp); if (i < 0) { const vi = alleArts.findIndex(a => a.key === sp); i = arts.findIndex(a => alleArts.indexOf(a) > vi); } }
+    else if (cur && ui.modus === 'alles') arts.forEach((a, j) => { const be = S.bestel[a.key + '|' + cur.besteldag]; if (be && be.besteld) i = j; });
+    if (i >= 0) { while (pos <= i && pos < arts.length) chunk(); const c = lst.querySelector(`.card[data-k="${CSS.escape(arts[i].key)}"]`); if (c) window.scrollTo(0, Math.min(maxY(), Math.max(0, c.getBoundingClientRect().top + window.scrollY - innerHeight / 3))); } }
   lst.onclick = e => { if (e.target.closest('[data-nul]')) { ui.toonNul = !ui.toonNul; return render(true); } const gr = e.target.closest('[data-grp]'); if (gr && !ui.q) { const k = gr.dataset.grp; dicht.has(k) ? dicht.delete(k) : dicht.add(k); bewaarDicht(); return render(true); } onKaartKlik(e); };
   const ka = $('#klapA'); if (ka) { const alleDicht = Object.keys(tel).length > 0 && Object.keys(tel).every(k => dicht.has(k)); ka.textContent = alleDicht ? '▾ Alles uitklappen' : '▸ Alles inklappen'; ka.onclick = () => { if (alleDicht) dicht.clear(); else Object.keys(tel).forEach(k => dicht.add(k)); bewaarDicht(); render(true); }; } lst.onchange = onKaartWijzig;
   lst.onfocusin = e => { if (e.target.dataset && e.target.dataset.in) e.target.select(); };
@@ -259,7 +266,7 @@ async function onKaartKlik(e) {
     const be = S.bestel[key + '|' + cur.besteldag]; const was = !!(be && be.besteld); const nu = !was;
     const adv0 = C.advies(M, key, cur, vrVan(key), bestellingenVan(key)).adv;
     const zet = v => write('bestellingen', [{ bron: a.bron, nr: a.nr, besteldag: cur.besteldag, lever: cur.L, besteld: v, besteld_door: v ? mijnNaam() : null, besteld_om: v ? new Date().toISOString() : null, advies: adv0 }]);
-    zet(nu); if (nu) { routeTik(a, cur); log('besteld', `Besteld: ${a.naam}${be && be.aantal ? ' (' + be.aantal + ')' : ''}`); ongedaan('Besteld afgevinkt', () => zet(false)); }
+    zet(nu); if (nu) { routeTik(a, cur); log('besteld', `Besteld: ${a.naam}${be && be.aantal ? ' (' + be.aantal + ')' : ''}`); ongedaan('Besteld afgevinkt', () => zet(false)); if (ui.q && ui.vanScan) { ververs(card, a, cur); werkVoortgang(onderdeelVan(a), cur); setTimeout(() => terugNaLijst(key), 400); return; } }
     if (ui.fOpen && nu) { card.style.transition = 'opacity .3s'; card.style.opacity = '0'; setTimeout(() => render(true), 300); } else ververs(card, a, cur);
     werkVoortgang(onderdeelVan(a), cur); return;
   }
