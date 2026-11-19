@@ -671,3 +671,6 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 
 /* 1.78: lijst Besteld zonder groepen */
 #lst.plat .card{border:1px solid var(--lijn);border-radius:12px;margin-top:10px}
+
+/* 1.79: levering onderweg */
+.lbl.weg{border-color:var(--blauw);color:var(--blauw)}

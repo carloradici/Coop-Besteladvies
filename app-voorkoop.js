@@ -285,10 +285,10 @@ function linkPlakken() {
 let telHook = null, scanHook = null, scannerGezien = false;
 let piepCtx = null;
 function geluidKlaar() { try { piepCtx = piepCtx || new (window.AudioContext || window.webkitAudioContext)(); if (piepCtx.state === 'suspended') piepCtx.resume(); } catch (e) { } }
-/* 1.75: zacht geluid (ok = korte tik, fout = lage dong die wegsterft) en een tikje voelen */
+/* 1.75: zacht geluid (ok = korte tik, fout = lage dong die wegsterft, 'let' = ding-ding: levering onderweg) en een tikje voelen */
 function klank(ok) {
-  if (!(S.pref || {}).stil) try { geluidKlaar(); const t = piepCtx.currentTime; for (const [f, v] of ok ? [[1100, 0.05]] : [[330, 0.14], [495, 0.05]]) { const o = piepCtx.createOscillator(), g = piepCtx.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + (ok ? 0.06 : 0.6)); o.connect(g); g.connect(piepCtx.destination); o.start(t); o.stop(t + (ok ? 0.07 : 0.62)); } } catch (e) { }
-  voel(); if (!ok) setTimeout(voel, 180);
+  if (!(S.pref || {}).stil) try { geluidKlaar(); const t = piepCtx.currentTime; for (const [f, v, s, d] of ok === 'let' ? [[660, 0.09, 0, 0.14], [880, 0.09, 0.17, 0.2]] : ok ? [[1100, 0.05, 0, 0.06]] : [[330, 0.14, 0, 0.6], [495, 0.05, 0, 0.6]]) { const o = piepCtx.createOscillator(), g = piepCtx.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t + s); g.gain.exponentialRampToValueAtTime(v, t + s + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + s + d); o.connect(g); g.connect(piepCtx.destination); o.start(t + s); o.stop(t + s + d + 0.02); } } catch (e) { }
+  voel(); if (ok !== true) setTimeout(voel, 180);
 }
 function voel() { if (navigator.vibrate) return navigator.vibrate(40); try { const l = document.createElement('label'); l.innerHTML = '<input type="checkbox" switch>'; l.style.cssText = 'position:fixed;opacity:0;pointer-events:none'; document.body.appendChild(l); l.click(); setTimeout(() => l.remove(), 200); } catch (e) { } }
 function piep() { klank(false); }

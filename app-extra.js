@@ -133,7 +133,7 @@ async function scanStart(od, opVondst) {
   let strm = null; const stop = () => { try { strm && strm.getTracks().forEach(t => t.stop()); } catch (e) { } ov.remove(); scanStop = null; scanHook = null; };
   scanStop = stop;
   geluidKlaar();
-  const gevonden = code => { const a = vindCode(code), m = $('#scM', ov), k = $('.scankader', ov); if (!a) { m.textContent = `❌ Onbekend artikel: ${code}`; m.className = 'fout'; k.classList.remove('fout'); void k.offsetWidth; k.classList.add('fout'); klank(false); return false; } klank(true); stop(); if (opVondst) opVondst(a); else naarArtikel(a); return true; };
+  const gevonden = code => { const a = vindCode(code), m = $('#scM', ov), k = $('.scankader', ov); if (!a) { m.textContent = `❌ Onbekend artikel: ${code}`; m.className = 'fout'; k.classList.remove('fout'); void k.offsetWidth; k.classList.add('fout'); klank(false); return false; } { const v = vorigeBestel(a.key, besteldag(onderdeelVan(a)).cur); klank(v && v.weg ? 'let' : true); } stop(); if (opVondst) opVondst(a); else naarArtikel(a); return true; };
   scanHook = c => gevonden(c);
   $('#scX', ov).onclick = stop; $('#scZ', ov).onclick = () => gevonden($('#scI', ov).value.trim()); $('#scI', ov).onkeydown = e => { if (e.key === 'Enter') gevonden(e.target.value.trim()); };
   try { // 1.71: zxing-cpp (WebAssembly) via BarcodeDetector; leest ook lastige barcodes op zakken en flessen. Alleen het kader wordt bekeken.

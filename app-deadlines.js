@@ -52,6 +52,10 @@ function zichtbaar(a, bd) {
   }
   return true;
 }
+/* 1.79: vorige bestelling (onderweg = levering nog niet geweest) */
+function vorigeBestel(key, bd) { let v = null; for (const k in S.bestel) if (k.startsWith(key + '|')) { const b = S.bestel[k]; if (b.besteld && (!bd || b.besteldag < bd.besteldag) && (!v || b.besteldag > v.besteldag)) v = b; } return v && Object.assign({ weg: v.lever > C.today() || (v.lever === C.today() && new Date().getHours() < 12) }, v); }
+function vorigeLbl(a, bd) { const v = vorigeBestel(a.key, bd); if (!v) return ''; const n = v.aantal !== null && v.aantal !== undefined ? ` · ${C.fmt(+v.aantal)} ${ehTxt(a, +v.aantal)}` : '';
+  return v.weg ? `<span class="lbl weg">🚚 Onderweg${n} · besteld ${C.fmtDag(v.besteldag)} · komt ${C.fmtDag(v.lever)}</span>` : `<span class="lbl info">Laatst besteld: ${C.fmtDag(v.besteldag)}${n}</span>`; }
 function bestellingenVan(key) { const out = []; for (const k in S.bestel) if (k.startsWith(key + '|')) { const b = S.bestel[k]; const lc = S.lever && S.lever[key + '|' + b.lever]; out.push(lc && lc.ok === false && b.aantal !== null && b.aantal !== undefined ? Object.assign({}, b, { aantal: Math.max(0, +b.aantal - (+lc.mist || +b.aantal)) }) : b); } return out; }
 
 function lijstMenu(od, cur, arts, bdSleutel) {
@@ -194,6 +198,7 @@ function kaart(a, bd, laatste) {
   if (a.eigen) { labels.push('<span class="lbl eigen">Eigen artikel</span>'); const bk = eigenInBoek(a); if (bk) labels.push(`<span class="lbl chk">Staat nu in het bestelboek</span>${mag('saneren') ? `<button class="link" data-eigover="${bk.key}">Boekartikel overnemen</button>` : ''}`); }
   else if (a.nieuw) labels.push('<span class="lbl nieuw">Nieuw in assortiment</span>');
   if (st === 'in' && r && r.opgenomen && r.sinds && C.diff(r.sinds, C.today()) <= 28) labels.push(`<span class="lbl nieuw">Opgenomen ${C.fmtDag(r.sinds).split(' ')[1]} · ${esc(ini(r.door))}</span>`);
+  if (!teller && bd) { const vl = vorigeLbl(a, bd); if (vl) labels.unshift(vl); }
   if (a.uit) labels.push('<span class="lbl uit">Uit het bestelboek</span>');
   if (nietGeleverd(a.key)) labels.push('<span class="lbl uit">Vorige keer niet geleverd</span>');
   if (S.leeg && S.leeg[a.key + '|' + C.today()]) labels.push('<span class="lbl uit">🚫 Vandaag leeg gemeld</span>');
