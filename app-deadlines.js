@@ -249,7 +249,7 @@ async function onKaartKlik(e) {
   const eg = e.target.closest('[data-eig]'); if (eg) return eigenBewerk(S.eigen[eg.dataset.eig], a.od);
   if (e.target.closest('[data-pad]')) return routeKiesPad(a);
   if (e.target.closest('[data-meer]')) { ui.open = ui.open || new Set(); ui.open.has(key) ? ui.open.delete(key) : ui.open.add(key); card.classList.toggle('open', ui.open.has(key)); return; }
-  if (e.target.dataset.collo !== undefined) { const inp = card.querySelector('[data-in="b"]'); inp.value = e.target.dataset.collo; card._okHoog = +inp.value; return opslaan(card, 'b', inp.value); }
+  if (e.target.dataset.collo !== undefined) { const inp = card.querySelector('[data-in="b"]'); inp.value = e.target.dataset.collo; { const { cur: c0 } = besteldag(onderdeelVan(M.art[card.dataset.k])); (ui.okHoog = ui.okHoog || new Set()).add(card.dataset.k + '|' + c0.besteldag); } return opslaan(card, 'b', inp.value); }
   if (e.target.dataset.telnu !== undefined) { (ui.telK = ui.telK || new Set()).add(card.dataset.k); return render(true); }
   if (e.target.dataset.neem !== undefined) { const inp = card.querySelector('[data-in="b"]'); inp.value = inp.dataset.adv; return opslaan(card, 'b', inp.value); }
   if (e.target.dataset.not !== undefined) return notitieBewerk('a:' + key, a.naam);
@@ -291,11 +291,11 @@ async function opslaan(card, s, val, getypt) {
   else {
     const n = C.num(val); const ad = C.advies(M, key, cur, vrVan(key), bestellingenVan(key)); const vorig = S.bestel[key + '|' + cur.besteldag];
     const wf = waarschuwF(); const grens = ad.adv ? Math.max(ad.adv * wf, ad.adv + (a.perHE ? 1 : 2)) : (a.perHE ? 3 : 10);
-    if (wf && n > grens && !(card._okHoog >= n)) {
-      if (card._vraagt) return; card._vraagt = true;
+    const okK = key + '|' + cur.besteldag; if (wf && n > grens && !(ui.okHoog && ui.okHoog.has(okK))) {
+      if (card._vraagt) return; card._vraagt = true; clearTimeout(card._t);
       const ok = await bevestig('Klopt dit?', `Je bestelt <b>${C.fmt(n)} ${ehTxt(a, n)}</b> ${esc(a.naam)}${/\.$/.test(a.naam) ? '' : '.'}<br>Het advies is ${ad.adv} ${ehTxt(a, ad.adv)}.`, 'Ja, klopt', 'Aanpassen');
-      card._vraagt = false; if (ok) card._okHoog = n;
-      if (!ok) { const i = card.querySelector('[data-in="b"]'); i.value = vorig && vorig.aantal !== null && vorig.aantal !== undefined ? vorig.aantal : ''; return; }
+      card._vraagt = false; if (!card.isConnected) card = document.querySelector(`.card[data-k="${CSS.escape(key)}"]`) || card; if (ok) (ui.okHoog = ui.okHoog || new Set()).add(okK);
+      if (!ok) { const i = card.querySelector('[data-in="b"]'); if (i) i.value = vorig && vorig.aantal !== null && vorig.aantal !== undefined ? vorig.aantal : ''; return; }
     }
     (ui.blijf = ui.blijf || new Set()).add(key); write('bestellingen', [{ bron: a.bron, nr: a.nr, besteldag: cur.besteldag, lever: cur.L, aantal: n, door: mijnNaam(), advies: ad.adv }]); routeTik(a, cur);
     if (getypt && Math.abs(n - ad.adv) >= Math.max(ad.adv * 0.5, a.perHE ? 2 : 4) && !(vorig && vorig.reden)) setTimeout(() => toonReden(card, a, cur), 400);

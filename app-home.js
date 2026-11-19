@@ -191,7 +191,7 @@ function ongedaan(tekst, fn) {
   const oud = $('#undoBalk'); if (oud) oud.remove(); const fl = $('#flits'); if (fl) fl.className = 'flits';
   const b = document.createElement('div'); b.id = 'undoBalk'; b.className = 'undobalk'; b.innerHTML = `<span>✓ ${esc(tekst)}</span><button>Ongedaan maken</button>`;
   b.querySelector('button').onclick = () => { b.remove(); fn(); toast('Teruggedraaid'); setTimeout(() => render(true), 50); };
-  document.body.appendChild(b); clearTimeout(ongedaan._t); ongedaan._t = setTimeout(() => b.remove(), 6000);
+  document.body.appendChild(b); clearTimeout(ongedaan._t); ongedaan._t = setTimeout(() => b.remove(), 4000);
 }
 function bevestig(titel, tekst, ja, nee) {
   return new Promise(res => { const ov = sheet(`<h2 style="margin:0">${titel}</h2><div class="hulptekst">${tekst}</div><div class="row"><button class="btn sec" data-nee style="flex:1">${nee || 'Annuleren'}</button><button class="btn" data-ja style="flex:1">${ja || 'Ja'}</button></div>`, (e, o) => { if (e.target.dataset.ja !== undefined) { o.remove(); res(true); } if (e.target.dataset.nee !== undefined) { o.remove(); res(false); } }); ov.addEventListener('click', e => { if (e.target === ov) res(false); }); });
