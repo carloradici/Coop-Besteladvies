@@ -379,3 +379,31 @@ function tafelPrint(t, week) {
   window.__laatstePrint = { tafel: t.naam, n: (ind.items || []).length };
   toonPdf(`${t.naam} week ${+week.split('-')[1]}`, null, { staand: true });
 }
+
+/* 1.81: eerdere bestellingen terugkijken (S.bestel = laatste 3 weken, 'Ouder laden' haalt meer van de server) */
+const OD_NM = { agf: 'AGF', vers: 'Vers', brood: 'Brood', diep: 'Diepvries', kw: 'KW' }; let eerderOud = {}, eerderVan = null;
+function renderEerder() {
+  const v = $('#view'), q = (ui.eQ || '').toLowerCase(), od = ui.eOd || '', dagen = {}; ui.eOpen = ui.eOpen || {};
+  for (const [k, b] of Object.entries(Object.assign({}, eerderOud, S.bestel))) {
+    if (!b.besteld) continue; const key = k.split('|')[0], a = M.art[key], o = a ? onderdeelVan(a) : '';
+    const nm = a ? a.naam : 'Artikel ' + key.split(':')[1]; if (od && o !== od) continue;
+    if (q && !nm.toLowerCase().includes(q) && !key.includes(q)) continue; (dagen[b.besteldag] = dagen[b.besteldag] || []).push({ a, nm, b, o });
+  }
+  const ds = Object.keys(dagen).sort().reverse(), om = x => x.b.besteld_om || '';
+  let h = `<div class="bar"><input id="eQ" type="search" placeholder="🔍 Zoek artikel of nummer" value="${esc(ui.eQ || '')}"><div class="chips">${[['', 'Alles']].concat(Object.entries(OD_NM)).map(([k, t]) => `<button class="chip ${k === od ? 'on' : ''}" data-eod="${k}">${t}</button>`).join('')}</div></div>`;
+  if (!ds.length) h += `<div class="empty">${q ? 'Dit artikel is in deze periode niet besteld.' : 'Geen bestellingen gevonden.'}</div>`;
+  for (const d of ds) { const l = dagen[d].sort((x, y) => om(x) > om(y) ? -1 : 1), open = q || ui.eOpen[d];
+    h += `<div class="card eerdag"><button class="eerkop" data-ed="${d}"><b>${open ? '▾' : '▸'} ${C.DAGNAAM[C.wd(d)]} ${C.fmtDag(d).split(' ')[1]}</b><span class="small">levering ${[...new Set(l.map(x => x.b.lever).filter(Boolean))].sort().map(C.fmtDag).join(', ') || '?'} · ${l.length} artikel${l.length === 1 ? '' : 'en'}</span></button>`;
+    if (open) h += l.map(x => `<div class="eerrij"><div><b>${esc(x.nm)}</b><div class="small">${x.a ? esc(x.a.nr) + ' · ' : ''}${OD_NM[x.o] || ''}${x.b.besteld_door ? ' · ' + esc(x.b.besteld_door) : ''} ${hhmm(x.b.besteld_om)}</div></div><b>${x.b.aantal !== null && x.b.aantal !== undefined ? C.fmt(+x.b.aantal) + (x.a ? ' ' + ehTxt(x.a, +x.b.aantal) : '') : '–'}</b></div>`).join('');
+    h += '</div>'; }
+  const van = eerderVan || C.add(C.today(), -21);
+  h += `<p class="small" style="text-align:center">Vanaf ${C.fmtDag(van)}</p><button class="btn sec" id="eOud" style="width:100%">Ouder laden (3 weken)</button>`;
+  v.innerHTML = h;
+  const qi = $('#eQ'); qi.oninput = () => { ui.eQ = qi.value.trim(); clearTimeout(qi._t); qi._t = setTimeout(() => { renderEerder(); const n = $('#eQ'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
+  v.querySelectorAll('[data-eod]').forEach(b => b.onclick = () => { ui.eOd = b.dataset.eod; renderEerder(); });
+  v.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => { ui.eOpen[b.dataset.ed] = !ui.eOpen[b.dataset.ed]; renderEerder(); });
+  $('#eOud').onclick = async e => { if (DEMO || !navigator.onLine) return toast('Ouder laden kan alleen online'); e.target.disabled = true; e.target.textContent = 'Laden…';
+    try { const tot = van, v2 = C.add(van, -21); const rows = await rest(wq(`bestellingen?besteldag=gte.${v2}&besteldag=lt.${tot}&besteld=eq.true&select=bron,nr,besteldag,lever,aantal,besteld,besteld_door,besteld_om`));
+      rows.forEach(r => eerderOud[r.bron + ':' + r.nr + '|' + r.besteldag] = Object.assign({}, r, { aantal: r.aantal === null ? null : +r.aantal })); eerderVan = v2; toast(rows.length ? `${rows.length} bestellingen erbij` : 'Geen oudere bestellingen gevonden'); }
+    catch (er) { toast('Ophalen mislukt'); } renderEerder(); };
+}

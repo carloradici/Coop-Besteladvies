@@ -126,7 +126,7 @@ function renderLijst(od, soft) {
   if (cur && ui.modus === 'todo' && !ui.q && kantoorMag()) { const tw = alleArts.filter(a => !a.uit && assStatus(a) === 'in' && (!ui.groep || groepVan(a) === ui.groep) && !S.bestel[a.key + '|' + cur.besteldag] && C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).twijfel); if (tw.length) { extraNaam = 'Even kijken'; nulVan = arts.length; if (ui.toonNul) arts = arts.concat(tw); else arts.nulN = tw.length; } }
   if (cur && ui.modus === 'alles' && !ui.q) { const nul = arts.filter(a => { if (a.uit || assStatus(a) !== 'in') return false; const be = S.bestel[a.key + '|' + cur.besteldag]; return !(be && (be.besteld || (be.aantal != null && be.aantal !== ''))) && !C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).adv; }); if (nul.length > 5) { const z = new Set(nul); arts = arts.filter(a => !z.has(a)); nulVan = arts.length; if (ui.toonNul) arts = arts.concat(nul); else arts.nulN = nul.length; } }
   const plat = ui.modus === 'besteld' && !ui.q && cur; if (plat) { const t = a => ((S.bestel[a.key + '|' + cur.besteldag] || {}).besteld_om || ''); arts = arts.slice().sort((x, y) => t(y) < t(x) ? -1 : t(y) > t(x) ? 1 : 0); }
-  html += `<div id="lst" class="${plat ? 'plat' : ''}"></div>`;
+  html += `<div id="lst" class="${plat ? 'plat' : ''}"></div>${ui.modus === 'besteld' && !ui.q ? '<button class="btn sec" id="eerB" style="width:100%;margin-top:14px">📜 Eerdere bestellingen</button>' : ''}`;
   if (cur && !leeg && st.nodig && mag('afvinken') && !ui.q) html += `<div class="klaarblok"><button class="btn klaarknop" id="klaarB">${st.open ? 'Klaar, alles besteld ✓' : '✓ Alles besteld'}</button>${terminalLijst(od, cur).length ? `<button class="btn sec" id="termB" style="width:100%;margin-top:8px">📲 Naar de terminal (${terminalLijst(od, cur).length})</button>` : ''}<p class="small">${st.open ? `Vinkt de ${st.open} artikelen met advies in één keer af.` : 'Goed bezig 👍'}</p></div>`;
   if (!arts.length && !leeg) html += `<div class="empty">${ui.q ? `Niets gevonden voor "${esc(ui.q)}".` : teller ? 'Hier valt nu niets te tellen.' : ui.modus === 'todo' ? (st && st.nodig ? '✓ Alles is besteld voor deze dag.' : '') : ui.modus === 'besteld' ? 'Nog niets besteld voor deze dag.' : 'Geen artikelen voor deze keuze.'}</div>`;
   zetHtml(v, html);
@@ -141,6 +141,7 @@ function renderLijst(od, soft) {
   const kb = $('#klaarB'); if (kb) kb.onclick = () => allesBesteld(od, cur); const tb = $('#termB'); if (tb) tb.onclick = () => terminalModus(od, cur);
   $('#scanB').onclick = () => scanStart(od);
   const kh = $('#klaarHome'); if (kh) kh.onclick = () => ga('home');
+  const eb = $('#eerB'); if (eb) eb.onclick = () => { ui.eTerug = od; ga('eerder'); };
   const lst = $('#lst'); let pos = 0, lastG = null, lastP = -1; const ra = routeAan(od);
   const tel = {}, tk = (i, g) => (nulVan >= 0 && i >= nulVan ? 'x' : '') + g; arts.forEach((a, i) => { const g = tk(i, groepToon(a)); tel[g] = (tel[g] || 0) + 1; });
   const nulKop = () => `<button class="belrij nulkop" data-nul="1"><span class="ic">👀</span><span><b>${extraNaam} (${ui.toonNul ? arts.length - nulVan : arts.nulN})</b><small>${extraNaam === 'Even kijken' ? 'Weinig nodig en voorraad onbekend: kijk zelf op het schap' : 'Artikelen zonder advies'}</small></span><span class="pijl">${ui.toonNul ? '▴' : '▾'}</span></button>`;
