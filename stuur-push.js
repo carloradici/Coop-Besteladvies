@@ -1,7 +1,7 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
 // Wordt door de korte stuur-push in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
 // Soorten: update (nieuwe app-versie op GitHub, per versie één keer; ook in cron), test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
-export const FUNCTIE_VERSIE = '1.28';
+export const FUNCTIE_VERSIE = '1.29';
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };
 const ONDERDELEN = [['agf', 'AGF'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries'], ['kw', 'KW']];
 const STD_OPEN = [['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['', '']];
@@ -138,6 +138,7 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date(), haal 
             let dd = add(bdag, u.d); if (dd >= L) dd = add(L, -1); if (dd !== dag) continue;
             if (!(await eenmalig(`deadline:${W}:${lev}:${u.id}:${bdag}`))) continue;
             let { data: be } = await sb.from('bestellingen').select('besteld,aantal,bron,nr').eq('winkel_id', W).eq('besteldag', bdag).in('bron', bronnen);
+            if (lev === 'vantol') { const g = await groepen(), los = inst.gmGroepen || ['Geneesmiddel-ehbo']; be = (be || []).filter(x => !los.some(l => (g[x.bron + ':' + x.nr] || '').startsWith(l))); }
             if (eigen.length) { const g = await groepen(); be = (be || []).filter(x => { const gg = g[x.bron + ':' + x.nr] || ''; return u.groepen ? u.groepen.includes(gg) : !inRegel.has(gg); }); }
             const open = (be || []).filter(r => !r.besteld && +r.aantal > 0).length; const besteld = (be || []).filter(r => r.besteld).length;
             if (!open && besteld) continue;

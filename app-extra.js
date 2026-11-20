@@ -15,7 +15,7 @@ async function fotoVerklein(file) {
 }
 function eigenBewerk(e, od, voor) {
   if (!mag('saneren')) return toast('Je hebt geen recht om artikelen toe te voegen');
-  const nieuw = !e; const d = Object.assign({ naam: '', nr: '', ean: '', od: od && BESTEL_OD.includes(od) ? od : 'vers', groep: '', perHE: false, he: '', ehNaam: 'HE', lev: od === 'kw' ? 'vantol' : 'versunie', prijs: '', foto: '', volgen: true }, e || voor || {});
+  const nieuw = !e; const d = Object.assign({ naam: '', nr: '', ean: '', od: od && BESTEL_OD.includes(od) ? od : 'vers', groep: '', perHE: false, he: '', ehNaam: 'HE', lev: isKw(od) ? 'vantol' : 'versunie', prijs: '', foto: '', volgen: true }, e || voor || {});
   const groepen = od => [...new Set(lijstArtikelen(od).map(groepVan))];
   const chips = (naam, lijst, waarde) => `<div class="chips2" data-chips="${naam}">${lijst.map(([k, l]) => `<button type="button" class="${k === waarde ? 'aan' : ''}" data-k="${k}">${l}</button>`).join('')}</div>`;
   const ov = sheet(`<h2 style="margin:0">${nieuw ? 'Artikel toevoegen' : 'Artikel aanpassen'}</h2><p class="small">Voor artikelen die niet in het bestelboek staan.</p><div class="form">
@@ -68,6 +68,7 @@ function belItemsBasis() {
   if (!M) return [];
   const out = []; const vandaag = C.today();
   for (const od of BESTEL_OD) {
+    if (od === 'gm') { const g = mag('o_kw') && (mag('bestellen') || mag('afvinken')) && gmWaarde(); if (g && g.adv >= GM_MIN() && !g.besteld) out.push({ ic: '💊', t: 'Geneesmiddelen: minimum bestelbedrag gehaald', sub: `Advies € ${C.fmt(Math.round(g.adv))} van € ${C.fmt(GM_MIN())} · je kunt bestellen`, ga: 'gm' }); continue; }
     if (!mag('o_' + od)) continue; const cur = besteldag(od).cur;
     if (cur && (mag('bestellen') || mag('afvinken')) && cur.besteldag <= vandaag && (S.boeken[bronVan(od)] || lijstArtikelen(od).length)) { const st = voortgang(od, cur, cur.besteldag < vandaag); if (st.open) out.push({ ic: (ONDERDELEN.find(o => o[0] === od) || [])[2] || '🛒', t: `${odNaam(od)}: vandaag bestellen`, sub: `Nog ${st.open} te gaan · levering ${C.fmtDag(cur.L)}`, ga: od, n: st.open, laat: cur.besteldag < vandaag }); }
   }

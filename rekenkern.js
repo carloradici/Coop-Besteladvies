@@ -524,7 +524,7 @@ C.actieUplift = (M, key, p) => {
 };
 // leveringen voor een besteldag
 C.levering = (M, bron, besteldag) => {
-  const sch = M.st.schema[bron] || M.st.schema.vers || []; const wd = C.wd(besteldag);
+  const sch = M.st.schema[bron] || (bron === 'gm' && M.st.schema.kw) || M.st.schema.vers || []; const wd = C.wd(besteldag);
   const r = sch.find(x => x.b === wd); if (!r) return null;
   let L = C.add(besteldag, 1); while (C.wd(L) !== r.l) L = C.add(L, 1);
   const lev = sch.map(x => x.l);
@@ -533,7 +533,7 @@ C.levering = (M, bron, besteldag) => {
   return { besteldag, L, L2, P };
 };
 C.besteldagen = (M, bron, n = 4) => {
-  const sch = M.st.schema[bron] || M.st.schema.vers || []; const out = []; let d = M.vandaag;
+  const sch = M.st.schema[bron] || (bron === 'gm' && M.st.schema.kw) || M.st.schema.vers || []; const out = []; let d = M.vandaag;
   for (let k = 0; k < 21 && out.length < n; k++, d = C.add(d, 1)) if (sch.some(x => x.b === C.wd(d))) out.push(C.levering(M, bron, d));
   return out;
 };

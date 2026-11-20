@@ -10,12 +10,12 @@ function dlVoor(lev, g, lv) {
   let dag = C.add(lv.besteldag, r ? +r.d || 0 : 0); if (dag >= lv.L) dag = C.add(lv.L, -1); if (dag < lv.besteldag) dag = lv.besteldag;
   return { dag, t, ts: dag + ' ' + t, regel: r };
 }
-function dlArt(a, lv) { const lev = levVan(a); return lev === 'versunie' || lev === 'vantol' ? dlVoor(lev, groepVan(a), lv) : null; }
+function dlArt(a, lv) { if (onderdeelVan(a) === 'gm') return null; const lev = levVan(a); return lev === 'versunie' || lev === 'vantol' ? dlVoor(lev, groepVan(a), lv) : null; }
 function dlKort(dg) { return dg.dag === C.today() ? `tot ${dg.t}` : `tot ${C.DAGEN[C.wd(dg.dag)]} ${dg.t}`; }
 let odgCache = null;
 function odGroepen(od) { if (!odgCache || odgCache.M !== M) odgCache = { M }; return odgCache[od] || (odgCache[od] = [...new Set(lijstArtikelen(od).map(groepVan))]); }
 function bdLijst(od, n = 4) {
-  const vandaag = C.today(); const sch = M.st.schema[od] || M.st.schema.vers || []; const verl = []; const lev = od === 'kw' ? 'vantol' : 'versunie'; const nu = nuTs();
+  const vandaag = C.today(); const sch = M.st.schema[od] || (od === 'gm' && M.st.schema.kw) || M.st.schema.vers || []; const verl = []; const lev = isKw(od) ? 'vantol' : 'versunie'; const nu = nuTs();
   const regels = dlRegels().filter(r => r.lev === lev && odGroepen(od).some(g => r.groepen.includes(g)) && (+r.d || 0) > 0);
   if (regels.length) for (let k = 3; k >= 1; k--) {
     const d = C.add(vandaag, -k); if (!sch.some(x => x.b === C.wd(d))) continue; const lv = C.levering(M, od, d); if (!lv || lv.L <= vandaag) continue;
@@ -24,6 +24,14 @@ function bdLijst(od, n = 4) {
   return verl.concat(C.besteldagen(M, od, n));
 }
 function groepRang(od) { const l = (S.inst && S.inst.groepVolgorde && S.inst.groepVolgorde[od]) || []; const m = {}; l.forEach((g, i) => m[g] = i); return m; }
+/* 1.82: waarde van de geneesmiddelen-bestelling (inkoop excl.) tegen het minimum */
+let gmC = null;
+function gmWaarde() { const cur = besteldag('gm').cur; if (!cur) return null; const sig = Object.keys(S.bestel).length + '|' + cur.besteldag; if (gmC && gmC.M === M && gmC.sig === sig && Date.now() - gmC.t < 3000) return gmC.r;
+  let adv = 0, besteld = 0; for (const a of lijstArtikelen('gm')) { if (a.uit || assStatus(a) !== 'in') continue; const f = (a.perHE ? (+a.he || 1) : 1) * (+a.ink || 0); if (!f) continue;
+    const be = S.bestel[a.key + '|' + cur.besteldag], n = be && be.aantal !== null && be.aantal !== undefined ? +be.aantal : (C.advies(M, a.key, cur, vrVan(a.key), bestellingenVan(a.key)).adv || 0); adv += n * f; if (be && be.besteld) besteld += n * f; }
+  gmC = { M, sig, t: Date.now(), r: { adv, besteld, cur } }; return gmC.r; }
+function gmBanner() { const g = gmWaarde(); if (!g) return ''; const min = GM_MIN(), p = Math.min(100, Math.round(g.adv / min * 100)), e = x => '€ ' + C.fmt(Math.round(x));
+  return `<div class="banner gmmin"><h3><span>💊 Bestelling nu ${e(g.adv)}</span><span class="small">min. ${e(min)}</span></h3><div class="gmbalk"><i style="width:${p}%"></i></div><div class="sub">${g.besteld ? `${e(g.besteld)} afgevinkt · ` : ''}${g.adv >= min ? '✓ Minimum gehaald, je kunt bestellen' : `Nog ${e(min - g.adv)} tot het minimum. Geen haast: bestel als het minimum gehaald is.`}</div></div>`; }
 function lijstArtikelen(od) {
   const bron = bronVan(od); const b = S.boeken[bron];
   const lijst = Object.values(M.art).filter(a => (a.eigen ? a.od === od : b && a.bron === bron && onderdeelVan(a) === od) && !(a.uit && S.schapOk.has(a.key)));
@@ -108,7 +116,8 @@ function renderLijst(od, soft) {
   const leeg = !boek || !M.dagLijst.length, teller = !mag('bestellen') && !mag('afvinken');
   let html = `<div class="bar lijstkop">
   ${teller ? '' : cur ? `<div class="bdkop"><button class="bdpijl" id="bdV" ${ci > 0 ? '' : 'disabled'} aria-label="Vorige besteldag">‹</button><div class="bdmid"><b>Bestellen ${C.DAGNAAM[C.wd(cur.besteldag)]} ${C.fmtDag(cur.besteldag).split(' ')[1]}</b><span>${lijstAftel(od, cur)}levering ${C.fmtDag(cur.L)}${!leeg && st.nodig ? ` · ${st.open ? `${klaar} van ${st.nodig} besteld` : '✓ alles besteld'}` : ''}</span></div><button class="bdpijl" id="bdN" ${ci < lijst.length - 1 ? '' : 'disabled'} aria-label="Volgende besteldag">›</button>${!leeg && st.nodig && klaar ? `<div class="vgbalk ${st.open ? '' : 'klaar'}"><div style="width:${Math.round(klaar / st.nodig * 100)}%"></div></div>` : ''}</div>` : '<div class="bdkop"><div class="bdmid"><b>Geen besteldag</b><span>Stel de besteldagen in onder Kantoor</span></div></div>'}
-  ${cur && cur.besteldag < C.today() ? `<div class="banner dlnog"><h3>⏰ Nog te bestellen: ${dlRegels().filter(r => r.lev === (od === 'kw' ? 'vantol' : 'versunie') && odGroepen(od).some(g => r.groepen.includes(g))).map(r => [r, dlVoor(r.lev, r.groepen[0], cur)]).filter(x => x[1] && x[1].ts > nuTs()).map(([r, dg]) => `${esc(regelNaam(r))} ${dlKort(dg)}`).join(', ')}</h3><div class="sub">De andere groepen van deze bestelling zijn al voorbij.</div></div>` : ''}
+  ${od === 'gm' && cur && !teller ? gmBanner() : ''}
+  ${od !== 'gm' && cur && cur.besteldag < C.today() ? `<div class="banner dlnog"><h3>⏰ Nog te bestellen: ${dlRegels().filter(r => r.lev === (isKw(od) ? 'vantol' : 'versunie') && odGroepen(od).some(g => r.groepen.includes(g))).map(r => [r, dlVoor(r.lev, r.groepen[0], cur)]).filter(x => x[1] && x[1].ts > nuTs()).map(([r, dg]) => `${esc(regelNaam(r))} ${dlKort(dg)}`).join(', ')}</h3><div class="sub">De andere groepen van deze bestelling zijn al voorbij.</div></div>` : ''}
   ${cur && !leeg && !st.nodig && !teller ? '<div class="vgtxt">Geen advies voor deze dag. Kies "Alle artikelen" om zelf te bestellen.</div>' : ''}
   <div id="weer"></div>
   ${cur && !leeg ? telVraagHtml(od, cur) : ''}
@@ -304,7 +313,7 @@ async function opslaan(card, s, val, getypt) {
   }
   clearTimeout(card._t); card._t = setTimeout(() => { ververs(card, a, cur); werkVoortgang(od, cur); }, 350);
 }
-function werkVoortgang(od, cur) { const el = $('.voortgang'); if (!el) return; const st = voortgang(od, cur); el.innerHTML = `<span>${st.advies} met advies</span><b>${st.open ? `nog ${st.open} te gaan` : '✓ alles besteld'}</b>`; }
+function werkVoortgang(od, cur) { if (od === 'gm') { gmC = null; const b = $('.gmmin'); if (b) b.outerHTML = gmBanner(); } const el = $('.voortgang'); if (!el) return; const st = voortgang(od, cur); el.innerHTML = `<span>${st.advies} met advies</span><b>${st.open ? `nog ${st.open} te gaan` : '✓ alles besteld'}</b>`; }
 function ververs(card, a, cur) {
   if (!card.isConnected) return;
   const n = document.createElement('div'); n.innerHTML = kaart(a, cur, card.classList.contains('laatste')); const nc = n.firstElementChild;

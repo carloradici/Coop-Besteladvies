@@ -91,7 +91,7 @@ function zoekScore(q, tekst) {
 }
 function waarschuwF() { const n = (S.inst || {}).waarschuw; return n === undefined || n === null ? 3 : +n; }
 function odDeadline(od, cur) {
-  if (!cur) return null; const lev = od === 'kw' ? 'vantol' : 'versunie'; const nu = nuTs();
+  if (!cur || od === 'gm') return null; const lev = isKw(od) ? 'vantol' : 'versunie'; const nu = nuTs();
   const l = odGroepen(od).map(g => dlVoor(lev, g, cur)).filter(Boolean).sort((a, b) => a.ts < b.ts ? -1 : 1); if (!l.length) return null;
   return l.find(x => x.ts > nu) || l[l.length - 1];
 }
@@ -133,14 +133,14 @@ function taakRij(r, metVoor) { return `<div class="it taakrij"><span style="flex
 function taakKlaar(id) { const r = S.overdracht[id]; if (!r) return; const rij = Object.assign({}, r, { klaar: true, klaar_door: mijnNaam(), klaar_om: new Date().toISOString() }); write('overdracht', [rij]); log('taak', `${r.soort === 'bericht' ? 'Bericht gelezen' : 'Taak gedaan'}: ${r.tekst}`); ongedaan(r.soort === 'bericht' ? 'Gelezen' : 'Taak afgevinkt', () => write('overdracht', [Object.assign({}, r, { klaar: false, klaar_door: null, klaar_om: null })])); render(); }
 function autoTaken() { try { return belItems().filter(x => x.jij && !x.taak); } catch (e) { return []; } }
 function dlTekst(od) {
-  const t = ((S.inst || {}).deadline || {})[od === 'kw' ? 'vantol' : 'versunie']; if (!t) return '';
+  const t = od !== 'gm' && ((S.inst || {}).deadline || {})[isKw(od) ? 'vantol' : 'versunie']; if (!t) return '';
   const r = minuten(t) - minuten(nuHHMM()); return r < 0 ? '<span class="rood">deadline voorbij</span>' : r <= 60 ? `<span class="rood">nog ${r} min</span>` : 'vóór ' + esc(t);
 }
 function takenRijen(auto) {
   const best = auto.filter(x => BESTEL_OD.includes(x.ga) && x.ic !== '🔢'), tel = auto.filter(x => x.ic === '🔢'), rest = auto.filter(x => !best.includes(x) && !tel.includes(x));
   const rij = (ic, t, sub, attr) => `<button class="belrij" ${attr}><span class="ic">${ic}</span><span><b>${esc(t)}</b><small>${sub}</small></span><span class="pijl">›</span></button>`;
   const nTel = tel.reduce((s, x) => s + (+(x.t.match(/tel (\d+)/) || [])[1] || 0), 0);
-  return best.map(x => rij(x.ic, `${odNaam(x.ga)} bestellen`, [x.laat ? '<span class="rood">te laat</span>' : dlTekst(x.ga), x.n ? `${x.n} artikel${x.n === 1 ? '' : 'en'}` : ''].filter(Boolean).join(' · '), `data-ga="${x.ga}" data-tka="${auto.indexOf(x)}"`)).join('')
+  return best.map(x => x.ga === 'gm' ? rij(x.ic, x.t, esc(x.sub), `data-ga="gm" data-tka="${auto.indexOf(x)}"`) : rij(x.ic, `${odNaam(x.ga)} bestellen`, [x.laat ? '<span class="rood">te laat</span>' : dlTekst(x.ga), x.n ? `${x.n} artikel${x.n === 1 ? '' : 'en'}` : ''].filter(Boolean).join(' · '), `data-ga="${x.ga}" data-tka="${auto.indexOf(x)}"`)).join('')
     + (tel.length ? rij('🔢', `${nTel} artikel${nTel === 1 ? '' : 'en'} tellen`, esc(tel.map(x => x.t.split(':')[0]).join(', ')), 'data-tktel="1"') : '')
     + rest.map(x => rij(x.ic, x.t, esc(x.sub), `data-tka="${auto.indexOf(x)}"`)).join('');
 }
@@ -191,7 +191,7 @@ function berichtMaken(begin) {
 const BEL_JIJ = new Set(BESTEL_OD.concat(['levering', 'tafels', 'taken']));
 function belItems() {
   const out = belItemsBasis().map(x => Object.assign({ jij: BEL_JIJ.has(x.ga) }, x));
-  for (const od of BESTEL_OD) { if (!mag('o_' + od) || !mag('tellen')) continue; const cur = besteldag(od).cur; if (!cur || cur.besteldag !== C.today()) continue; const t = telKeuze(od, cur); if (t.open.length) out.push({ ic: '🔢', t: `${odNaam(od)}: tel ${t.open.length} artikelen`, sub: 'Dan wordt het advies beter', ga: od, jij: true }); }
+  for (const od of BESTEL_OD) { if (od === 'gm' || !mag('o_' + od) || !mag('tellen')) continue; const cur = besteldag(od).cur; if (!cur || cur.besteldag !== C.today()) continue; const t = telKeuze(od, cur); if (t.open.length) out.push({ ic: '🔢', t: `${odNaam(od)}: tel ${t.open.length} artikelen`, sub: 'Dan wordt het advies beter', ga: od, jij: true }); }
   for (const r of openTaken()) out.unshift({ ic: r.soort === 'bericht' ? '✉️' : '☑️', t: r.tekst, sub: r.soort === 'bericht' ? `Bericht van ${r.wie || ''}` : `Taak van ${r.wie || ''}`, ga: 'taken', jij: true, taak: true });
   return out;
 }

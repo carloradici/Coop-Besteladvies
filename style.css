@@ -680,3 +680,6 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 
 /* 1.81: eerdere bestellingen */
 .eerdag{padding:0;overflow:hidden}.eerkop{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;border:0;background:none;color:inherit;font:inherit;text-align:left;padding:14px 16px}.eerrij{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 16px;border-top:1px solid var(--lijn)}.eerrij>b{white-space:nowrap}
+
+/* 1.82: geneesmiddelen minimum bestelbedrag */
+.bar .banner.gmmin{margin:0}.gmbalk{height:8px;border-radius:4px;background:var(--lijn);margin:8px 0 4px;overflow:hidden}.gmbalk i{display:block;height:100%;background:var(--oranje)}
