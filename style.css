@@ -689,3 +689,6 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 .rbknop{display:flex;gap:8px;margin:10px 0}.rbknop>*{flex:1;text-align:center;padding-left:6px;padding-right:6px}
 .rbrij{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--lijn)}.rbrij:first-child{border-top:0}.rbok{width:44px;height:44px;flex:none;border-radius:50%;border:2px solid var(--lijn);background:none;color:transparent;font-size:20px;font-weight:700}.rbok.on{background:var(--groen,#2e7d32);border-color:transparent;color:#fff}.rbtx{flex:1;text-align:left;background:none;border:0;color:inherit;font:inherit;padding:0}.rbtx small{display:block}
 .rbscan{overflow:auto;max-height:46vh;border-radius:12px;border:1px solid var(--lijn);background:#fff}.rbscan img{display:block;width:100%}.rbscan.groot img{width:230%}.rbis{margin-left:8px;font-weight:700;color:var(--oranje);white-space:nowrap}
+
+/* 1.84: retour tegen weekstaat */
+.rbrij.verschil .rbst,.rbrij.mist .rbst{color:var(--rood,#c62828);font-weight:700}.rbrij.ok .rbst{color:var(--groen,#2e7d32)}.rbrij.wacht .rbst{opacity:.7}.rbws{border:1px solid var(--lijn);border-radius:10px;padding:10px 12px;margin:8px 0}.rbws small{display:block}.rbws.verschil{border-color:var(--rood,#c62828)}
