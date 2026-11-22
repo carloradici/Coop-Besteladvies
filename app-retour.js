@@ -4,7 +4,7 @@ const RB_V = [['k', 'Containers totaal', 100], ['bk', 'Bierkrat + 16/24 fles', 3
 /* kolommen C t/m L van de Excel */
 const RB_X = [['k', 'karren retour'], ['bb', 'bigbags retour'], ['bk', 'bierkratten'], ['bl', 'bierkrat leeg'], ['fk', 'friskratten'], ['rad', 'RAD'], ['pl', 'plank'], ['ep', 'euro pallet'], ['b12', 'bierkrat 12 flessen'], ['fl', 'bierfles los']];
 LIB.ocr = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-let RB = null, rbRij = [], rbOcr = null;
+let RB = null, rbRij = [], rbOcr = null, rbTel = { n: 0, tot: 0 };
 const rbEuro = x => '€ ' + (Math.round(x * 100) / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+,)/g, '.');
 const rbSom = s => String(s ?? '').split(/[\s,;.+]+/).reduce((t, x) => t + (+x || 0), 0);
 const rbWaarde = b => RB_V.reduce((t, [k, , p]) => t + (+b[k] || 0) * p, 0);
@@ -73,22 +73,25 @@ async function renderRetour() {
 
 function rbForm(v) {
   const e = ui.rbEdit, b = e.b, veld = (k, t, x = '') => `<div class="f"><label>${t}</label><input data-rf="${k}" type="text" inputmode="decimal" value="${esc(b['_' + k] ?? (b[k] || ''))}" ${x}><span class="rbis" data-ris="${k}"></span></div>`;
-  v.innerHTML = `${e.img ? `<div class="rbscan"><img src="${e.img}" alt="Scan van de bon"></div><p class="small" style="text-align:center">Tik op de scan om in of uit te zoomen</p>` : ''}
-    <div class="blk form">${e.rij ? `<p class="small">Scan ${rbRij.length ? 'nog ' + rbRij.length + ' te gaan' : ''}</p>` : ''}
-    ${e.fout ? `<p class="small rood">⚠️ ${esc(e.fout)}</p>` : ''}<div class="f"><label>Bonnummer</label><input id="rbNr" type="text" value="${esc(b.nr || '')}" placeholder="BGR 202606941"></div>
+  const blok2 = RB_V.slice(1).map(([k, t]) => veld(k, t)).join('');
+  v.innerHTML = `${e.img ? `<div class="rbkop" style="background-image:url(${e.img})" role="img" aria-label="Kop van de bon met het bonnummer"></div>` : ''}
+    <div class="blk form rbf">${e.rij ? `<p class="small">Bon ${rbTel.n + 1} van ${rbTel.tot}</p>` : ''}${e.fout ? `<p class="small rood">⚠️ ${esc(e.fout)}</p>` : ''}
+    <label class="rbnrl" for="rbNr">Bonnummer</label><input id="rbNr" class="rbnr" type="text" value="${esc(b.nr || '')}" placeholder="BGR 202606941">
     <div class="f"><label>Datum</label><input id="rbDat" type="date" value="${esc(b.datum || '')}"></div>
-    <div class="f"><label>Retourbon (producten)</label><input id="rbRb" type="text" inputmode="numeric" value="${esc(b.rb || '')}" placeholder="alleen als er producten mee gaan"></div>
-    <p class="small">Meer kolommen op de bon? Typ ze achter elkaar met een komma: <b>18,11,17</b> wordt 46.</p>
-    ${RB_V.map(([k, t]) => veld(k, t)).join('')}
+    ${veld('k', 'Containers totaal')}
+    <div class="f"><label>Retourbon (producten)</label><input id="rbRb" type="text" inputmode="numeric" value="${esc(b.rb || '')}" placeholder="alleen bij producten"></div></div>
+    ${e.img ? `<div class="rbscan"><img src="${e.img}" alt="Scan van de bon"></div><p class="small" style="text-align:center">Tik op de scan om in of uit te zoomen</p>` : ''}
+    <div class="blk form rbf"><p class="small">Meer kolommen op de bon? Typ ze achter elkaar met een komma: <b>18,11,17</b> wordt 46.</p>
+    ${blok2}
     <div class="f"><label>Opmerking</label><input id="rbOpm" type="text" value="${esc(b.opm || '')}" placeholder="bv. mist op factuur"></div>
     ${e.i >= 0 ? rbWsHtml(b) : ''}
-    <label class="f"><input type="checkbox" id="rbOk" ${b.ok ? 'checked' : ''}> Klopt met de factuur</label></div>
+    <label class="f rbokl"><input type="checkbox" id="rbOk" ${b.ok ? 'checked' : ''}> Klopt met de factuur</label></div>
     <button class="btn" id="rbSla" style="width:100%">${e.rij && rbRij.length > 1 ? 'Opslaan → volgende bon' : 'Opslaan'}</button>
     <div class="rbknop">${e.rij ? '<button class="btn sec" id="rbSkip">Scan overslaan</button>' : ''}<button class="btn sec" id="rbTerug">Annuleren</button>${e.i >= 0 ? '<button class="btn sec rood" id="rbDel">Verwijderen</button>' : ''}</div>`;
   const toon = i => { const k = i.dataset.rf, s = $(`[data-ris="${k}"]`); s.textContent = /[\s,;.+]/.test(i.value.trim()) ? '= ' + rbSom(i.value) : ''; };
   v.querySelectorAll('[data-rf]').forEach(i => { toon(i); i.oninput = () => toon(i); });
   if ($('.rbscan')) $('.rbscan').onclick = () => $('.rbscan').classList.toggle('groot');
-  const klaar = () => { if (e.rij) rbRij.shift(); ui.rbEdit = e.rij && rbRij.length ? Object.assign({ i: -1 }, rbRij[0], { rij: 1 }) : null; renderRetour(); window.scrollTo(0, 0); };
+  const klaar = () => { if (e.rij) { rbRij.shift(); rbTel.n++; } ui.rbEdit = e.rij && rbRij.length ? Object.assign({ i: -1 }, rbRij[0], { rij: 1 }) : null; renderRetour(); window.scrollTo(0, 0); };
   $('#rbTerug').onclick = () => { ui.rbEdit = null; renderRetour(); };
   if ($('#rbSkip')) $('#rbSkip').onclick = klaar;
   if ($('#rbDel')) $('#rbDel').onclick = async () => { if (!await bevestig('Bon verwijderen?', `${esc(b.nr || 'Deze bon')} verdwijnt uit de lijst.`, 'Verwijderen')) return; RB.bonnen.splice(e.i, 1); if (b.nr) idel('rbscan:' + b.nr); rbBewaar(); ui.rbEdit = null; renderRetour(); };
@@ -107,14 +110,14 @@ function rbWsHtml(b) { const s = rbStatus(b); if (s.st === 'leeg') return '<p cl
   return `<div class="rbws ${s.st}"><b>Weekstaat ${esc(s.f.ws)}${s.f.fnr ? ' · factuur ' + esc(s.f.fnr) : ''}</b>${(s.f.regels || []).map(r => `<small>${r.n} × ${esc(r.oms)} · ${rbEuro(Math.abs(r.eur))}</small>`).join('')}<small>Gecrediteerd ${rbEuro(Math.abs(s.f.eur))} · bon ${rbEuro(rbWaarde(b))}</small>${s.st === 'verschil' ? `<small class="rood"><b>${s.v > 0 ? rbEuro(s.v) + ' te weinig' : rbEuro(-s.v) + ' te veel'}</b>${s.dif.length ? ' · ' + s.dif.map(esc).join(' · ') : ''}</small>` : '<small>✓ Klopt</small>'}</div>`; }
 /* scans (pdf van de iPhone-scanner of foto's) → per bladzijde een plaatje + gedrukte tekst lezen */
 async function rbUpload(files) {
-  if (!files.length) return; let n = 0, tot = 0, eerst = true, weg = 0;
-  const klaar = r => { if (r.leeg) { weg++; tot--; return; } rbRij.push(r); toast(`Scan ${++n} van ${tot} gelezen`, 4000); if (eerst && !ui.rbEdit && ui.tab === 'retour') { eerst = false; ui.rbEdit = Object.assign({ i: -1 }, rbRij[0], { rij: 1 }); renderRetour(); } };
+  if (!files.length) return; let n = 0, tot = 0, eerst = true, weg = 0; if (!rbRij.length) rbTel = { n: 0, tot: 0 };
+  const klaar = r => { if (r.leeg) { weg++; tot--; rbTel.tot--; return; } rbRij.push(r); toast(`Scan ${++n} van ${tot} gelezen`, 4000); if (eerst && !ui.rbEdit && ui.tab === 'retour') { eerst = false; ui.rbEdit = Object.assign({ i: -1 }, rbRij[0], { rij: 1 }); renderRetour(); } };
   try {
     for (const f of files) {
-      if (/pdf/i.test(f.type) || /\.pdf$/i.test(f.name)) { const p = await pdfjs(), d = await p.getDocument({ data: await f.arrayBuffer() }).promise; tot += d.numPages;
+      if (/pdf/i.test(f.type) || /\.pdf$/i.test(f.name)) { const p = await pdfjs(), d = await p.getDocument({ data: await f.arrayBuffer() }).promise; tot += d.numPages; rbTel.tot += d.numPages;
         for (let i = 1; i <= d.numPages; i++) { const pg = await d.getPage(i), tx = (await pg.getTextContent()).items.map(x => x.str).join(' '), vp0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: 2400 / vp0.width }), c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
           await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise; const r = await rbLees(c, tx); c.width = c.height = 0; pg.cleanup(); klaar(r); } }
-      else { tot++; const bm = await createImageBitmap(f), sc = Math.min(1, 2400 / bm.width), c = document.createElement('canvas'); c.width = bm.width * sc; c.height = bm.height * sc; c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height); bm.close && bm.close(); const r = await rbLees(c, ''); c.width = c.height = 0; klaar(r); }
+      else { tot++; rbTel.tot++; const bm = await createImageBitmap(f), sc = Math.min(1, 2400 / bm.width), c = document.createElement('canvas'); c.width = bm.width * sc; c.height = bm.height * sc; c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height); bm.close && bm.close(); const r = await rbLees(c, ''); c.width = c.height = 0; klaar(r); }
     }
   } catch (e) { toast('Kon de scan niet openen: ' + e.message, 6000); }
   if (n || weg) toast(`${n} ${n === 1 ? 'scan' : 'scans'} klaar om in te vullen${weg ? ` · ${weg} lege ${weg === 1 ? 'bladzijde' : 'bladzijden'} overgeslagen` : ''}`, 4000);

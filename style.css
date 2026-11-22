@@ -698,3 +698,9 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 
 /* 1.86 */
 .rbgrp{margin:16px 0 4px;font-size:15px}.rbgrp:first-child{margin-top:0}
+
+/* 1.88: retourbon-formulier: kop-uitsnede, groot bonnummer, vakjes recht onder elkaar */
+.rbkop{background-color:#fff;background-repeat:no-repeat;background-size:200% auto;background-position:right 6%;aspect-ratio:2.4/1;border-radius:12px;border:1px solid var(--lijn);margin-bottom:10px}
+.rbnrl{display:block;font-size:14px;margin-bottom:4px}.rbnr{width:100%;font-size:24px;font-weight:700;letter-spacing:.5px;margin-bottom:10px;box-sizing:border-box}
+.rbf .f{display:grid;grid-template-columns:minmax(0,1fr) 7.5em 3.4em;gap:8px;align-items:center}.rbf .f>input{width:100%;box-sizing:border-box;min-width:0}.rbf .f>input:last-child{grid-column:2/4}.rbf .rbis{margin:0;text-align:left}
+.rbf .rbokl{display:flex;gap:10px}
