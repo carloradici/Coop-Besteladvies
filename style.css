@@ -692,3 +692,6 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 
 /* 1.84: retour tegen weekstaat */
 .rbrij.verschil .rbst,.rbrij.mist .rbst{color:var(--rood,#c62828);font-weight:700}.rbrij.ok .rbst{color:var(--groen,#2e7d32)}.rbrij.wacht .rbst{opacity:.7}.rbws{border:1px solid var(--lijn);border-radius:10px;padding:10px 12px;margin:8px 0}.rbws small{display:block}.rbws.verschil{border-color:var(--rood,#c62828)}
+
+/* 1.85 */
+.rbmist{border:2px solid var(--rood,#c62828)}.rbmist .rbrij .btn{flex:none}
