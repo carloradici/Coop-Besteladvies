@@ -7,7 +7,7 @@ const voortgang = atom({ plugin: 'voortgang-balk', key: 'voortgang' } as const, 
 const limieten = atom({ plugin: 'voortgang-balk', key: 'limieten' } as const, [] as Limiet[])
 
 const TOOL = 'mcp__voortgang-balk__voortgang'
-const UITLEG = `Voortgangsbalk: de gebruiker ziet live een balk boven het tekstveld. Roep bij werk van meer dan één stap de tool ${TOOL} aan (stil, de gebruiker ziet de aanroep niet): meteen aan het begin met je inschatting, en daarna bij elke nieuwe fase (lezen, bouwen, testen, opleveren) met een oplopend percentage en 2-4 woorden over wat je nu doet. Schrijf daarom géén aparte "⏳ xx%"-voortgangsberichten in je tekst; dat vervangt deze tool.`
+const UITLEG = `Voortgangsbalk: de gebruiker ziet live een balk boven het tekstveld. Roep bij werk van meer dan één stap de tool ${TOOL} aan (stil, de gebruiker ziet de aanroep niet): meteen aan het begin met je inschatting, en daarna bij elke nieuwe fase (lezen, bouwen, testen, opleveren) met een oplopend percentage en 2-4 woorden over wat je nu doet. Schrijf daarnaast ook korte "⏳ xx% · wat"-regels in je tekst (niet elke app toont de balk).`
 
 const NAAM: Record<string, string> = { five_hour: '5u', seven_day: 'wk', spend_limit: '€' }
 const BEZIG: Record<string, string> = { Read: 'lezen', Grep: 'zoeken', Glob: 'zoeken', Edit: 'aanpassen', Write: 'schrijven', Bash: 'uitvoeren', Agent: 'hulpje', WebSearch: 'opzoeken', WebFetch: 'opzoeken', Skill: 'voorbereiden' }
