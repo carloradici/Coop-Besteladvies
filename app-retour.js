@@ -12,6 +12,12 @@ async function rbLaad() {
   if (RB) return; RB = ls.get('cba-retour') || { bonnen: [] };
   if (!DEMO && navigator.onLine) try { const r = await rest(wq('voorkeuren?wie=eq.retour')); if (r[0] && r[0].data && r[0].data.bonnen) { RB = r[0].data; ls.set('cba-retour', RB); } } catch (e) { }
 }
+/* 1.86: lijst per weekstaat (nieuwste eerst), binnen een groep eerst de verschillen, dan op bonnummer */
+function rbGroepen(B, ST, gekop) {
+  const g = {}, rang = x => ({ verschil: 0, mist: 0, wacht: 1, ok: 2 }[x[2].st]); B.forEach((b, i) => { const k = ST[i].f ? ST[i].f.ws : ''; (g[k] = g[k] || []).push([b, i, ST[i]]); });
+  return Object.keys(g).sort((x, y) => !x ? 1 : !y ? -1 : y.localeCompare(x)).map(k => { const l = g[k].sort((x, y) => rang(x) - rang(y) || rbKey(x[0].nr).localeCompare(rbKey(y[0].nr))), dv = l.reduce((t, x) => t + (x[2].st === 'verschil' || x[2].st === 'mist' ? x[2].v : 0), 0), n = `${l.length} ${l.length === 1 ? 'bon' : 'bonnen'}`;
+    return [k ? `Weekstaat ${esc(k)} · ${n} · ${Math.abs(dv) >= 0.01 ? `<span class="rood">${rbEuro(Math.abs(dv))} verschil</span>` : '✓ klopt'}` : `${gekop ? 'Nog niet op een weekstaat' : 'Bonnen'} · ${n}${dv ? ` · <span class="rood">${rbEuro(dv)} mist</span>` : ''}`, l]; });
+}
 /* 1.84: controle tegen de Van Tol-weekstaten (via Brood Opzet: S.bo.retour) */
 const rbRet = () => (S.bo || {}).retour || {}, rbKey = nr => String(nr || '').replace(/\D/g, '');
 const RB_OMS = [[/CONTAINER/i, 'k'], [/PLANK/i, 'pl'], [/PALLET/i, 'ep'], [/\bRAD\b/i, 'rad'], [/BIG ?BAG/i, 'bb'], [/FRIS/i, 'fk'], [/LEEG/i, 'bl'], [/12/, 'b12'], [/KRAT/i, 'bk'], [/FLES/i, 'fl']];
@@ -28,6 +34,9 @@ function rbMist(B) {
   for (let i = 1; i < nrs.length; i++) { const d = nrs[i] - nrs[i - 1]; if (d > 1 && d <= 4) for (let x = nrs[i - 1] + 1; x < nrs[i]; x++) if (!neg.has(String(x)) && !(rbRet().bonnen || {})[x]) gat.push(String(x)); }
   return { ws, gat };
 }
+function rbBoTekst() { const R = rbRet(), bn = Object.values(R.bonnen || {}), ws = [...new Set(bn.map(x => x.ws).filter(Boolean))].sort();
+  if (!S.bo) return 'Nog niet opgehaald van Brood Opzet.'; if (!S.bo.retour) return '⚠️ Brood Opzet geeft nog geen retourgegevens door: tik in Supabase op Deploy bij brood-export (Brood Opzet-project) en lees de weekstaten in Brood Opzet in.';
+  return `Van Brood Opzet: ${bn.length} retourbonnen uit ${ws.length} weekstaten${ws.length ? ` (${ws[0]} t/m ${ws[ws.length - 1]})` : ''} · opgehaald ${new Date(S.bo.t || Date.now()).toTimeString().slice(0, 5)}`; }
 function rbBewaar() { ls.set('cba-retour', RB); write('voorkeuren', [{ wie: 'retour', data: RB }], true); }
 
 async function renderRetour() {
@@ -38,6 +47,7 @@ async function renderRetour() {
   const MI = rbMist(B); let auto = 0; B.forEach((b, i) => { if (ST[i].st === 'ok' && !b.ok) { b.ok = true; auto++; } }); if (auto) rbBewaar();
   const rood = ST.filter(x => x.st === 'verschil' || x.st === 'mist'), tegoed = rood.reduce((t, x) => t + Math.max(0, x.v), 0), teveel = rood.reduce((t, x) => t + Math.min(0, x.v), 0), wacht = ST.filter(x => x.st === 'wacht').length;
   v.innerHTML = `<div class="blk"><h2>Van Tol</h2>${gekop ? `<p class="rbsom">Nog te ontvangen <b>${rbEuro(tegoed)}</b></p><p class="small">${rood.length ? `${rood.length} ${rood.length === 1 ? 'bon klopt' : 'bonnen kloppen'} niet met de weekstaat` : '✓ Alle gecontroleerde bonnen kloppen'}${teveel < 0 ? ` · ${rbEuro(-teveel)} te veel gecrediteerd` : ''}${wacht ? ` · ${wacht} nog niet op een ingelezen weekstaat` : ''}</p>
+    <p class="small">${rbBoTekst()}</p>
     ${dr ? `<p class="rbsom">Karren volgens Van Tol <b>${Object.entries(dr.items || {}).map(([n, a]) => `${a} ${/CONTAINER/i.test(n) ? 'karren' : n.toLowerCase()}`).join(' · ')}</b></p><p class="small">Weekstaat ${esc(dr.ws)}${dr.d ? ' · ' + C.fmtDag(dr.d) : ''}</p>` : ''}`
     : '<p class="small">Koppel Brood Opzet (Kantoor › Brood Opzet) en lees daar de weekstaten in: dan controleert de app elke bon tegen Van Tol.</p>'}</div>
     ${MI.ws.length || MI.gat.length ? `<div class="blk rbmist"><h2>Ontbrekende bonnen</h2>${MI.ws.length ? `<p class="small">Wel gecrediteerd op een weekstaat, maar niet in je lijst:</p>${MI.ws.map(([k, f]) => `<div class="rbrij"><span class="rbtx"><b>BGR ${esc(k)}</b><small>${(f.regels || []).map(r => `${r.n} × ${esc(r.oms)}`).join(' · ')} · ${rbEuro(Math.abs(+f.eur || 0))} · weekstaat ${esc(f.ws)}</small></span><button class="btn sm" data-rbws="${esc(k)}">+ Toevoegen</button><button class="btn sm sec" data-rbneg="${esc(k)}" aria-label="Negeren">✕</button></div>`).join('')}` : ''}
@@ -46,8 +56,8 @@ async function renderRetour() {
     ${rbRij.length ? `<button class="btn" id="rbVerder" style="width:100%;margin-bottom:10px">✏️ Verder invullen · nog ${rbRij.length} ${rbRij.length === 1 ? 'scan' : 'scans'}</button>` : ''}
     <label class="btn" style="display:block;text-align:center">📄 Scans uploaden<input type="file" id="rbUp" multiple accept=".pdf,image/*" class="hide"></label>
     <div class="rbknop"><button class="btn sec" id="rbNieuw">+ Zonder scan</button><label class="btn sec">Excel importeren<input type="file" id="rbImp" accept=".xlsx,.xls" class="hide"></label><button class="btn sec" id="rbExp">Excel maken</button></div>
-    <div class="blk">${B.length ? B.map((b, i) => [b, i, ST[i]]).reverse().sort((x, y) => ({ verschil: 0, mist: 0, wacht: 1, ok: 2 }[x[2].st] - { verschil: 0, mist: 0, wacht: 1, ok: 2 }[y[2].st])).map(([b, i, s]) => `<div class="rbrij ${s.st}"><button class="rbok ${b.ok ? 'on' : ''}" data-rok="${i}" aria-label="Klopt">✓</button><button class="rbtx" data-rb="${i}"><b>${esc(b.nr || 'Zonder nummer')}</b><small>${[b.datum ? C.fmtDag(b.datum) : '', b.k ? b.k + ' karren' : '', b.bk ? b.bk + ' bierkratten' : '', b.fk ? b.fk + ' friskratten' : '', b.rb ? 'retourbon ' + esc(b.rb) : ''].filter(Boolean).join(' · ')}</small>
-      <small class="rbst">${s.st === 'ok' ? `✓ weekstaat ${esc(s.f.ws)}` : s.st === 'verschil' ? `${s.v > 0 ? rbEuro(s.v) + ' te weinig' : rbEuro(-s.v) + ' te veel'} gecrediteerd · weekstaat ${esc(s.f.ws)}` : s.st === 'mist' ? `${rbEuro(s.v)} · mist op de weekstaten` : gekop ? 'nog niet op een ingelezen weekstaat' : ''}</small>${b.opm ? `<small class="rood">${esc(b.opm)}</small>` : ''}</button></div>`).join('') : '<p class="small">Upload je scans of importeer je Excel.</p>'}</div>`;
+    <div class="blk">${B.length ? rbGroepen(B, ST, gekop).map(([kop, l]) => `<h3 class="rbgrp">${kop}</h3>` + l.map(([b, i, s]) => `<div class="rbrij ${s.st}"><button class="rbok ${b.ok ? 'on' : ''}" data-rok="${i}" aria-label="Klopt">✓</button><button class="rbtx" data-rb="${i}"><b>${esc(b.nr || 'Zonder nummer')}</b><small>${[b.datum ? C.fmtDag(b.datum) : '', b.k ? b.k + ' karren' : '', b.bk ? b.bk + ' bierkratten' : '', b.fk ? b.fk + ' friskratten' : '', b.rb ? 'retourbon ' + esc(b.rb) : ''].filter(Boolean).join(' · ')}</small>
+      <small class="rbst">${s.st === 'ok' ? '✓ klopt' : s.st === 'verschil' ? `${s.v > 0 ? rbEuro(s.v) + ' te weinig' : rbEuro(-s.v) + ' te veel'} gecrediteerd` : s.st === 'mist' ? `${rbEuro(s.v)} · mist op de weekstaten` : ''}</small>${b.opm ? `<small class="rood">${esc(b.opm)}</small>` : ''}</button></div>`).join('')).join('') : '<p class="small">Upload je scans of importeer je Excel.</p>'}</div>`;
   $('#rbUp').onchange = e => rbUpload([...e.target.files]);
   $('#rbImp').onchange = e => rbImport(e.target.files[0]);
   $('#rbExp').onclick = rbExport;
@@ -64,7 +74,7 @@ function rbForm(v) {
   const e = ui.rbEdit, b = e.b, veld = (k, t, x = '') => `<div class="f"><label>${t}</label><input data-rf="${k}" type="text" inputmode="decimal" value="${esc(b['_' + k] ?? (b[k] || ''))}" ${x}><span class="rbis" data-ris="${k}"></span></div>`;
   v.innerHTML = `${e.img ? `<div class="rbscan"><img src="${e.img}" alt="Scan van de bon"></div><p class="small" style="text-align:center">Tik op de scan om in of uit te zoomen</p>` : ''}
     <div class="blk form">${e.rij ? `<p class="small">Scan ${rbRij.length ? 'nog ' + rbRij.length + ' te gaan' : ''}</p>` : ''}
-    <div class="f"><label>Bonnummer</label><input id="rbNr" type="text" value="${esc(b.nr || '')}" placeholder="BGR 202606941"></div>
+    ${e.fout ? `<p class="small rood">⚠️ ${esc(e.fout)}</p>` : ''}<div class="f"><label>Bonnummer</label><input id="rbNr" type="text" value="${esc(b.nr || '')}" placeholder="BGR 202606941"></div>
     <div class="f"><label>Datum</label><input id="rbDat" type="date" value="${esc(b.datum || '')}"></div>
     <div class="f"><label>Retourbon (producten)</label><input id="rbRb" type="text" inputmode="numeric" value="${esc(b.rb || '')}" placeholder="alleen als er producten mee gaan"></div>
     <p class="small">Meer kolommen op de bon? Typ ze achter elkaar met een komma: <b>18,11,17</b> wordt 46.</p>
@@ -95,28 +105,34 @@ function rbWsHtml(b) { const s = rbStatus(b); if (!s.f) return `<p class="small"
   return `<div class="rbws ${s.st}"><b>Weekstaat ${esc(s.f.ws)}${s.f.fnr ? ' · factuur ' + esc(s.f.fnr) : ''}</b>${(s.f.regels || []).map(r => `<small>${r.n} × ${esc(r.oms)} · ${rbEuro(Math.abs(r.eur))}</small>`).join('')}<small>Gecrediteerd ${rbEuro(Math.abs(s.f.eur))} · bon ${rbEuro(rbWaarde(b))}</small>${s.st === 'verschil' ? `<small class="rood"><b>${s.v > 0 ? rbEuro(s.v) + ' te weinig' : rbEuro(-s.v) + ' te veel'}</b>${s.dif.length ? ' · ' + s.dif.map(esc).join(' · ') : ''}</small>` : '<small>✓ Klopt</small>'}</div>`; }
 /* scans (pdf van de iPhone-scanner of foto's) → per bladzijde een plaatje + gedrukte tekst lezen */
 async function rbUpload(files) {
-  if (!files.length) return; const pag = [];
+  if (!files.length) return; let n = 0, tot = 0, eerst = true;
+  const klaar = r => { rbRij.push(r); toast(`Scan ${++n} van ${tot} gelezen`, 4000); if (eerst && !ui.rbEdit && ui.tab === 'retour') { eerst = false; ui.rbEdit = Object.assign({ i: -1 }, rbRij[0], { rij: 1 }); renderRetour(); } };
   try {
     for (const f of files) {
-      if (/pdf/i.test(f.type) || /\.pdf$/i.test(f.name)) { const p = await pdfjs(), d = await p.getDocument({ data: await f.arrayBuffer() }).promise;
-        for (let i = 1; i <= d.numPages; i++) { const pg = await d.getPage(i), vp0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: 2400 / vp0.width }), c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise; pag.push(c); } }
-      else { const bm = await createImageBitmap(f), s = Math.min(1, 2400 / bm.width), c = document.createElement('canvas'); c.width = bm.width * s; c.height = bm.height * s; c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height); pag.push(c); }
+      if (/pdf/i.test(f.type) || /\.pdf$/i.test(f.name)) { const p = await pdfjs(), d = await p.getDocument({ data: await f.arrayBuffer() }).promise; tot += d.numPages;
+        for (let i = 1; i <= d.numPages; i++) { const pg = await d.getPage(i), tx = (await pg.getTextContent()).items.map(x => x.str).join(' '), vp0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: 2400 / vp0.width }), c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+          await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise; const r = await rbLees(c, tx); c.width = c.height = 0; pg.cleanup(); klaar(r); } }
+      else { tot++; const bm = await createImageBitmap(f), sc = Math.min(1, 2400 / bm.width), c = document.createElement('canvas'); c.width = bm.width * sc; c.height = bm.height * sc; c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height); bm.close && bm.close(); const r = await rbLees(c, ''); c.width = c.height = 0; klaar(r); }
     }
-  } catch (e) { return toast('Kon de scan niet openen: ' + e.message, 6000); }
-  try { if (!rbOcr) { await loadScript(LIB.ocr); rbOcr = await window.Tesseract.createWorker('eng'); } } catch (e) { rbOcr = null; toast('Tekst lezen lukt nu niet (offline?): vul het bonnummer zelf in', 6000); }
-  let n = 0;
-  for (const c of pag) {
-    toast(`Scan ${++n} van ${pag.length} lezen…`, 8000); const kl = document.createElement('canvas'), fz = Math.min(1, 1400 / c.width); kl.width = c.width * fz; kl.height = c.height * fz; kl.getContext('2d').drawImage(c, 0, 0, kl.width, kl.height); const r = { img: kl.toDataURL('image/jpeg', 0.6), b: {} };
-    if (rbOcr) try { const strook = (x0, y0, x1, y1) => { const k = document.createElement('canvas'), sw = (x1 - x0) * c.width, sh = (y1 - y0) * c.height, f = Math.max(1, 1440 / sw); k.width = sw * f; k.height = sh * f; const g = k.getContext('2d'); g.drawImage(c, x0 * c.width, y0 * c.height, sw, sh, 0, 0, k.width, k.height);
-        const im = g.getImageData(0, 0, k.width, k.height), d = im.data, hs = new Array(256).fill(0); for (let p = 0; p < d.length; p += 4) { d[p] = d[p + 1] = d[p + 2] = (d[p] * 3 + d[p + 1] * 6 + d[p + 2]) / 10 | 0; hs[d[p]]++; }
-        let lo = 0, hi = 255, n = 0, z = d.length / 4 * 0.02; while ((n += hs[lo]) < z) lo++; n = 0; while ((n += hs[hi]) < z) hi--; const sc = 255 / Math.max(1, hi - lo); for (let p = 0; p < d.length; p += 4) d[p] = d[p + 1] = d[p + 2] = Math.max(0, Math.min(255, (d[p] - lo) * sc)); g.putImageData(im, 0, 0); return k; };
-      const t = (await rbOcr.recognize(strook(0.4, 0, 1, 0.2))).data.text, o = (await rbOcr.recognize(strook(0.2, 0.68, 0.7, 0.92))).data.text;
-      const m = t.match(/BGR\s*(\d{6,10})/i) || t.match(/\b(20\d{6,7})\b/), d = t.match(/(\d{1,2})\s*-\s*(\d{1,2})\s*-\s*(20\d\d)/);
-      if (m) r.b.nr = 'BGR ' + m[1]; if (d) r.b.datum = `${d[3]}-${d[2].padStart(2, '0')}-${d[1].padStart(2, '0')}`; if (/KLANT|LABEL|Bag-?ID|Klant-?ID/i.test(o)) { r.b.bb = 1; r.b._bb = '1'; } } catch (e) { }
-    rbRij.push(r);
-  }
-  toast(`${pag.length} ${pag.length === 1 ? 'scan' : 'scans'} klaar om in te vullen`, 3000);
-  ui.rbEdit = Object.assign({ i: -1 }, rbRij[0], { rij: 1 }); renderRetour();
+  } catch (e) { toast('Kon de scan niet openen: ' + e.message, 6000); }
+  if (n) toast(`${n} ${n === 1 ? 'scan' : 'scans'} klaar om in te vullen`, 3000);
+}
+/* 1.86: één bladzijde tegelijk (iPhone-geheugen); eerst de tekst in de pdf zelf, anders tekstherkenning op twee stroken */
+async function rbLees(c, tx) {
+  const kl = document.createElement('canvas'), fz = Math.min(1, 1400 / c.width); kl.width = c.width * fz; kl.height = c.height * fz; kl.getContext('2d').drawImage(c, 0, 0, kl.width, kl.height);
+  const r = { img: kl.toDataURL('image/jpeg', 0.6), b: {} }; kl.width = kl.height = 0;
+  const zoek = (t, o) => { const m = t.match(/BGR\s*(\d{6,10})/i) || t.match(/\b(20\d{7})\b/), d = t.match(/(\d{1,2})\s*-\s*(\d{1,2})\s*-\s*(20\d\d)/);
+    if (m) r.b.nr = 'BGR ' + m[1]; if (d) r.b.datum = `${d[3]}-${d[2].padStart(2, '0')}-${d[1].padStart(2, '0')}`; if (/KLANT\s*LABEL|Bag-?ID|Klant-?ID/i.test(o)) { r.b.bb = 1; r.b._bb = '1'; } };
+  if (/BGR\s*\d{6}/i.test(tx || '')) { zoek(tx, tx); return r; }
+  if (!rbOcr) try { await loadScript(LIB.ocr); rbOcr = await window.Tesseract.createWorker('eng'); } catch (e) { r.fout = 'Tekst lezen kon niet laden (offline?): vul het bonnummer zelf in'; return r; }
+  try { const strook = (x0, y0, x1, y1) => { const k = document.createElement('canvas'), sw = (x1 - x0) * c.width, sh = (y1 - y0) * c.height, f = Math.max(1, 1440 / sw); k.width = sw * f; k.height = sh * f; const g = k.getContext('2d'); g.drawImage(c, x0 * c.width, y0 * c.height, sw, sh, 0, 0, k.width, k.height);
+      const im = g.getImageData(0, 0, k.width, k.height), d = im.data, hs = new Array(256).fill(0); for (let p = 0; p < d.length; p += 4) { d[p] = d[p + 1] = d[p + 2] = (d[p] * 3 + d[p + 1] * 6 + d[p + 2]) / 10 | 0; hs[d[p]]++; }
+      let lo = 0, hi = 255, n = 0, z = d.length / 4 * 0.02; while ((n += hs[lo]) < z) lo++; n = 0; while ((n += hs[hi]) < z) hi--; const sc = 255 / Math.max(1, hi - lo); for (let p = 0; p < d.length; p += 4) d[p] = d[p + 1] = d[p + 2] = Math.max(0, Math.min(255, (d[p] - lo) * sc)); g.putImageData(im, 0, 0); return k; };
+    const k1 = strook(0.4, 0, 1, 0.22); let t = '';
+    for (const psm of ['6', '4', '12', '3']) { await rbOcr.setParameters({ tessedit_pageseg_mode: psm }); const x = (await rbOcr.recognize(k1)).data.text; t += '\n' + x; if (/BGR\s*\d{6}/i.test(x)) break; }
+    k1.width = k1.height = 0; await rbOcr.setParameters({ tessedit_pageseg_mode: '6' }); const k2 = strook(0.2, 0.68, 0.7, 0.92), o = (await rbOcr.recognize(k2)).data.text; k2.width = k2.height = 0;
+    zoek(t, o); if (!r.b.nr) r.fout = 'Bonnummer niet gevonden op deze scan: vul het zelf in'; } catch (e) { r.fout = 'Tekst lezen mislukt: ' + (e.message || e); }
+  return r;
 }
 
 async function rbImport(f) {

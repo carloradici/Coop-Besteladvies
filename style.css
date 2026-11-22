@@ -695,3 +695,6 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 
 /* 1.85 */
 .rbmist{border:2px solid var(--rood,#c62828)}.rbmist .rbrij .btn{flex:none}
+
+/* 1.86 */
+.rbgrp{margin:16px 0 4px;font-size:15px}.rbgrp:first-child{margin-top:0}
