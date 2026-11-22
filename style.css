@@ -707,3 +707,6 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 
 /* 1.89: automatisch vinkje */
 .rbok{display:flex;align-items:center;justify-content:center}.rbok.xl{background:#8a8a8a;border-color:transparent;color:#fff}.rbok.fout{background:var(--rood,#c62828);border-color:transparent;color:#fff}
+
+/* 1.91: datumveld niet breder dan het vak */
+.rbf .f>input[type=date]{max-width:100%;-webkit-appearance:none;appearance:none;min-height:44px}

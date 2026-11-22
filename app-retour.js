@@ -79,13 +79,13 @@ function rbForm(v) {
   const blok2 = RB_V.slice(1).map(([k, t]) => veld(k, t)).join('');
   v.innerHTML = `${e.img ? `<div class="rbkop" style="background-image:url(${e.img})" role="img" aria-label="Kop van de bon met het bonnummer"></div>` : ''}
     <div class="blk form rbf">${e.rij ? `<p class="small">Bon ${rbTel.n + 1} van ${rbTel.tot}</p>` : ''}${e.fout ? `<p class="small rood">⚠️ ${esc(e.fout)}</p>` : ''}
-    <label class="rbnrl" for="rbNr">Bonnummer</label><input id="rbNr" class="rbnr" type="text" value="${esc(b.nr || '')}" placeholder="BGR 202606941">
+    <label class="rbnrl" for="rbNr">Bonnummer</label><input id="rbNr" class="rbnr" type="text" inputmode="numeric" value="${esc(b.nr || 'BGR ')}" placeholder="BGR 202606941">
     <div class="f"><label>Datum</label><input id="rbDat" type="date" value="${esc(b.datum || '')}"></div>
     ${veld('k', 'Containers totaal')}
     <div class="f"><label>Retourbon (producten)</label><input id="rbRb" type="text" inputmode="decimal" value="${esc(b.rb || '')}" placeholder="bv. 60226399,60226433"></div></div>
     ${e.img ? `<div class="rbscan"><img src="${e.img}" alt="Scan van de bon"></div><p class="small" style="text-align:center">Tik op de scan om in of uit te zoomen</p>` : ''}
     <div class="blk form rbf"><p class="small">Meer kolommen op de bon? Typ ze achter elkaar met een komma: <b>18,11,17</b> wordt 46.</p>
-    ${blok2}
+    ${blok2}${b.bags && b.bags.length ? `<p class="small">Bag-ID: ${b.bags.map(esc).join(' · ')}</p>` : ''}
     <div class="f"><label>Opmerking</label><input id="rbOpm" type="text" value="${esc(b.opm || '')}" placeholder="bv. mist op factuur"></div>
     ${e.i >= 0 ? rbWsHtml(b) : ''}
 </div>
@@ -93,18 +93,20 @@ function rbForm(v) {
     <div class="rbknop">${e.rij ? '<button class="btn sec" id="rbSkip">Scan overslaan</button>' : ''}<button class="btn sec" id="rbTerug">Annuleren</button>${e.i >= 0 ? '<button class="btn sec rood" id="rbDel">Verwijderen</button>' : ''}</div>`;
   const toon = i => { const k = i.dataset.rf, s = $(`[data-ris="${k}"]`); s.textContent = /[\s,;.+]/.test(i.value.trim()) ? '= ' + rbSom(i.value) : ''; };
   v.querySelectorAll('[data-rf]').forEach(i => { toon(i); i.oninput = () => toon(i); });
+  $('#rbNr').onfocus = ev => setTimeout(() => { const x = ev.target; x.setSelectionRange(x.value.length, x.value.length); }, 0);
   if ($('.rbscan')) $('.rbscan').onclick = () => $('.rbscan').classList.toggle('groot');
   const klaar = () => { if (e.rij) { rbRij.shift(); rbTel.n++; } ui.rbEdit = e.rij && rbRij.length ? Object.assign({ i: -1 }, rbRij[0], { rij: 1 }) : null; renderRetour(); window.scrollTo(0, 0); };
   $('#rbTerug').onclick = () => { ui.rbEdit = null; renderRetour(); };
   if ($('#rbSkip')) $('#rbSkip').onclick = klaar;
   if ($('#rbDel')) $('#rbDel').onclick = async () => { if (!await bevestig('Bon verwijderen?', `${esc(b.nr || 'Deze bon')} verdwijnt uit de lijst.`, 'Verwijderen')) return; RB.bonnen.splice(e.i, 1); if (b.nr) idel('rbscan:' + b.nr); rbBewaar(); ui.rbEdit = null; renderRetour(); };
   $('#rbSla').onclick = async () => {
-    const n = Object.assign({}, e.i >= 0 ? RB.bonnen[e.i] : {}, { nr: $('#rbNr').value.trim().replace(/^bgr\s*/i, 'BGR ').toUpperCase(), datum: $('#rbDat').value, rb: rbRbs($('#rbRb').value).join(', '), opm: $('#rbOpm').value.trim() });
+    const n = Object.assign({}, e.i >= 0 ? RB.bonnen[e.i] : {}, { nr: $('#rbNr').value.replace(/\D/g, '') ? 'BGR ' + $('#rbNr').value.replace(/\D/g, '') : '', datum: $('#rbDat').value, rb: rbRbs($('#rbRb').value).join(', '), opm: $('#rbOpm').value.trim() });
     v.querySelectorAll('[data-rf]').forEach(i => { const k = i.dataset.rf, s = rbSom(i.value); if (s) n[k] = s; else delete n[k]; });
+    if (b.bags) n.bags = [...new Set((n.bags || []).concat(b.bags))];
     if (!n.nr) return toast('Vul het bonnummer in');
     let i = e.i; const j = RB.bonnen.findIndex((x, y) => y !== e.i && x.nr === n.nr), tk = [];
     if (j >= 0) { const k = await rbKeuze(n.nr); if (!k) return; if (k === 'over') return klaar(); const x = RB.bonnen[j];
-      if (k === 'samen') { const m = Object.assign({}, x); for (const f of ['datum', 'opm']) if (!m[f] && n[f]) m[f] = n[f]; m.rb = [...new Set(rbRbs(m.rb).concat(rbRbs(n.rb)))].join(', ');
+      if (k === 'samen') { const m = Object.assign({}, x); for (const f of ['datum', 'opm']) if (!m[f] && n[f]) m[f] = n[f]; m.rb = [...new Set(rbRbs(m.rb).concat(rbRbs(n.rb)))].join(', '); if (n.bags || m.bags) m.bags = [...new Set((m.bags || []).concat(n.bags || []))];
         const dif = RB_V.filter(([f]) => n[f] && m[f] && +n[f] !== +m[f]); RB_V.forEach(([f]) => { if (n[f] && !m[f]) m[f] = n[f]; });
         if (dif.length && await bevestig('Aantallen wijken af', dif.map(([f, t]) => `${t}: in de lijst <b>${m[f]}</b>, op deze bon <b>${n[f]}</b>`).join('<br>'), 'Bon gebruiken', 'Lijst houden')) dif.forEach(([f]) => m[f] = n[f]);
         Object.assign(n, m); } else n.ok = x.ok;
@@ -134,16 +136,17 @@ async function rbUpload(files) {
 async function rbLees(c, tx) {
   const kl = document.createElement('canvas'), fz = Math.min(1, 1400 / c.width); kl.width = c.width * fz; kl.height = c.height * fz; kl.getContext('2d').drawImage(c, 0, 0, kl.width, kl.height);
   const r = { img: kl.toDataURL('image/jpeg', 0.6), b: {} }; { const d = kl.getContext('2d').getImageData(0, 0, kl.width, kl.height).data; let z = 0; for (let p = 0; p < d.length; p += 16) if (d[p] + d[p + 1] + d[p + 2] < 300) z++; r.inkt = z / (d.length / 16); } kl.width = kl.height = 0;
-  const zoek = (t, o) => { const m = t.match(/BGR\s*(\d{6,10})/i) || t.match(/\b(20\d{7})\b/), d = t.match(/(\d{1,2})\s*-\s*(\d{1,2})\s*-\s*(20\d\d)/);
-    if (m) r.b.nr = 'BGR ' + m[1]; if (d) r.b.datum = `${d[3]}-${d[2].padStart(2, '0')}-${d[1].padStart(2, '0')}`; if (/KLANT\s*LABEL|Bag-?ID|Klant-?ID/i.test(o)) { r.b.bb = 1; r.b._bb = '1'; } };
+  const zoek = (t, o) => { const t2 = t.replace(/BGR\s*([0-9OoIl|]{8,10})/gi, (x, y) => 'BGR ' + y.replace(/[Oo]/g, '0').replace(/[Il|]/g, '1')), m = t2.match(/BGR\s*(\d{6,10})/i) || t2.match(/\b(20\d{7})\b/), d = t.match(/(\d{1,2})\s*-\s*(\d{1,2})\s*-\s*(20\d\d)/);
+    if (m) r.b.nr = 'BGR ' + m[1]; if (d) r.b.datum = `${d[3]}-${d[2].padStart(2, '0')}-${d[1].padStart(2, '0')}`; const ids = [...new Set([...o.matchAll(/Bag\W{0,2}[I1l|]?\W{0,2}D\W{0,3}(\d{8})(?!\d)/gi)].map(x => x[1]))], bb = Math.max(ids.length, ...o.split('\f').map(x => Math.max((x.match(/KLANT\s*LABEL/gi) || []).length, (x.match(/K\w{1,4}[\s\-\[]*[I1l|]?\W?D\W{0,3}\d{7}(?!\d)/gi) || []).length)));
+    if (bb) { r.b.bb = bb; r.b._bb = String(bb); } if (ids.length) r.b.bags = ids; };
   if (/BGR\s*\d{6}/i.test(tx || '')) { zoek(tx, tx); return r; }
   if (!rbOcr) try { await loadScript(LIB.ocr); rbOcr = await window.Tesseract.createWorker('eng'); } catch (e) { r.fout = 'Tekst lezen kon niet laden (offline?): vul het bonnummer zelf in'; return r; }
   try { const strook = (x0, y0, x1, y1) => { const k = document.createElement('canvas'), sw = (x1 - x0) * c.width, sh = (y1 - y0) * c.height, f = Math.max(1, 1440 / sw); k.width = sw * f; k.height = sh * f; const g = k.getContext('2d'); g.drawImage(c, x0 * c.width, y0 * c.height, sw, sh, 0, 0, k.width, k.height);
       const im = g.getImageData(0, 0, k.width, k.height), d = im.data, hs = new Array(256).fill(0); for (let p = 0; p < d.length; p += 4) { d[p] = d[p + 1] = d[p + 2] = (d[p] * 3 + d[p + 1] * 6 + d[p + 2]) / 10 | 0; hs[d[p]]++; }
       let lo = 0, hi = 255, n = 0, z = d.length / 4 * 0.02; while ((n += hs[lo]) < z) lo++; n = 0; while ((n += hs[hi]) < z) hi--; const sc = 255 / Math.max(1, hi - lo); for (let p = 0; p < d.length; p += 4) d[p] = d[p + 1] = d[p + 2] = Math.max(0, Math.min(255, (d[p] - lo) * sc)); g.putImageData(im, 0, 0); return k; };
     const k1 = strook(0.4, 0, 1, 0.22); let t = '';
-    for (const psm of ['6', '4', '12', '3']) { await rbOcr.setParameters({ tessedit_pageseg_mode: psm }); const x = (await rbOcr.recognize(k1)).data.text; t += '\n' + x; if (/BGR\s*\d{6}/i.test(x)) break; }
-    k1.width = k1.height = 0; await rbOcr.setParameters({ tessedit_pageseg_mode: '6' }); const k2 = strook(0.2, 0.68, 0.7, 0.92), o = (await rbOcr.recognize(k2)).data.text; k2.width = k2.height = 0;
+    const BG = /BGR\s*[0-9OoIl|]{8}/i; for (const psm of ['6', '4', '12', '3']) { await rbOcr.setParameters({ tessedit_pageseg_mode: psm }); const x = (await rbOcr.recognize(k1)).data.text; t += '\n' + x; if (BG.test(x)) break; }
+    k1.width = k1.height = 0; if (!BG.test(t)) { const k3 = strook(0.5, 0.03, 1, 0.3); for (const psm of ['4', '6']) { await rbOcr.setParameters({ tessedit_pageseg_mode: psm }); const x = (await rbOcr.recognize(k3)).data.text; t += '\n' + x; if (BG.test(x)) break; } k3.width = k3.height = 0; } await rbOcr.setParameters({ tessedit_pageseg_mode: '6' }); const k2 = strook(0.08, 0.62, 0.96, 0.96); let o = (await rbOcr.recognize(k2)).data.text; await rbOcr.setParameters({ tessedit_pageseg_mode: '11' }); o += '\f' + (await rbOcr.recognize(k2)).data.text; await rbOcr.setParameters({ tessedit_pageseg_mode: '6' }); k2.width = k2.height = 0;
     zoek(t, o); if (!r.b.nr) r.fout = 'Bonnummer niet gevonden op deze scan: vul het zelf in'; } catch (e) { r.fout = 'Tekst lezen mislukt: ' + (e.message || e); }
   if (!r.b.nr && r.inkt < 0.01) r.leeg = true;
   return r;
