@@ -1,0 +1,1 @@
+{ "name": "voortgang-balk", "version": "0.1.0", "description": "Balk boven het tekstveld: bouw-voortgang in procenten en resterend Claude-gebruik", "license": "MIT", "author": { "name": "Carlo" }, "types": "./types/index.d.ts" }

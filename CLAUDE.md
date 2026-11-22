@@ -7,7 +7,7 @@ Web-app (PWA) van Coop Vogelenzang die per artikel een bestel-advies geeft (vers
 - **Lees alleen de bestanden die je nodig hebt.** Zoek een functie met `grep -n "function naam\|const naam" app-*.js rekenkern.js` en lees dan alleen dat stuk.
 - Pas gericht aan (Edit), herschrijf geen hele bestanden. Houd code compact.
 - Nieuw scherm = meteen een eigen hulptekst (HULP).
-- Stuur tijdens langer werk korte voortgangsberichten met percentage ("⏳ 40% · nu testen").
+- Voortgang tijdens langer werk: via de stille tool `mcp__voortgang-balk__voortgang` (pct + 2-4 woorden; balk boven het tekstveld, mod in `claude-mods/` van Coop-Besteladvies). Geen aparte "⏳ 40%"-berichten. Werkt de tool niet, dan wel korte voortgangsberichten met percentage.
 
 ## Opbouw
 - `index.html`: alleen HTML-geraamte + laadscript met `LADEN`.

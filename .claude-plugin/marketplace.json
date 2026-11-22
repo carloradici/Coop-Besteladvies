@@ -1,0 +1,5 @@
+{
+  "name": "coop-mods",
+  "owner": { "name": "Carlo" },
+  "plugins": [{ "name": "voortgang-balk", "source": "./claude-mods/voortgang-balk", "description": "Balk boven het tekstveld: bouw-voortgang in procenten en resterend Claude-gebruik" }]
+}
