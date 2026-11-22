@@ -683,3 +683,9 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 
 /* 1.82: geneesmiddelen minimum bestelbedrag */
 .bar .banner.gmmin{margin:0}.gmbalk{height:8px;border-radius:4px;background:var(--lijn);margin:8px 0 4px;overflow:hidden}.gmbalk i{display:block;height:100%;background:var(--oranje)}
+
+/* 1.83: retourbonnen */
+.rbtot{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}.rbtot div{background:var(--vlak2,rgba(127,127,127,.12));border-radius:10px;padding:8px 10px}.rbtot b{display:block;font-size:22px}.rbtot small{display:block}.rbsom{font-size:18px;margin:12px 0 4px}.rbsom b{color:var(--oranje)}
+.rbknop{display:flex;gap:8px;margin:10px 0}.rbknop>*{flex:1;text-align:center;padding-left:6px;padding-right:6px}
+.rbrij{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--lijn)}.rbrij:first-child{border-top:0}.rbok{width:44px;height:44px;flex:none;border-radius:50%;border:2px solid var(--lijn);background:none;color:transparent;font-size:20px;font-weight:700}.rbok.on{background:var(--groen,#2e7d32);border-color:transparent;color:#fff}.rbtx{flex:1;text-align:left;background:none;border:0;color:inherit;font:inherit;padding:0}.rbtx small{display:block}
+.rbscan{overflow:auto;max-height:46vh;border-radius:12px;border:1px solid var(--lijn);background:#fff}.rbscan img{display:block;width:100%}.rbscan.groot img{width:230%}.rbis{margin-left:8px;font-weight:700;color:var(--oranje);white-space:nowrap}
