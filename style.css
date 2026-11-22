@@ -704,3 +704,6 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 .rbnrl{display:block;font-size:14px;margin-bottom:4px}.rbnr{width:100%;font-size:24px;font-weight:700;letter-spacing:.5px;margin-bottom:10px;box-sizing:border-box}
 .rbf .f{display:grid;grid-template-columns:minmax(0,1fr) 7.5em 3.4em;gap:8px;align-items:center}.rbf .f>input{width:100%;box-sizing:border-box;min-width:0}.rbf .f>input:last-child{grid-column:2/4}.rbf .rbis{margin:0;text-align:left}
 .rbf .rbokl{display:flex;gap:10px}
+
+/* 1.89: automatisch vinkje */
+.rbok{display:flex;align-items:center;justify-content:center}.rbok.xl{background:#8a8a8a;border-color:transparent;color:#fff}.rbok.fout{background:var(--rood,#c62828);border-color:transparent;color:#fff}
