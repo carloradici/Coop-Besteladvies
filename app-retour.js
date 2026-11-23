@@ -4,12 +4,14 @@ const RB_V = [['k', 'Containers totaal', 100], ['bk', 'Bierkrat + 16/24 fles', 3
 /* kolommen C t/m L van de Excel */
 const RB_X = [['k', 'karren retour'], ['bb', 'bigbags retour'], ['bk', 'bierkratten'], ['bl', 'bierkrat leeg'], ['fk', 'friskratten'], ['rad', 'RAD'], ['pl', 'plank'], ['ep', 'euro pallet'], ['b12', 'bierkrat 12 flessen'], ['fl', 'bierfles los']];
 LIB.ocr = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-let RB = null, rbRij = [], rbOcr = null, rbTel = { n: 0, tot: 0 };
+let RB = null, rbRij = [], rbOcr = null, rbTel = { n: 0, tot: 0 }, rbBezig = null;
+/* 1.92: wachtrij van gelezen scans blijft op het toestel bewaard (ook na sluiten of update) */
+const rbRijBewaar = () => { iset('rbrij', rbRij); ls.set('cba-rbtel', rbTel); };
 const rbEuro = x => '€ ' + (Math.round(x * 100) / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+,)/g, '.');
 const rbSom = s => String(s ?? '').split(/[\s,;.+]+/).reduce((t, x) => t + (+x || 0), 0);
 const rbWaarde = b => RB_V.reduce((t, [k, , p]) => t + (+b[k] || 0) * p, 0);
 async function rbLaad() {
-  if (RB) return; RB = ls.get('cba-retour') || { bonnen: [] };
+  if (RB) return; RB = ls.get('cba-retour') || { bonnen: [] }; try { rbRij = (await iget('rbrij')) || []; rbTel = ls.get('cba-rbtel') || { n: 0, tot: rbRij.length }; } catch (e) { }
   if (!DEMO && navigator.onLine) try { const r = await rest(wq('voorkeuren?wie=eq.retour')); if (r[0] && r[0].data && r[0].data.bonnen) { RB = r[0].data; ls.set('cba-retour', RB); } } catch (e) { }
 }
 /* 1.86: lijst per weekstaat (nieuwste eerst), binnen een groep eerst de verschillen, dan op bonnummer */
@@ -58,7 +60,7 @@ async function renderRetour() {
     ${MI.ws.length || MI.gat.length ? `<div class="blk rbmist"><h2>Ontbrekende bonnen</h2>${MI.ws.length ? `<p class="small">Wel gecrediteerd op een weekstaat, maar niet in je lijst:</p>${MI.ws.map(([k, f]) => `<div class="rbrij"><span class="rbtx"><b>BGR ${esc(k)}</b><small>${(f.regels || []).map(r => `${r.n} × ${esc(r.oms)}`).join(' · ')} · ${rbEuro(Math.abs(+f.eur || 0))} · weekstaat ${esc(f.ws)}</small></span><button class="btn sm" data-rbws="${esc(k)}">+ Toevoegen</button><button class="btn sm sec" data-rbneg="${esc(k)}" aria-label="Negeren">✕</button></div>`).join('')}` : ''}
       ${MI.gat.length ? `<p class="small">Gat in de nummering (zoek de bon op of tik ✕ als hij niet van jou is):</p>${MI.gat.map(k => `<div class="rbrij"><span class="rbtx"><b>BGR ${k}</b><small>tussen je andere bonnen in, nog niet ingevoerd</small></span><button class="btn sm sec" data-rbneg="${k}" aria-label="Negeren">✕</button></div>`).join('')}` : ''}</div>` : ''}
     <div class="blk"><h2>Retour · ${B.length} bonnen</h2><div class="rbtot">${RB_V.filter(([k]) => tot[k]).map(([k, t]) => `<div><b>${C.fmt(tot[k])}</b><small>${t}</small></div>`).join('') || '<p class="small">Nog geen bonnen.</p>'}</div></div>
-    ${rbRij.length ? `<button class="btn" id="rbVerder" style="width:100%;margin-bottom:10px">✏️ Verder invullen · nog ${rbRij.length} ${rbRij.length === 1 ? 'scan' : 'scans'}</button>` : ''}
+    ${rbBezig ? `<div class="blk rbvg"><b>Scans inlezen…</b><div class="gmbalk"><i id="rbVgB" style="width:${Math.round(rbBezig.n / Math.max(1, rbBezig.tot) * 100)}%"></i></div><p class="small" id="rbVgT">${rbVgTekst()}</p></div>` : rbRij.length ? `<button class="btn" id="rbVerder" style="width:100%;margin-bottom:10px">✏️ Controleer bonnen (${rbTel.n ? 'nog ' : ''}${rbRij.length})</button>` : ''}
     <label class="btn" style="display:block;text-align:center">📄 Scans uploaden<input type="file" id="rbUp" multiple accept=".pdf,image/*" class="hide"></label>
     <div class="rbknop"><button class="btn sec" id="rbNieuw">+ Zonder scan</button><label class="btn sec">Excel importeren<input type="file" id="rbImp" accept=".xlsx,.xls" class="hide"></label><button class="btn sec" id="rbExp">Excel maken</button></div>
     <div class="blk">${B.length ? rbGroepen(B, ST, gekop).map(([kop, l]) => `<h3 class="rbgrp">${kop}</h3>` + l.map(([b, i, s]) => `<div class="rbrij ${s.st}"><span class="rbok ${s.st === 'ok' || s.st === 'leeg' ? 'on' : s.st === 'verschil' || s.st === 'mist' ? 'fout' : b.ok ? 'xl' : ''}" aria-label="${rbGec(b, s) ? 'Gecontroleerd' : s.st === 'wacht' ? 'Nog niet gecontroleerd' : 'Klopt niet'}">${rbGec(b, s) ? '✓' : s.st === 'verschil' || s.st === 'mist' ? '✕' : ''}</span><button class="rbtx" data-rb="${i}"><b>${esc(b.nr || 'Zonder nummer')}</b><small>${[b.datum ? C.fmtDag(b.datum) : '', b.k ? b.k + ' karren' : '', b.bk ? b.bk + ' bierkratten' : '', b.fk ? b.fk + ' friskratten' : '', b.rb ? (rbRbs(b.rb).length > 1 ? 'retourbonnen ' : 'retourbon ') + rbRbs(b.rb).join(' · ') : ''].filter(Boolean).join(' · ')}</small>
@@ -95,7 +97,7 @@ function rbForm(v) {
   v.querySelectorAll('[data-rf]').forEach(i => { toon(i); i.oninput = () => toon(i); });
   $('#rbNr').onfocus = ev => setTimeout(() => { const x = ev.target; x.setSelectionRange(x.value.length, x.value.length); }, 0);
   if ($('.rbscan')) $('.rbscan').onclick = () => $('.rbscan').classList.toggle('groot');
-  const klaar = () => { if (e.rij) { rbRij.shift(); rbTel.n++; } ui.rbEdit = e.rij && rbRij.length ? Object.assign({ i: -1 }, rbRij[0], { rij: 1 }) : null; renderRetour(); window.scrollTo(0, 0); };
+  const klaar = () => { if (e.rij) { rbRij.shift(); rbTel.n++; if (!rbRij.length) rbTel = { n: 0, tot: 0 }; rbRijBewaar(); } ui.rbEdit = e.rij && rbRij.length ? Object.assign({ i: -1 }, rbRij[0], { rij: 1 }) : null; renderRetour(); window.scrollTo(0, 0); };
   $('#rbTerug').onclick = () => { ui.rbEdit = null; renderRetour(); };
   if ($('#rbSkip')) $('#rbSkip').onclick = klaar;
   if ($('#rbDel')) $('#rbDel').onclick = async () => { if (!await bevestig('Bon verwijderen?', `${esc(b.nr || 'Deze bon')} verdwijnt uit de lijst.`, 'Verwijderen')) return; RB.bonnen.splice(e.i, 1); if (b.nr) idel('rbscan:' + b.nr); rbBewaar(); ui.rbEdit = null; renderRetour(); };
@@ -119,18 +121,25 @@ function rbForm(v) {
 function rbWsHtml(b) { const s = rbStatus(b); if (s.st === 'leeg') return '<p class="small">Lege bon: er ging niets retour.</p>'; if (!s.f) return `<p class="small">${s.st === 'mist' ? 'Deze bon staat niet op de ingelezen weekstaten.' : 'Nog niet op een ingelezen weekstaat.'}</p>`;
   return `<div class="rbws ${s.st}"><b>Weekstaat ${esc(s.f.ws)}${s.f.fnr ? ' · factuur ' + esc(s.f.fnr) : ''}</b>${(s.f.regels || []).map(r => `<small>${r.n} × ${esc(r.oms)} · ${rbEuro(Math.abs(r.eur))}</small>`).join('')}<small>Gecrediteerd ${rbEuro(Math.abs(s.f.eur))} · bon ${rbEuro(rbWaarde(b))}</small>${s.st === 'verschil' ? `<small class="rood"><b>${s.v > 0 ? rbEuro(s.v) + ' te weinig' : rbEuro(-s.v) + ' te veel'}</b>${s.dif.length ? ' · ' + s.dif.map(esc).join(' · ') : ''}</small>` : '<small>✓ Klopt</small>'}</div>`; }
 /* scans (pdf van de iPhone-scanner of foto's) → per bladzijde een plaatje + gedrukte tekst lezen */
+function rbVgTekst() { const b = rbBezig; return `Scan ${b.n} van ${b.tot} gelezen${b.al + b.weg ? ` · ${b.al + b.weg} overgeslagen` : ''}`; }
+function rbVg() { const b = rbBezig; if (!b || ui.tab !== 'retour' || ui.rbEdit) return; const x = $('#rbVgB'), t = $('#rbVgT'); if (x) x.style.width = Math.round(b.n / Math.max(1, b.tot) * 100) + '%'; if (t) t.textContent = rbVgTekst(); }
 async function rbUpload(files) {
-  if (!files.length) return; let n = 0, tot = 0, eerst = true, weg = 0; if (!rbRij.length) rbTel = { n: 0, tot: 0 };
-  let al = 0; const klaar = r => { if (r.leeg) { weg++; tot--; rbTel.tot--; return; } const x = r.b.nr && RB.bonnen.find(b => b.nr === r.b.nr); if (x && rbGec(x)) { iset('rbscan:' + x.nr, r.img); x.scan = true; al++; tot--; rbTel.tot--; return; } rbRij.push(r); toast(`Scan ${++n} van ${tot} gelezen`, 4000); if (eerst && !ui.rbEdit && ui.tab === 'retour') { eerst = false; ui.rbEdit = Object.assign({ i: -1 }, rbRij[0], { rij: 1 }); renderRetour(); } };
-  try {
-    for (const f of files) {
-      if (/pdf/i.test(f.type) || /\.pdf$/i.test(f.name)) { const p = await pdfjs(), d = await p.getDocument({ data: await f.arrayBuffer() }).promise; tot += d.numPages; rbTel.tot += d.numPages;
-        for (let i = 1; i <= d.numPages; i++) { const pg = await d.getPage(i), tx = (await pg.getTextContent()).items.map(x => x.str).join(' '), vp0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: 2400 / vp0.width }), c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
-          await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise; const r = await rbLees(c, tx); c.width = c.height = 0; pg.cleanup(); klaar(r); } }
-      else { tot++; rbTel.tot++; const bm = await createImageBitmap(f), sc = Math.min(1, 2400 / bm.width), c = document.createElement('canvas'); c.width = bm.width * sc; c.height = bm.height * sc; c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height); bm.close && bm.close(); const r = await rbLees(c, ''); c.width = c.height = 0; klaar(r); }
-    }
-  } catch (e) { toast('Kon de scan niet openen: ' + e.message, 6000); }
-  if (al) rbBewaar(); if (n || weg || al) toast(`${n} ${n === 1 ? 'scan' : 'scans'} klaar om in te vullen${al ? ` · ${al} al gecontroleerd overgeslagen` : ''}${weg ? ` · ${weg} lege ${weg === 1 ? 'bladzijde' : 'bladzijden'} overgeslagen` : ''}`, 5000); if (!n && ui.tab === 'retour' && !ui.rbEdit) renderRetour();
+  if (!files.length || rbBezig) return; if (!rbRij.length) rbTel = { n: 0, tot: 0 };
+  const B = rbBezig = { n: 0, tot: 0, al: 0, weg: 0 }, bron = [];
+  try { for (const f of files) if (/pdf/i.test(f.type) || /\.pdf$/i.test(f.name)) { const d = await (await pdfjs()).getDocument({ data: await f.arrayBuffer() }).promise; bron.push(d); B.tot += d.numPages; } else { bron.push(f); B.tot++; } }
+  catch (e) { rbBezig = null; return toast('Kon de scan niet openen: ' + e.message, 6000); }
+  rbTel.tot += B.tot; if (ui.tab === 'retour' && !ui.rbEdit) renderRetour();
+  const klaar = r => { B.n++; const x = r.b.nr && RB.bonnen.find(b => b.nr === r.b.nr);
+    if (r.leeg) { B.weg++; rbTel.tot--; } else if (x && rbGec(x)) { iset('rbscan:' + x.nr, r.img); x.scan = true; B.al++; rbTel.tot--; } else rbRij.push(r);
+    rbRijBewaar(); rbVg(); };
+  try { for (const d of bron) {
+    if (d.numPages) for (let i = 1; i <= d.numPages; i++) { const pg = await d.getPage(i), tx = (await pg.getTextContent()).items.map(x => x.str).join(' '), vp0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: 2400 / vp0.width }), c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+      await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise; const r = await rbLees(c, tx); c.width = c.height = 0; pg.cleanup(); klaar(r); }
+    else { const bm = await createImageBitmap(d), sc = Math.min(1, 2400 / bm.width), c = document.createElement('canvas'); c.width = bm.width * sc; c.height = bm.height * sc; c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height); bm.close && bm.close(); const r = await rbLees(c, ''); c.width = c.height = 0; klaar(r); }
+  } } catch (e) { toast('Inlezen gestopt: ' + e.message, 6000); }
+  rbBezig = null; if (B.al) rbBewaar(); rbRijBewaar();
+  toast(`Klaar: ${rbRij.length} ${rbRij.length === 1 ? 'bon' : 'bonnen'} om te controleren${B.al ? ` · ${B.al} al gecontroleerd` : ''}${B.weg ? ` · ${B.weg} leeg` : ''}`, 5000);
+  if (ui.tab === 'retour' && !ui.rbEdit) renderRetour();
 }
 /* 1.86: één bladzijde tegelijk (iPhone-geheugen); eerst de tekst in de pdf zelf, anders tekstherkenning op twee stroken */
 async function rbLees(c, tx) {
