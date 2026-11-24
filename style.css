@@ -710,3 +710,6 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 
 /* 1.91: datumveld niet breder dan het vak */
 .rbf .f>input[type=date]{max-width:100%;-webkit-appearance:none;appearance:none;min-height:44px}
+
+/* 1.94: plaatje van de weekstaat */
+.rbwsimg{display:block;width:100%;margin:8px 0;border-radius:8px;border:1px solid var(--lijn);background:#fff}.rbwsimg.groot{width:220%;max-width:none}.rbws{overflow:auto}
