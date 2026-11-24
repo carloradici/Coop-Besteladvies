@@ -4,7 +4,7 @@ function kwTekenItem(wk, it, plekNaam, tid, cel) {
   const ind = JSON.parse(JSON.stringify(indelingVan(wk, tid))); ind.items = ind.items || [];
   ind.items.forEach(x => { x.cellen = (x.cellen || []).filter(c => c !== cel); });
   let i = ind.items.findIndex(x => x.kw === it.id);
-  if (i < 0) { ind.items.push({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: [], aantal: '', opm: [it.mech, it.variant].filter(Boolean).join(' · '), kleur: ind.items.length % TKLEUR.length, klaar: false, kw: it.id }); i = ind.items.length - 1; }
+  if (i < 0) { ind.items.push({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: [], aantal: '', opm: [it.mech, it.kop ? it.arts.length + ' soorten' : it.variant].filter(Boolean).join(' · '), kleur: ind.items.length % TKLEUR.length, klaar: false, kw: it.id }); i = ind.items.length - 1; }
   ind.items[i].cellen.push(cel); ind.items = ind.items.filter((x, j) => j === i || x.kw || (x.cellen || []).length);
   slaIndelingOp(wk, tid, ind);
   const p = S.kwplan[wk]; const oud = (p.plek || {})[it.id] || '';
@@ -75,7 +75,7 @@ function kwVorigeIndeling(wk, tid, alleenCheck) {
     }
   }
   if (alleenCheck) return nieuw.length > 0;
-  const pl = kwPlekVanTafel(tid); const ind = { items: nieuw.map(([it, cel], i) => ({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: cel, aantal: '', opm: [it.mech, it.variant].filter(Boolean).join(' · '), kleur: i % TKLEUR.length, klaar: false, kw: it.id })) };
+  const pl = kwPlekVanTafel(tid); const ind = { items: nieuw.map(([it, cel], i) => ({ naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), cellen: cel, aantal: '', opm: [it.mech, it.kop ? it.arts.length + ' soorten' : it.variant].filter(Boolean).join(' · '), kleur: i % TKLEUR.length, klaar: false, kw: it.id })) };
   slaIndelingOp(wk, tid, ind); p.plek = Object.assign({}, p.plek || {}); nieuw.forEach(([it]) => p.plek[it.id] = pl.naam); kwPlanOpslaan(wk); return nieuw.length;
 }
 // 1.58: vakje aan/uit; aan = null wisselt. Slepen over een rij zet meerdere vakjes tegelijk.

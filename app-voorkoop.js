@@ -72,15 +72,16 @@ function kwKoppel(wk, id, ids) {
   const p = S.kwplan[wk], it = p.folder.items.find(x => x.id === id), mee = p.folder.items.filter(x => ids.includes(x.id)); if (!it || !mee.length) return;
   const arts = x => (x.arts || []).length ? x.arts : [{ naam: x.naam, nr: (x.nrs || [])[0], ean: (x.nrs || [])[1], cvoor: (x.prijs || [])[0], cvan: (x.streep || [])[0] }];
   const al = [it, ...mee], pr = al.flatMap(x => x.prijs || []), sp = al.flatMap(x => x.streep || []);
-  Object.assign(it, { arts: al.flatMap(arts), nrs: [...new Set(al.flatMap(x => x.nrs || []))], prijs: pr.length ? [...new Set([Math.min(...pr), Math.max(...pr)])] : it.prijs, streep: sp.length ? [Math.max(...sp)] : [] });
+  const nm = (it.kop || [it.naam]).concat(mee.flatMap(x => x.kop || [x.naam])), vol = nm.join(' + ');
+  Object.assign(it, { kop: nm, naam: vol.length > 45 ? nm.map(x => x.split(' ')[0]).join(' + ') : vol, arts: al.flatMap(arts), nrs: [...new Set(al.flatMap(x => x.nrs || []))], prijs: pr.length ? [...new Set([Math.min(...pr), Math.max(...pr)])] : it.prijs, streep: sp.length ? [Math.max(...sp)] : [] });
   p.folder.items = p.folder.items.filter(x => !ids.includes(x.id));
   for (const k of ['plek', 'notitie']) if (ids.some(i => (p[k] || {})[i])) { p[k] = Object.assign({}, p[k]); ids.forEach(i => delete p[k][i]); }
-  for (const x of kwPlekken()) { if (!x.tafel) continue; const ind = indelingVan(wk, x.tafel); if ((ind.items || []).some(y => ids.includes(y.kw))) { const ni = JSON.parse(JSON.stringify(ind)); ni.items = ni.items.filter(y => !ids.includes(y.kw)); slaIndelingOp(wk, x.tafel, ni, true); } }
+  for (const t of Object.keys(S.indeling || {}).filter(k => k.startsWith(wk + '|')).map(k => k.slice(wk.length + 1))) { const x = { tafel: t }, ind = indelingVan(wk, t); if ((ind.items || []).some(y => ids.includes(y.kw) || y.kw === id)) { const ni = JSON.parse(JSON.stringify(ind)); ni.items = ni.items.filter(y => !ids.includes(y.kw)); ni.items.filter(y => y.kw === id).forEach(y => Object.assign(y, { naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), opm: [it.mech, it.arts.length + ' soorten'].filter(Boolean).join(' · ') })); slaIndelingOp(wk, x.tafel, ni, true); } }
   kwPlanOpslaan(wk); toast(`Gekoppeld · ${it.arts.length} soorten`); render(true);
 }
 function kwSplits(wk, id) {
   const p = S.kwplan[wk]; const i = p.folder.items.findIndex(x => x.id === id); const it = p.folder.items[i]; if (!it || !(it.arts || []).length) return;
-  const los = it.arts.map((a, j) => Object.assign({}, it, { id: it.id + '-' + (j + 1), naam: a.naam, variant: '', nrs: [a.nr, a.ean].filter(Boolean), prijs: a.cvoor ? [a.cvoor] : it.prijs, streep: a.cvan && a.cvan !== a.cvoor ? [a.cvan] : [], arts: [a] }));
+  const los = it.arts.map((a, j) => Object.assign({}, it, { id: it.id + '-' + (j + 1), naam: a.naam, variant: '', kop: undefined, nrs: [a.nr, a.ean].filter(Boolean), prijs: a.cvoor ? [a.cvoor] : it.prijs, streep: a.cvan && a.cvan !== a.cvoor ? [a.cvan] : [], arts: [a] }));
   p.folder.items.splice(i, 1, ...los);
   for (const k of ['plek', 'notitie']) if ((p[k] || {})[id]) { p[k] = Object.assign({}, p[k]); los.forEach(l => p[k][l.id] = p[k][id]); delete p[k][id]; }
   for (const x of kwPlekken()) { if (!x.tafel) continue; const ind = indelingVan(wk, x.tafel); if ((ind.items || []).some(y => y.kw === id)) { const ni = JSON.parse(JSON.stringify(ind)); ni.items = ni.items.filter(y => y.kw !== id); slaIndelingOp(wk, x.tafel, ni, true); } }

@@ -455,13 +455,9 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['⚡', 'Sneller bijwerken', 'Open je de app of tik je op de melding "Nieuwe versie", dan werkt hij zichzelf meteen bij. Je blijft ingelogd op hetzelfde scherm.'],
-  ['🕘', 'Vorige weken', 'Bij de actieplanning zie je alleen nog de huidige en komende weken; oude weken staan onder 🕘 Vorige weken. Hij opent op de laatst opgehaalde week.'],
-  ['🔄', 'Updates zoals in Brood Opzet', 'Een groene balk bovenaan als er een nieuwe versie is. Na het bijwerken blijf je ingelogd. Zet je "Updates tonen" uit (Meer › App-instellingen), dan werkt de app zichzelf stil bij.'],
-  ['🔗', 'Acties koppelen', 'Staan soorten van dezelfde actie los in KW-acties? Tik op 🔗 en vink ze aan. Met ✂️ Soorten los sorteren haal je ze weer uit elkaar.'],
-  ['🛒', 'Advies per soort', 'Onder "soorten" zie je per soort hoeveel HE. Het voorkoop-advies is de som daarvan.'],
-  ['🔍', 'Retourbonnen zoeken en filteren', 'Zoek op bonnummer, filter op Fout, Open of Goed en sorteer op weekstaat, datum, bedrag of nummer.'],
-  ['💶', 'Statiegeld per bon', 'In het formulier zie je per vakje wat het oplevert en onderaan het totaal.']];
+const NIEUWS = [['🔗', 'Gekoppelde acties in het schema', 'Het blok toont nu alle gekoppelde acties (bv. Maaza + Dubbelfrisss + Taksi) en het aantal soorten, ook in de pdf. Al eerder gekoppeld? Eén keer ✂️ los sorteren en opnieuw koppelen.'],
+  ['⚡', 'Sneller bijwerken', 'Open je de app of tik je op de melding "Nieuwe versie", dan werkt hij zichzelf meteen bij. Je blijft ingelogd op hetzelfde scherm.'],
+  ['🕘', 'Vorige weken', 'Bij de actieplanning zie je alleen nog de huidige en komende weken; oude weken staan onder 🕘 Vorige weken. Hij opent op de laatst opgehaalde week.']];
 let nieuweVersie = null;
 const updTonen = () => (S.pref || {}).upd ?? rol === 'admin';
 async function zoekUpdate(stil, forceer) {
