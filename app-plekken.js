@@ -34,6 +34,7 @@ function kwVakKies(wk, tid, cel) {
 function kwBlokMenu(wk, tid, idx) {
   const ind = JSON.parse(JSON.stringify(indelingVan(wk, tid))); const it = ind.items[idx]; if (!it) return; const t = S.tafels[tid];
   const ov = sheet(`<h2 style="margin:0">${esc(it.naam)}</h2><p class="small">${plekTekst(t, it.cellen)}${it.opm ? ' · ' + esc(it.opm) : ''}</p>
+  <button class="belrij" data-bm="naam"><span class="ic">🔤</span><span><b>Naam aanpassen</b><small>Wat er in het blok en de pdf staat</small></span></button>
   <button class="belrij" data-bm="vak"><span class="ic">✏️</span><span><b>Vakjes aanpassen</b><small>Tik vakjes aan of uit</small></span></button>
   <button class="belrij" data-bm="klaar"><span class="ic">${it.klaar ? '↩️' : '✅'}</span><span><b>${it.klaar ? 'Staat er nog niet' : 'Staat erin'}</b><small>${it.klaar && it.door ? 'Afgevinkt door ' + esc(it.door) : 'Afvinken als het is opgebouwd'}</small></span></button>
   <button class="belrij" data-bm="opm"><span class="ic">💬</span><span><b>Opmerking</b><small>${it.nota ? esc(it.nota) : 'Bijv. vullen vanuit restanten, 1 hoog, breed presenteren'}</small></span></button>
@@ -41,6 +42,7 @@ function kwBlokMenu(wk, tid, idx) {
   <button class="btn sec" data-x style="width:100%;margin-top:10px">Sluiten</button>`, (e, o) => {
     const b = e.target.closest('[data-bm]'); if (!b) return; o.remove(); const k = b.dataset.bm; const p = S.kwplan[wk];
     if (k === 'opm') return notitieKeuze(it.naam, it.nota || '', ['Vullen vanuit restanten', '1 hoog', 'Breed presenteren'], t => { it.nota = t; slaIndelingOp(wk, tid, ind); render(true); }, '💬 Opmerking');
+    if (k === 'naam') { const o2 = sheet(`<h2 style="margin:0">🔤 Naam aanpassen</h2><input type="text" id="bmN" value="${esc(it.naam)}" style="width:100%;margin:10px 0"><div class="row"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="bmS" style="flex:1">Opslaan</button></div>`); o2.querySelector('#bmS').onclick = () => { const n = o2.querySelector('#bmN').value.trim(); if (!n) return; o2.remove(); if (it.kw) { const f = p && p.folder.items.find(x => x.id === it.kw); if (f) f.eigen = 1; kwNaamZet(wk, it.kw, n); } else { it.naam = n; slaIndelingOp(wk, tid, ind); } render(true); }; return; }
     if (k === 'vak') { ui.kwSel = { tafel: tid, idx }; }
     if (k === 'klaar') { it.klaar = !it.klaar; it.door = it.klaar ? mijnNaam() : null; it.om = it.klaar ? new Date().toISOString() : null; slaIndelingOp(wk, tid, ind); if (it.kw) { p.klaar = Object.assign({}, p.klaar || {}); if (it.klaar) p.klaar[it.kw] = mijnNaam(); else delete p.klaar[it.kw]; kwPlanOpslaan(wk); } }
     if (k === 'weg') { ind.items.splice(idx, 1); slaIndelingOp(wk, tid, ind); if (it.kw && p.plek) { p.plek = Object.assign({}, p.plek); delete p.plek[it.kw]; kwPlanOpslaan(wk); } }

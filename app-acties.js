@@ -93,6 +93,7 @@ function renderKwActies() {
   kwMigreer(); kwHerlees();
   const v = $('#view'); const nu = weekSleutel(C.today()); const weken = Object.keys(S.kwplan || {}).sort();
   if (!ui.kwWeek || !S.kwplan[ui.kwWeek]) ui.kwWeek = weken[weken.length - 1] || null; // 2.08: de laatst opgehaalde week
+  if (ui.kwWeek) kwKopFix(ui.kwWeek);
   const wk = ui.kwWeek; const p = wk ? kwPas(S.kwplan[wk]) : null; if (p) kwNormPlan(p); const f = p && p.folder; const kan = magKwPlan();
   const volg = [1, 2, 3, 4, 5, 6].map(n => { const d = C.add(C.monday(C.today()), 7 * n); const x = C.isoWeek(d); return { y: x.y, w: x.w, k: weekSleutel(d) }; }).filter(x => !S.kwplan[x.k]);
   const stap = ui.kwStap || 'sort';

@@ -455,7 +455,8 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['🔗', 'Gekoppelde acties in het schema', 'Het blok toont nu alle gekoppelde acties (bv. Maaza + Dubbelfrisss + Taksi) en het aantal soorten, ook in de pdf. Al eerder gekoppeld? Eén keer ✂️ los sorteren en opnieuw koppelen.'],
+const NIEUWS = [['🔤', 'Naam aanpassen', 'Tik op een blok in het schema en kies Naam aanpassen. Gekoppelde acties heten nu naar de merken, bv. Dubbelfrisss + Maaza + Taksi.'],
+  ['🔗', 'Gekoppelde acties in het schema', 'Het blok toont nu alle gekoppelde acties (bv. Maaza + Dubbelfrisss + Taksi) en het aantal soorten, ook in de pdf. Al eerder gekoppeld? Eén keer ✂️ los sorteren en opnieuw koppelen.'],
   ['⚡', 'Sneller bijwerken', 'Open je de app of tik je op de melding "Nieuwe versie", dan werkt hij zichzelf meteen bij. Je blijft ingelogd op hetzelfde scherm.'],
   ['🕘', 'Vorige weken', 'Bij de actieplanning zie je alleen nog de huidige en komende weken; oude weken staan onder 🕘 Vorige weken. Hij opent op de laatst opgehaalde week.']];
 let nieuweVersie = null;

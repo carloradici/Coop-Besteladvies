@@ -68,13 +68,21 @@ function kwKoppelKies(wk, id) {
   sheet(`<h2 style="margin:0">🔗 Koppelen</h2><p class="small">Welke acties horen bij <b>${esc(it.naam)}</b>?</p>${A.length ? '<h3>Zelfde actie?</h3>' + A.map(rij).join('') : ''}${B.length ? '<h3>Andere acties</h3>' + B.map(rij).join('') : ''}<button class="btn" id="kwKp" style="width:100%;margin-top:8px">Koppelen</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`, (e, ov) => {
     if (e.target.id !== 'kwKp') return; const ids = [...ov.querySelectorAll('input:checked')].map(x => x.value); if (!ids.length) return toast('Vink eerst een actie aan'); ov.remove(); kwKoppel(wk, id, ids); });
 }
+// 2.10: naam van een gekoppelde actie = de merken uit de kassagegevens ("Dubbelfrisss + Maaza + Taksi")
+function kwMerkNaam(it) { const perB = kwNaamKassa.b || (kwNaamKassa.b = Object.values(S.kassa || {}).reduce((m, r) => (r.b && (m[r.b] = r), m), {}));
+  const m = [...new Set((it.arts || []).map(a => { const r = (S.kassa || {})[a.nr] || perB[a.nr] || (S.kassa || {})[a.ean] || perB[a.ean]; return r && r.m ? r.m.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase()) : ''; }).filter(Boolean))];
+  return m.length ? m.join(' + ') : ''; }
+function kwNaamZet(wk, id, naam) { const p = S.kwplan[wk], it = p && p.folder.items.find(x => x.id === id); if (!it) return; it.naam = naam;
+  for (const k of Object.keys(S.indeling || {}).filter(k => k.startsWith(wk + '|'))) { const t = k.slice(wk.length + 1), ind = indelingVan(wk, t); if ((ind.items || []).some(y => y.kw === id && y.naam !== naam)) { const ni = JSON.parse(JSON.stringify(ind)); ni.items.forEach(y => { if (y.kw === id) y.naam = naam; }); slaIndelingOp(wk, t, ni, true); } }
+  kwPlanOpslaan(wk); }
+function kwKopFix(wk) { const p = S.kwplan[wk]; if (!p || !p.folder || kwKopFix[wk]) return; kwKopFix[wk] = 1; for (const it of p.folder.items) if (it.kop && !it.eigen) { const n = kwMerkNaam(it); if (n && n !== it.naam) kwNaamZet(wk, it.id, n); } }
 function kwKoppel(wk, id, ids) {
   const p = S.kwplan[wk], it = p.folder.items.find(x => x.id === id), mee = p.folder.items.filter(x => ids.includes(x.id)); if (!it || !mee.length) return;
   const arts = x => (x.arts || []).length ? x.arts : [{ naam: x.naam, nr: (x.nrs || [])[0], ean: (x.nrs || [])[1], cvoor: (x.prijs || [])[0], cvan: (x.streep || [])[0] }];
   const al = [it, ...mee], pr = al.flatMap(x => x.prijs || []), sp = al.flatMap(x => x.streep || []);
   const nm = (it.kop || [it.naam]).concat(mee.flatMap(x => x.kop || [x.naam])), vol = nm.join(' + ');
-  Object.assign(it, { kop: nm, naam: vol.length > 45 ? nm.map(x => x.split(' ')[0]).join(' + ') : vol, arts: al.flatMap(arts), nrs: [...new Set(al.flatMap(x => x.nrs || []))], prijs: pr.length ? [...new Set([Math.min(...pr), Math.max(...pr)])] : it.prijs, streep: sp.length ? [Math.max(...sp)] : [] });
-  p.folder.items = p.folder.items.filter(x => !ids.includes(x.id));
+  Object.assign(it, { kop: nm, arts: al.flatMap(arts), nrs: [...new Set(al.flatMap(x => x.nrs || []))], prijs: pr.length ? [...new Set([Math.min(...pr), Math.max(...pr)])] : it.prijs, streep: sp.length ? [Math.max(...sp)] : [] });
+  p.folder.items = p.folder.items.filter(x => !ids.includes(x.id)); if (!it.eigen) it.naam = kwMerkNaam(it) || (vol.length > 45 ? nm.map(x => x.split(' ')[0]).join(' + ') : vol);
   for (const k of ['plek', 'notitie']) if (ids.some(i => (p[k] || {})[i])) { p[k] = Object.assign({}, p[k]); ids.forEach(i => delete p[k][i]); }
   for (const t of Object.keys(S.indeling || {}).filter(k => k.startsWith(wk + '|')).map(k => k.slice(wk.length + 1))) { const x = { tafel: t }, ind = indelingVan(wk, t); if ((ind.items || []).some(y => ids.includes(y.kw) || y.kw === id)) { const ni = JSON.parse(JSON.stringify(ind)); ni.items = ni.items.filter(y => !ids.includes(y.kw)); ni.items.filter(y => y.kw === id).forEach(y => Object.assign(y, { naam: it.naam, artikelen: kwKeys(it).map(k => ({ key: k, naam: M.art[k].naam, nr: M.art[k].nr })), opm: [it.mech, it.arts.length + ' soorten'].filter(Boolean).join(' · ') })); slaIndelingOp(wk, x.tafel, ni, true); } }
   kwPlanOpslaan(wk); toast(`Gekoppeld · ${it.arts.length} soorten`); render(true);
