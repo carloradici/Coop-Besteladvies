@@ -47,7 +47,7 @@ async function rbOpschonen() {
     const dif = RB_V.filter(([f]) => +a[f] && +b[f] && +a[f] !== +b[f]);
     if (dif.length && !await bevestig(`${esc(nr)} staat dubbel`, dif.map(([f, t]) => `${t}: <b>${a[f]}</b> of <b>${b[f]}</b>`).join('<br>'), `Houd ${dif.map(([f]) => a[f]).join(' / ')}`, `Houd ${dif.map(([f]) => b[f]).join(' / ')}`)) RB_V.forEach(([f]) => +b[f] ? a[f] = b[f] : delete a[f]);
     RB_V.forEach(([f]) => { if (+b[f] && !+a[f]) a[f] = b[f]; }); for (const f of ['datum', 'opm']) if (!a[f] && b[f]) a[f] = b[f];
-    a.rb = [...new Set(rbRbs(a.rb).concat(rbRbs(b.rb)))].join(', '); a.ok = a.ok || b.ok; a.scan = a.scan || b.scan; if (a.bags || b.bags) a.bags = [...new Set((a.bags || []).concat(b.bags || []))];
+    a.rb = [...new Set(rbRbs(a.rb).concat(rbRbs(b.rb)))].join(', '); a.ok = a.ok || b.ok; a.scan = a.scan || b.scan; if (a.bags || b.bags) a.bags = rbBags((a.bags || []).concat(b.bags || []));
   }
   if (w) { RB.bonnen = uit; rbBewaar(); }
 }
@@ -147,11 +147,11 @@ function rbForm(v) {
   $('#rbSla').onclick = async () => {
     const n = Object.assign({}, e.i >= 0 ? RB.bonnen[e.i] : {}, { nr: $('#rbNr').value.replace(/\D/g, '') ? 'BGR ' + $('#rbNr').value.replace(/\D/g, '') : '', datum: $('#rbDat').value, rb: rbRbs($('#rbRb').value).join(', '), opm: $('#rbOpm').value.trim() });
     v.querySelectorAll('[data-rf]').forEach(i => { const k = i.dataset.rf, s = rbSom(i.value); if (s) n[k] = s; else delete n[k]; });
-    if (b.bags) n.bags = [...new Set((n.bags || []).concat(b.bags))];
+    if (b.bags) n.bags = rbBags((n.bags || []).concat(b.bags));
     if (!n.nr) return toast('Vul het bonnummer in');
     let i = e.i; const j = RB.bonnen.findIndex((x, y) => y !== e.i && x.nr === n.nr), tk = [];
     if (j >= 0) { const k = await rbKeuze(n.nr); if (!k) return; if (k === 'over') return klaar(); const x = RB.bonnen[j];
-      if (k === 'samen') { const m = Object.assign({}, x); for (const f of ['datum', 'opm']) if (!m[f] && n[f]) m[f] = n[f]; m.rb = [...new Set(rbRbs(m.rb).concat(rbRbs(n.rb)))].join(', '); if (n.bags || m.bags) m.bags = [...new Set((m.bags || []).concat(n.bags || []))];
+      if (k === 'samen') { const m = Object.assign({}, x); for (const f of ['datum', 'opm']) if (!m[f] && n[f]) m[f] = n[f]; m.rb = [...new Set(rbRbs(m.rb).concat(rbRbs(n.rb)))].join(', '); if (n.bags || m.bags) m.bags = rbBags((m.bags || []).concat(n.bags || []));
         const dif = RB_V.filter(([f]) => n[f] && m[f] && +n[f] !== +m[f]); RB_V.forEach(([f]) => { if (n[f] && !m[f]) m[f] = n[f]; });
         if (dif.length && await bevestig('Aantallen wijken af', dif.map(([f, t]) => `${t}: in de lijst <b>${m[f]}</b>, op deze bon <b>${n[f]}</b>`).join('<br>'), 'Bon gebruiken', 'Lijst houden')) dif.forEach(([f]) => m[f] = n[f]);
         Object.assign(n, m); } else n.ok = x.ok;
@@ -202,11 +202,14 @@ async function rbUpload(files) {
   if (ui.tab === 'retour' && !ui.rbEdit) renderRetour();
 }
 /* 1.86: één bladzijde tegelijk (iPhone-geheugen); eerst de tekst in de pdf zelf, anders tekstherkenning op twee stroken */
+// 2.12: Bag-ID's opschonen. Eén sticker wordt vaak gelezen; een leesfout (≤2 cijfers anders, niet in de laatste 2, of maar 1× gelezen naast een vaker gelezen nummer) is dezelfde sticker
+function rbBags(l) { const n = {}; l.forEach(x => n[x] = (n[x] || 0) + 1);
+  return Object.keys(n).sort((a, b) => n[b] - n[a]).reduce((a, x) => a.some(y => { const d = [...y].map((c, i) => c !== x[i] ? i : -1).filter(i => i >= 0); return !d.length || (d.length <= 2 && (d.every(i => i < 6) || (n[x] === 1 && n[y] > 1))); }) ? a : a.concat(x), []); }
 async function rbLees(c, tx) {
   const kl = document.createElement('canvas'), fz = Math.min(1, 1400 / c.width); kl.width = c.width * fz; kl.height = c.height * fz; kl.getContext('2d').drawImage(c, 0, 0, kl.width, kl.height);
   const r = { img: kl.toDataURL('image/jpeg', 0.6), b: {} }; { const d = kl.getContext('2d').getImageData(0, 0, kl.width, kl.height).data; let z = 0; for (let p = 0; p < d.length; p += 16) if (d[p] + d[p + 1] + d[p + 2] < 300) z++; r.inkt = z / (d.length / 16); } kl.width = kl.height = 0;
   const zoek = (t, o) => { const t2 = t.replace(/BGR\s*([0-9OoIl|]{8,10})/gi, (x, y) => 'BGR ' + y.replace(/[Oo]/g, '0').replace(/[Il|]/g, '1')), m = t2.match(/BGR\s*(\d{6,10})/i) || t2.match(/\b(20\d{7})\b/), d = t.match(/(\d{1,2})\s*-\s*(\d{1,2})\s*-\s*(20\d\d)/);
-    if (m) r.b.nr = 'BGR ' + m[1]; if (d) r.b.datum = `${d[3]}-${d[2].padStart(2, '0')}-${d[1].padStart(2, '0')}`; const ids = [...o.matchAll(/Bag\W{0,2}[I1l|]?\W{0,2}D\W{0,3}(\d{8})(?!\d)/gi)].map(x => x[1]).reduce((a, x) => a.some(y => { const d = [...y].map((c, i) => c !== x[i] ? i : -1).filter(i => i >= 0); return !d.length || (d.length === 1 && d[0] < 6); }) ? a : a.concat(x), []), lab = Math.max(0, ...o.split(/[\f\v]/).map(x => (x.match(/KLANT\s*LABEL/gi) || []).length)), bb = ids.length || Math.max(lab, /KLANT|LABEL|Bag\W?[I1l|]?\W?D|Klant\W?[I1l|]D/i.test(o) ? 1 : 0);
+    if (m) r.b.nr = 'BGR ' + m[1]; if (d) r.b.datum = `${d[3]}-${d[2].padStart(2, '0')}-${d[1].padStart(2, '0')}`; const ids = rbBags([...o.matchAll(/Bag\W{0,2}[I1l|]?\W{0,2}D\W{0,3}(\d{8})(?!\d)/gi)].map(x => x[1])), lab = Math.max(0, ...o.split(/[\f\v]/).map(x => (x.match(/KLANT\s*LABEL/gi) || []).length)), bb = ids.length ? Math.max(lab, ids.length) : Math.max(lab, /KLANT|LABEL|Bag\W?[I1l|]?\W?D|Klant\W?[I1l|]D/i.test(o) ? 1 : 0);
     if (bb) { r.b.bb = bb; r.b._bb = String(bb); } if (ids.length) r.b.bags = ids; };
   if (/BGR\s*\d{6}/i.test(tx || '')) { zoek(tx, tx); return r; }
   if (!rbOcr) try { await loadScript(LIB.ocr); rbOcr = await window.Tesseract.createWorker('eng'); } catch (e) { r.fout = 'Tekst lezen kon niet laden (offline?): vul het bonnummer zelf in'; return r; }

@@ -455,7 +455,8 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['📲', 'Sneller bijwerken', 'Tik je op de melding "Nieuwe versie", dan zie je meteen een scherm "Bijwerken…" en staat de nieuwe versie er binnen een paar seconden.'],
+const NIEUWS = [['🛍️', 'Bigbags beter geteld', 'Leest de app hetzelfde Bag-ID een keer verkeerd, dan telt hij dat niet meer als tweede bigbag.'],
+  ['📲', 'Sneller bijwerken', 'Tik je op de melding "Nieuwe versie", dan zie je meteen een scherm "Bijwerken…" en staat de nieuwe versie er binnen een paar seconden.'],
   ['🔤', 'Naam aanpassen', 'Tik op een blok in het schema en kies Naam aanpassen. Gekoppelde acties heten nu naar de merken, bv. Dubbelfrisss + Maaza + Taksi.'],
   ['🔗', 'Gekoppelde acties in het schema', 'Het blok toont nu alle gekoppelde acties (bv. Maaza + Dubbelfrisss + Taksi) en het aantal soorten, ook in de pdf. Al eerder gekoppeld? Eén keer ✂️ los sorteren en opnieuw koppelen.'],
   ['⚡', 'Sneller bijwerken', 'Open je de app of tik je op de melding "Nieuwe versie", dan werkt hij zichzelf meteen bij. Je blijft ingelogd op hetzelfde scherm.'],
