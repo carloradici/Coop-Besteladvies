@@ -278,12 +278,13 @@ function renderAppInst() {
   <div class="it"><span><b>Korte lijst</b><br><span class="small">Eén regel per artikel: naam, advies en invullen</span></span><input type="checkbox" class="schak" data-pb="kort" ${p.kort ? 'checked' : ''}></div>
   <div class="it"><span><b>Verkooptabel altijd tonen</b><br><span class="small">Anders zie je die pas na een tik op "▾ Meer" bij een artikel</span></span><input type="checkbox" class="schak" data-pb="details" ${p.details ? 'checked' : ''}></div>
   <div class="it"><span><b>Eenvoudige modus</b><br><span class="small">Minder informatie en grotere knoppen</span></span><input type="checkbox" class="schak" data-pb="eenvoudig" ${p.eenvoudig ? 'checked' : ''}></div>
-  <div class="it"><span><b>Geluid bij scannen</b><br><span class="small">Zachte tik bij gevonden, lage toon bij onbekend</span></span><input type="checkbox" class="schak" id="pGel" ${p.stil ? '' : 'checked'}></div></div></div>
+  <div class="it"><span><b>Geluid bij scannen</b><br><span class="small">Zachte tik bij gevonden, lage toon bij onbekend</span></span><input type="checkbox" class="schak" id="pGel" ${p.stil ? '' : 'checked'}></div>
+  <div class="it"><span><b>Updates tonen</b><br><span class="small">${updTonen() ? 'Je ziet een balk als er een nieuwe versie klaarstaat, en na het bijwerken wat er nieuw is' : 'Uit: de app werkt zichzelf stil bij als hij op de achtergrond staat'}</span></span><input type="checkbox" class="schak" id="pUpd" ${updTonen() ? 'checked' : ''}></div></div></div>
   <div class="blk"><h2>Startpagina</h2><select id="pStart" style="width:100%">${starts.map(s => `<option value="${s[0]}" ${(p.start || 'waar') === s[0] ? 'selected' : ''}>${s[1]}</option>`).join('')}</select><p class="small">Deze instellingen gelden alleen voor jou (${esc(mijnNaam())}) en werken op elk toestel waar je inlogt.</p></div>
   <div class="blk"><h2>Pincode opnieuw vragen</h2><div class="segment licht">${[[1, '1 min'], [10, '10 min'], [60, '1 uur'], [0, 'Bij opstarten']].map(o => `<button class="${slotMin() === o[0] ? 'aan' : ''}" data-slot="${o[0]}">${o[1]}</button>`).join('')}</div><p class="small">Na zo lang buiten beeld vraagt de app je pincode opnieuw. Geldt alleen voor deze telefoon. Na 12 uur moet je altijd opnieuw inloggen.</p></div>`;
   v.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { ls.set('cba-slot', +b.dataset.slot); render(true); });
   v.querySelectorAll('[data-pk]').forEach(b => b.onclick = () => zetPref(b.dataset.pk, b.dataset.pv));
-  v.querySelectorAll('[data-pb]').forEach(c => c.onchange = () => zetPref(c.dataset.pb, c.checked)); $('#pGel').onchange = e => zetPref('stil', !e.target.checked);
+  v.querySelectorAll('[data-pb]').forEach(c => c.onchange = () => zetPref(c.dataset.pb, c.checked)); $('#pGel').onchange = e => zetPref('stil', !e.target.checked); $('#pUpd').onchange = e => { zetPref('upd', e.target.checked); toonUpdateBalk(); render(true); };
   $('#pStart').onchange = e => zetPref('start', e.target.value);
 }
 
@@ -427,7 +428,7 @@ const HULP = {
   mwedit: ['Rechten', 'Kies Vakkenvuller, Afdelingsleider of Beheerder en pas daarna per vinkje aan. Beginnersmodus: alleen bestellen en tellen.'],
   winkel: ['Winkel', 'Met de koppelcode koppel je een toestel van de winkel. Een nieuwe code ontkoppelt alle toestellen.'],
   meldingen: ['Meldingen', 'Kies welke pushmeldingen dit toestel krijgt. Op de iPhone werkt dit alleen als de app op je beginscherm staat.'],
-  appinst: ['App-instellingen', 'Licht of donker, tekstgrootte en korte lijst. Bij <b>Pincode opnieuw vragen</b> kies je hoe lang de app buiten beeld mag zijn voordat hij je pincode vraagt (alleen voor deze telefoon).'],
+  appinst: ['App-instellingen', 'Licht of donker, tekstgrootte en korte lijst. Bij <b>Pincode opnieuw vragen</b> kies je hoe lang de app buiten beeld mag zijn voordat hij je pincode vraagt (alleen voor deze telefoon). <b>Updates tonen</b>: aan = een groene balk bij een nieuwe versie en daarna een overzicht van wat er nieuw is; uit = de app werkt zichzelf stil bij als hij op de achtergrond staat. Na een update blijf je ingelogd.'],
   route: ['Looproute', 'De bestellijst staat per pad in de volgorde waarin je loopt; de app leert bij elke bestelling waar een artikel staat. Pad zelf kiezen: open het artikel en tik op 🚶 Pad. Tik op een kopje met ▾ om het open of dicht te klappen.'],
   uitleg: ['Uitleg', 'Bovenaan de woordenlijst, daaronder uitleg per scherm.'],
   eigen: ['Eigen artikelen', 'Artikelen die niet in het bestelboek staan voeg je zelf toe met "+ Artikel toevoegen" onderaan de lijst. Vul de EAN of PLU in, dan koppelt de app de verkoop uit de dag-export en krijg je een advies zoals bij de rest. Tik op de naam om het aan te passen of te verwijderen. Komt het artikel later in het bestelboek, dan meldt de app dat en neem je het boekartikel over.'],
@@ -452,37 +453,45 @@ function tour(i = 0) {
     (e, ov) => { if (e.target.dataset.volg !== undefined) { ov.remove(); if (i < TOUR.length - 1) tour(i + 1); } });
 }
 
-/* ---------- updates ---------- */
+/* ---------- updates (2.07: zoals Brood Opzet) ---------- */
+// Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
+const NIEUWS = [['🔄', 'Updates zoals in Brood Opzet', 'Een groene balk bovenaan als er een nieuwe versie is. Na het bijwerken blijf je ingelogd. Zet je "Updates tonen" uit (Meer › App-instellingen), dan werkt de app zichzelf stil bij.'],
+  ['🔗', 'Acties koppelen', 'Staan soorten van dezelfde actie los in KW-acties? Tik op 🔗 en vink ze aan. Met ✂️ Soorten los sorteren haal je ze weer uit elkaar.'],
+  ['🛒', 'Advies per soort', 'Onder "soorten" zie je per soort hoeveel HE. Het voorkoop-advies is de som daarvan.'],
+  ['🔍', 'Retourbonnen zoeken en filteren', 'Zoek op bonnummer, filter op Fout, Open of Goed en sorteer op weekstaat, datum, bedrag of nummer.'],
+  ['💶', 'Statiegeld per bon', 'In het formulier zie je per vakje wat het oplevert en onderaan het totaal.']];
 let nieuweVersie = null;
+const updTonen = () => (S.pref || {}).upd ?? rol === 'admin';
 async function zoekUpdate(stil, forceer) {
   if (DEMO) { if (!stil) toast(`✓ Je hebt de nieuwste versie (${VERSIE})`); return; }
   if (!navigator.onLine) { if (!stil) toast('Geen internet – probeer het straks nog eens'); return; }
   if (!stil) toast('Controleren…');
   try {
     const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }); const j = await r.json();
-    if (j.versie && j.versie !== VERSIE) { nieuweVersie = j.versie; toonUpdateBalk(); if (!stil || forceer || ls.get('cba-updvenster') !== j.versie + '|' + C.today()) updateVenster(j.versie); }
+    if (j.versie && j.versie !== VERSIE) { nieuweVersie = j.versie; toonUpdateBalk(); if (forceer) werkBij(); else if (!stil && await bevestig('📲 Nieuwe versie', `Versie <b>${esc(j.versie)}</b> staat klaar. Nu bijwerken?`, 'Nu bijwerken', 'Later')) werkBij(); }
     else if (!stil) toast(`✓ Je hebt de nieuwste versie (${VERSIE})`);
   } catch (e) { if (!stil) toast('Controleren lukt nu niet'); }
 }
-// 1.62: venster midden in beeld als er een nieuwe versie klaarstaat
-function updateVenster(v) {
-  if (document.querySelector('.updvenster')) return; ls.set('cba-updvenster', v + '|' + C.today());
-  const ov = sheet(`<h2 style="margin:0">📲 Nieuwe versie</h2><p>Versie <b>${esc(v)}</b> staat klaar. Je huidige versie is ${VERSIE}.</p><div class="row"><button class="btn sec" data-x style="flex:1">Sluiten</button><button class="btn" id="updNu" style="flex:1">Nu bijwerken</button></div>`, e => { if (e.target.id === 'updNu') { ov.remove(); werkBij(); } });
-  ov.classList.add('midden', 'updvenster');
-}
 function toonUpdateBalk() {
-  if (!nieuweVersie || $('#updBalk') || document.body.classList.contains('inlog')) return;
-  const b = document.createElement('button'); b.id = 'updBalk'; b.className = 'updbalk'; b.innerHTML = `Versie ${esc(nieuweVersie)} staat klaar – <u>Bijwerken</u>`; b.onclick = werkBij;
+  const el = $('#updBalk'); if (!nieuweVersie || !updTonen() || !OPEN || document.body.classList.contains('inlog')) { if (el) el.remove(); return; } if (el) return;
+  const b = document.createElement('button'); b.id = 'updBalk'; b.className = 'updbalk'; b.textContent = `🔄 Nieuwe versie ${nieuweVersie} beschikbaar – tik om bij te werken`; b.onclick = () => werkBij();
   $('#kop').after(b);
 }
-async function werkBij() {
-  toast('Bijwerken…');
+async function werkBij(stil) {
+  if (werkBij.bezig) return; werkBij.bezig = 1; if (!stil) toast('Bijwerken…');
+  // ingelogd blijven na het herladen (zelfde medewerker, binnen 2 minuten)
+  try { plekBewaar(); if (OPEN && mw) ls.set('cba-updopen', { id: mw.id, t: Date.now(), weg: document.hidden ? verborgen || Date.now() : 0 }); } catch (e) { }
   // 1.59: eerst wachten tot de nieuwe versie klaar is (anders breekt iOS het laden af: "Load failed")
   try { const reg = await navigator.serviceWorker.getRegistration(); if (reg) { await reg.update(); const sw = reg.installing || reg.waiting;
     if (sw) await new Promise(ok => { const t = setTimeout(ok, 8000); const k = () => { if (sw.state === 'activated' || sw.state === 'redundant') { clearTimeout(t); ok(); } }; sw.addEventListener('statechange', k); k(); }); } } catch (e) { }
   location.reload();
 }
-if (!DEMO) { setInterval(() => { if (!document.hidden) zoekUpdate(true); }, 30 * 60000); setTimeout(() => zoekUpdate(true), 8000); }
+function updOpen() { const u = ls.get('cba-updopen'); ls.del('cba-updopen'); if (!u || !mw || u.id !== mw.id || Date.now() - u.t > 120000) return; OPEN = true; if (u.weg) verborgen = u.weg; }
+function nieuwsNaStart() { const k = 'cba-gezien-' + wieSleutel(), g = ls.get(k); if (!g) return ls.set(k, VERSIE); if (g !== VERSIE && updTonen() && !OEFEN) setTimeout(() => { if (!$('.sheet')) toonNieuws(); }, 900); }
+function toonNieuws() { ls.set('cba-gezien-' + wieSleutel(), VERSIE); belTel();
+  sheet(`<h2 style="margin:0 0 8px">✨ Nieuw in versie ${VERSIE}</h2>${NIEUWS.map(([i, t, x]) => `<div class="nieuwsrij"><span class="ic">${i}</span><span><b>${t}</b><small>${x}</small></span></div>`).join('')}<button class="btn" data-x style="width:100%;margin-top:10px">Begrepen</button>`); }
+if (!DEMO) { setInterval(() => { if (!document.hidden) zoekUpdate(true); }, 30 * 60000); setTimeout(() => zoekUpdate(true), 8000);
+  document.addEventListener('visibilitychange', () => { if (document.hidden && nieuweVersie && !updTonen()) setTimeout(() => { if (document.hidden) werkBij(true); }, 1500); }); }
 // 1.61: via de pushmelding "Nieuwe versie" meteen bijwerken
 function updateVanMelding() { zoekUpdate(true, true); }
 let updLaatst = 0; document.addEventListener('visibilitychange', () => { if (!DEMO && !document.hidden && Date.now() - updLaatst > 60000) { updLaatst = Date.now(); zoekUpdate(true); } });

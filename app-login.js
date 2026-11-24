@@ -171,7 +171,7 @@ function ingelogd(g) {
   eigenaar = berekenEigenaar(); rol = eigenaar ? 'admin' : 'winkel';
   if (!DEMO) return start();
   S.pref = Object.assign({}, (ls.get('cba-pref-' + wieSleutel()) || {})); pasPrefToe();
-  shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig(); setTimeout(weerHist, 2500); setTimeout(kwAutoHaal, 4000); setTimeout(boekAutoHaal, 12000); setTimeout(versAutoHaal, 6000); setTimeout(pdfOpruimen, 8000); setTimeout(boHaal, 3000);
+  shell(); if (!M) rebuild(); ui.tab = startTab(); render(); tourAlsNodig(); nieuwsNaStart(); setTimeout(weerHist, 2500); setTimeout(kwAutoHaal, 4000); setTimeout(boekAutoHaal, 12000); setTimeout(versAutoHaal, 6000); setTimeout(pdfOpruimen, 8000); setTimeout(boHaal, 3000);
 }
 async function faceInstellen() {
   if (DEMO) return toast('Face ID werkt alleen in de echte app');
@@ -207,6 +207,7 @@ function startDemo(r) {
   rebuild(); IN.keuze = r === 'admin' ? 'd1' : null; inlogScherm();
 }
 async function start() {
+  if (!OPEN) updOpen();
   if (!OPEN) return inlogScherm();
   shell();
   const had = await loadCache();
@@ -218,7 +219,7 @@ async function start() {
   await sync(!had);
   if (document.body.classList.contains('inlog')) return;
   if (!M) { rebuild(); render(); }
-  tourAlsNodig(); setTimeout(kwAutoHaal, 4000); setTimeout(boekAutoHaal, 12000); setTimeout(versAutoHaal, 6000); setTimeout(pdfOpruimen, 8000);
+  tourAlsNodig(); nieuwsNaStart(); toonUpdateBalk(); setTimeout(kwAutoHaal, 4000); setTimeout(boekAutoHaal, 12000); setTimeout(versAutoHaal, 6000); setTimeout(pdfOpruimen, 8000);
 }
 // 1.65: verder waar je was (per persoon, max 12 uur)
 function plekBewaar() { if (!OPEN || !mw || !M) return; const u = {}; for (const k in ui) if (k !== 'q' && ['string', 'number', 'boolean'].includes(typeof ui[k])) u[k] = ui[k]; ls.set('cba-plek-' + wieSleutel(), { u, y: Math.round(window.scrollY), ts: Date.now() }); }

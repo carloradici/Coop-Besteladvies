@@ -4,4 +4,4 @@
   if (DEMO) return showLogin();
   if (sess) start(); else showLogin();
 });
-window.__cba = { S, get M() { return M; }, ui, render, rebuild, meer: id => { const x = meerItems().find(y => y.id === id); if (x) x.go(); }, naar: sec => naarBeheer(sec), boArts: () => boArts().map(a => [a.key, a.naam]), hulpSleutel: () => hulpSleutel(), hulpHeeft: () => !!HULP[hulpSleutel()], t: { vrVan, restant, weerModel, ontbrekend, C, boekArch, boekArchHaal, onbekendLijst, pdfjs, gmWaarde, belItemsBasis } };
+window.__cba = { S, get M() { return M; }, ui, render, rebuild, meer: id => { const x = meerItems().find(y => y.id === id); if (x) x.go(); }, naar: sec => naarBeheer(sec), boArts: () => boArts().map(a => [a.key, a.naam]), hulpSleutel: () => hulpSleutel(), hulpHeeft: () => !!HULP[hulpSleutel()], t: { upd: v => { nieuweVersie = v; toonUpdateBalk(); }, updOpen, vrVan, restant, weerModel, ontbrekend, C, boekArch, boekArchHaal, onbekendLijst, pdfjs, gmWaarde, belItemsBasis } };

@@ -46,6 +46,9 @@ Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js`, `verkoop-export.js
 2. `version.json`: `{"versie":"x.y"}` (hiermee ziet de app dat er een update is).
 3. `sw.js`: `V = 'cba-x.y'`.
 4. `index.html`: `?b=x.y` bij style.css en in het laadscript.
+5. `app-home.js`: `NIEUWS` bijwerken (icoon, titel, één zin per punt) = venster "Nieuw in versie" (zoals Brood Opzet).
+
+Updates (2.07, zoals Brood Opzet): groene balk bij nieuwe versie; instelling "Updates tonen" per persoon (standaard aan voor beheerder, uit = stil bijwerken op de achtergrond); na bijwerken blijf je ingelogd (`cba-updopen`, 2 min).
 
 ## Afspraken over de app (1.46)
 - Bestellen: Carlo voert eerst in op de terminal en vinkt daarna af. Knop heet "✓ Besteld · 2 dozen". Andersom kan ook (1.50): eerst afvinken, dan "📲 Naar de terminal" toont per artikel een QR-code met het bestelnummer (terminal leest QR en EAN, geen Code128).

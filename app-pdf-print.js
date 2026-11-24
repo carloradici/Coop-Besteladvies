@@ -164,7 +164,7 @@ function renderTaken() {
   ${anderen.length ? `<div class="blk"><h2>Taken van anderen</h2><div class="list">${anderen.map(r => taakRij(r, true)).join('')}</div></div>` : ''}
   <div class="blk">${isBeheer() || mag('team') ? '<button class="btn" id="tkNieuw" style="width:100%">+ Nieuwe taak</button>' : ''}${beheerNamen().includes(mijnNaam()) ? '' : `<button class="btn sec" id="tkBericht" style="width:100%;margin-top:10px">Bericht voor ${esc(beheerNamen().join(' of '))}</button>`}</div>`;
   v.insertAdjacentHTML('beforeend', overdrachtHtml()); takenHomeEvents(v); homeEvents(v);
-  v.querySelectorAll('[data-bi]').forEach(b => b.onclick = () => { const x = l[+b.dataset.bi]; ga(x.ga); if (x.bsub) { ui.bsub = x.bsub; render(); } });
+  v.querySelectorAll('[data-bi]').forEach(b => b.onclick = () => { const x = l[+b.dataset.bi]; if (x.fn) return x.fn(); ga(x.ga); if (x.bsub) { ui.bsub = x.bsub; render(); } });
   const n = $('#tkNieuw'); if (n) n.onclick = taakMaken; const tb = $('#tkBericht'); if (tb) tb.onclick = () => berichtMaken('');
 }
 function taakMaken() {
@@ -192,6 +192,7 @@ const BEL_JIJ = new Set(BESTEL_OD.concat(['levering', 'tafels', 'taken']));
 function belItems() {
   const out = belItemsBasis().map(x => Object.assign({ jij: BEL_JIJ.has(x.ga) }, x));
   for (const od of BESTEL_OD) { if (od === 'gm' || !mag('o_' + od) || !mag('tellen')) continue; const cur = besteldag(od).cur; if (!cur || cur.besteldag !== C.today()) continue; const t = telKeuze(od, cur); if (t.open.length) out.push({ ic: '🔢', t: `${odNaam(od)}: tel ${t.open.length} artikelen`, sub: 'Dan wordt het advies beter', ga: od, jij: true }); }
+  if (updTonen() && ls.get('cba-gezien-' + wieSleutel()) !== VERSIE) out.unshift({ ic: '✨', t: `Nieuw in versie ${VERSIE}`, sub: 'Wat er veranderd is', fn: toonNieuws });
   for (const r of openTaken()) out.unshift({ ic: r.soort === 'bericht' ? '✉️' : '☑️', t: r.tekst, sub: r.soort === 'bericht' ? `Bericht van ${r.wie || ''}` : `Taak van ${r.wie || ''}`, ga: 'taken', jij: true, taak: true });
   return out;
 }
@@ -199,7 +200,7 @@ function belInfo(x) { return !x.jij || (x.taak && x.ic === '✉️'); }
 function belSheet() {
   const l = belItems(); const info = l.filter(belInfo);
   sheet(`<h2 style="margin:0 0 6px">Meldingen</h2>${info.length ? info.map(x => `<button class="belrij" data-bi="${l.indexOf(x)}"><span class="ic">${x.ic}</span><span><b>${esc(x.t)}</b><small>${esc(x.sub)}</small></span><span class="pijl">›</span></button>`).join('') : '<p class="small">Geen meldingen. Wat je moet doen staat bij Taken.</p>'}<button class="btn sec" data-x style="margin-top:12px;width:100%">Sluiten</button>`, (e, ov) => {
-    const b = e.target.closest('[data-bi]'); if (!b) return; const x = l[+b.dataset.bi]; ov.remove(); ga(x.ga); if (x.bsub) { ui.bsub = x.bsub; render(); }
+    const b = e.target.closest('[data-bi]'); if (!b) return; const x = l[+b.dataset.bi]; ov.remove(); if (x.fn) return x.fn(); ga(x.ga); if (x.bsub) { ui.bsub = x.bsub; render(); }
   });
 }
 /* klaar, alles besteld */
