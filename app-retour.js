@@ -7,6 +7,7 @@ LIB.ocr = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js
 let RB = null, rbRij = [], rbOcr = null, rbTel = { n: 0, tot: 0 }, rbBezig = null;
 /* 1.92: wachtrij van gelezen scans blijft op het toestel bewaard (ook na sluiten of update) */
 const rbRijBewaar = () => { iset('rbrij', rbRij); ls.set('cba-rbtel', rbTel); };
+const RB_P = Object.fromEntries(RB_V.map(([k, , p]) => [k, p]));
 const rbEuro = x => '€ ' + (Math.round(x * 100) / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+,)/g, '.');
 const rbSom = s => String(s ?? '').split(/[\s,;.+]+/).reduce((t, x) => t + (+x || 0), 0);
 const rbWaarde = b => RB_V.reduce((t, [k, , p]) => t + (+b[k] || 0) * p, 0);
@@ -108,7 +109,7 @@ async function renderRetour() {
 }
 
 function rbForm(v) {
-  const e = ui.rbEdit, b = e.b, veld = (k, t, x = '') => `<div class="f"><label>${t}</label><input data-rf="${k}" type="text" inputmode="decimal" value="${esc(b['_' + k] ?? (b[k] || ''))}" ${x}><span class="rbis" data-ris="${k}"></span></div>`;
+  const e = ui.rbEdit, b = e.b, veld = (k, t, x = '') => `<div class="f"><label>${t}<small class="rbpr">${RB_P[k] ? rbEuro(RB_P[k]) + ' per stuk' : 'geen statiegeld'}</small></label><input data-rf="${k}" type="text" inputmode="decimal" value="${esc(b['_' + k] ?? (b[k] || ''))}" ${x}><span class="rbis" data-ris="${k}"></span></div>`;
   const blok2 = RB_V.slice(1).map(([k, t]) => veld(k, t)).join('');
   v.innerHTML = `${e.img ? `<div class="rbkop" style="background-image:url(${e.img})" role="img" aria-label="Kop van de bon met het bonnummer"></div>` : ''}
     <div class="blk form rbf">${e.rij ? `<p class="small">Bon ${rbTel.n + 1} van ${rbTel.tot}</p>` : ''}${e.fout ? `<p class="small rood">⚠️ ${esc(e.fout)}</p>` : ''}
@@ -118,13 +119,13 @@ function rbForm(v) {
     <div class="f"><label>Retourbon (producten)</label><input id="rbRb" type="text" inputmode="decimal" value="${esc(b.rb || '')}" placeholder="bv. 60226399,60226433"></div></div>
     ${e.img ? `<div class="rbscan"><img src="${e.img}" alt="Scan van de bon"></div><p class="small" style="text-align:center">Tik op de scan om in of uit te zoomen</p>` : ''}
     <div class="blk form rbf"><p class="small">Meer kolommen op de bon? Typ ze achter elkaar met een komma: <b>18,11,17</b> wordt 46.</p>
-    ${blok2}${b.bags && b.bags.length ? `<p class="small">Bag-ID: ${b.bags.map(esc).join(' · ')}</p>` : ''}
+    ${blok2}<p class="rbtotaal">Totaal statiegeld <b id="rbTotS"></b></p>${b.bags && b.bags.length ? `<p class="small">Bag-ID: ${b.bags.map(esc).join(' · ')}</p>` : ''}
     <div class="f"><label>Opmerking</label><input id="rbOpm" type="text" value="${esc(b.opm || '')}" placeholder="bv. mist op factuur"></div>
     ${e.i >= 0 ? rbWsHtml(b) : ''}
 </div>
     <button class="btn" id="rbSla" style="width:100%">${e.rij && rbRij.length > 1 ? 'Opslaan → volgende bon' : 'Opslaan'}</button>
     <div class="rbknop">${e.rij ? '<button class="btn sec" id="rbSkip">Scan overslaan</button>' : ''}<button class="btn sec" id="rbTerug">Annuleren</button>${e.i >= 0 ? '<button class="btn sec rood" id="rbDel">Verwijderen</button>' : ''}</div>`;
-  const toon = i => { const k = i.dataset.rf, s = $(`[data-ris="${k}"]`); s.textContent = /[\s,;.+]/.test(i.value.trim()) ? '= ' + rbSom(i.value) : ''; };
+  const toon = i => { const k = i.dataset.rf, n = rbSom(i.value); $(`[data-ris="${k}"]`).innerHTML = (/[\s,;.+]/.test(i.value.trim()) ? '= ' + n : '') + (n && RB_P[k] ? `<small>${rbEuro(n * RB_P[k])}</small>` : ''); $('#rbTotS').textContent = rbEuro([...v.querySelectorAll('[data-rf]')].reduce((t, x) => t + rbSom(x.value) * (RB_P[x.dataset.rf] || 0), 0)); };
   v.querySelectorAll('[data-rf]').forEach(i => { toon(i); i.oninput = () => toon(i); });
   $('#rbNr').onfocus = ev => setTimeout(() => { const x = ev.target; x.setSelectionRange(x.value.length, x.value.length); }, 0);
   if ($('.rbscan')) $('.rbscan').onclick = () => $('.rbscan').classList.toggle('groot');
