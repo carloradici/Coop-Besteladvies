@@ -127,7 +127,7 @@ function rbForm(v) {
 }
 
 function rbWsHtml(b) { const s = rbStatus(b); if (s.st === 'leeg') return '<p class="small">Lege bon: er ging niets retour.</p>'; if (!s.f) return `<p class="small">${s.st === 'mist' ? 'Deze bon staat niet op de ingelezen weekstaten.' : 'Nog niet op een ingelezen weekstaat.'}</p>`;
-  return `<div class="rbws ${s.st}"><b>Weekstaat ${esc(s.f.ws)}${s.f.fnr ? ' · factuur ' + esc(s.f.fnr) : ''}</b>${s.f.img ? `<img class="rbwsimg" data-wsimg="${esc(rbKey(b.nr))}" alt="Bladzijde Retouremballage van de weekstaat">` : ''}${(s.f.regels || []).map(r => `<small>${r.n} × ${esc(r.oms)} · ${rbEuro(Math.abs(r.eur))}</small>`).join('')}<small>Gecrediteerd ${rbEuro(Math.abs(s.f.eur))} · bon ${rbEuro(rbWaarde(b))}</small>${s.st === 'verschil' ? `<small class="rood"><b>${s.v > 0 ? rbEuro(s.v) + ' te weinig' : rbEuro(-s.v) + ' te veel'}</b>${s.dif.length ? ' · ' + s.dif.map(esc).join(' · ') : ''}</small>` : '<small>✓ Klopt</small>'}</div>`; }
+  return `<div class="rbws ${s.st}"><b>Weekstaat ${esc(s.f.ws)}${s.f.fnr ? ' · factuur ' + esc(s.f.fnr) : ''}</b><small>${s.f.eigen || (RB.ws || {})[rbKey(b.nr)] ? 'Uit je eigen upload' : 'Uit Brood Opzet'}</small>${s.f.img ? `<img class="rbwsimg" data-wsimg="${esc(rbKey(b.nr))}" alt="Bladzijde Retouremballage van de weekstaat">` : ''}${(s.f.regels || []).map(r => `<small>${r.n} × ${esc(r.oms)} · ${rbEuro(Math.abs(r.eur))}</small>`).join('')}<small>Gecrediteerd ${rbEuro(Math.abs(s.f.eur))} · bon ${rbEuro(rbWaarde(b))}</small>${s.st === 'verschil' ? `<small class="rood"><b>${s.v > 0 ? rbEuro(s.v) + ' te weinig' : rbEuro(-s.v) + ' te veel'}</b>${s.dif.length ? ' · ' + s.dif.map(esc).join(' · ') : ''}</small>` : '<small>✓ Klopt</small>'}</div>`; }
 async function rbWsUpload(files) {
   if (!files.length || rbBezig) return; RB.ws = RB.ws || {}; const B = rbBezig = { ws: 1, n: 0, tot: files.length, nb: 0, al: 0, weg: 0 }; if (ui.tab === 'retour' && !ui.rbEdit) renderRetour();
   const pj = await pdfjs();
@@ -136,7 +136,7 @@ async function rbWsUpload(files) {
       for (let i = 1; i <= doc.numPages; i++) { const pg = await doc.getPage(i), L = C.lines((await pg.getTextContent()).items.filter(x => x.str && x.str.trim()).map(x => ({ s: x.str, x: x.transform[4], y: x.transform[5] }))).map(l => l.txt), t = L.join('\n');
         const wn = t.match(/Weekstaatnummer\s*:\s*([\d.]+\d)/); if (wn) ws = wn[1];
         const bl = C.wsRetour(L); if (Object.keys(bl).length) { const vp0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: 1100 / vp0.width }), c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise; const img = c.toDataURL('image/jpeg', 0.6); c.width = c.height = 0;
-          for (const k in bl) { await iset('rbws:' + k, img); nieuw[k] = Object.assign(bl[k], { img: 1 }); } }
+          for (const k in bl) { await iset('rbws:' + k, img); nieuw[k] = Object.assign(bl[k], { img: 1, eigen: 1 }); } }
         const gi = L.findIndex(x => /SALDO GOEDERENDRAGERS/i.test(x)); if (gi >= 0) { const items = {}; for (const x of L.slice(gi + 1)) { const m = x.match(/^([A-Z][A-Z .\/]+?)\s+(-?\d+)$/); if (!m) break; items[m[1]] = +m[2]; }
           const d = L[gi].match(/(\d\d)\.(\d\d)\.(\d{4})/) || []; const dr = { d: d[3] ? `${d[3]}-${d[2]}-${d[1]}` : '', ws: ws || f.name, items }; if (!RB.dr || dr.d >= RB.dr.d) RB.dr = dr; }
         pg.cleanup(); }
