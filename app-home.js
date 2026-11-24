@@ -455,7 +455,8 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['🔤', 'Naam aanpassen', 'Tik op een blok in het schema en kies Naam aanpassen. Gekoppelde acties heten nu naar de merken, bv. Dubbelfrisss + Maaza + Taksi.'],
+const NIEUWS = [['📲', 'Sneller bijwerken', 'Tik je op de melding "Nieuwe versie", dan zie je meteen een scherm "Bijwerken…" en staat de nieuwe versie er binnen een paar seconden.'],
+  ['🔤', 'Naam aanpassen', 'Tik op een blok in het schema en kies Naam aanpassen. Gekoppelde acties heten nu naar de merken, bv. Dubbelfrisss + Maaza + Taksi.'],
   ['🔗', 'Gekoppelde acties in het schema', 'Het blok toont nu alle gekoppelde acties (bv. Maaza + Dubbelfrisss + Taksi) en het aantal soorten, ook in de pdf. Al eerder gekoppeld? Eén keer ✂️ los sorteren en opnieuw koppelen.'],
   ['⚡', 'Sneller bijwerken', 'Open je de app of tik je op de melding "Nieuwe versie", dan werkt hij zichzelf meteen bij. Je blijft ingelogd op hetzelfde scherm.'],
   ['🕘', 'Vorige weken', 'Bij de actieplanning zie je alleen nog de huidige en komende weken; oude weken staan onder 🕘 Vorige weken. Hij opent op de laatst opgehaalde week.']];
@@ -477,12 +478,13 @@ function toonUpdateBalk() {
   $('#kop').after(b);
 }
 async function werkBij(stil) {
-  if (werkBij.bezig) return; werkBij.bezig = 1; if (!stil) toast('Bijwerken…');
+  if (werkBij.bezig) return; werkBij.bezig = 1;
+  if (!stil) { const o = document.createElement('div'); o.className = 'updscherm'; o.innerHTML = `<div class="updrond"></div><b>📲 Bijwerken naar versie ${esc(nieuweVersie || '')}…</b><small>Een paar seconden geduld</small>`; document.body.appendChild(o); }
   // ingelogd blijven na het herladen (zelfde medewerker, binnen 2 minuten)
   try { plekBewaar(); if (OPEN && mw) ls.set('cba-updopen', { id: mw.id, t: Date.now(), weg: document.hidden ? verborgen || Date.now() : 0 }); } catch (e) { }
   // 1.59: eerst wachten tot de nieuwe versie klaar is (anders breekt iOS het laden af: "Load failed")
   try { const reg = await navigator.serviceWorker.getRegistration(); if (reg) { await reg.update(); const sw = reg.installing || reg.waiting;
-    if (sw) await new Promise(ok => { const t = setTimeout(ok, 8000); const k = () => { if (sw.state === 'activated' || sw.state === 'redundant') { clearTimeout(t); ok(); } }; sw.addEventListener('statechange', k); k(); }); } } catch (e) { }
+    if (sw) await new Promise(ok => { const t = setTimeout(ok, 3000); const k = () => { if (sw.state === 'activated' || sw.state === 'redundant') { clearTimeout(t); ok(); } }; sw.addEventListener('statechange', k); k(); }); } } catch (e) { }
   location.reload();
 }
 function updOpen() { const u = ls.get('cba-updopen'); ls.del('cba-updopen'); if (!u || !mw || u.id !== mw.id || Date.now() - u.t > 120000) return; OPEN = true; if (u.weg) verborgen = u.weg; }
