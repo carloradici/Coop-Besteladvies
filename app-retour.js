@@ -100,7 +100,10 @@ function rbForm(v) {
   v.querySelectorAll('[data-rf]').forEach(i => { toon(i); i.oninput = () => toon(i); });
   $('#rbNr').onfocus = ev => setTimeout(() => { const x = ev.target; x.setSelectionRange(x.value.length, x.value.length); }, 0);
   if ($('.rbscan')) $('.rbscan').onclick = () => $('.rbscan').classList.toggle('groot');
-  v.querySelectorAll('[data-wsimg]').forEach(async im => { const f = rbRet().bonnen[im.dataset.wsimg], u = typeof f.img === 'string' ? f.img : await iget('rbws:' + im.dataset.wsimg); if (u) im.src = u; else im.remove(); im.onclick = () => im.classList.toggle('groot'); });
+  v.querySelectorAll('[data-wsimg]').forEach(async im => { const k = 'rbws:' + im.dataset.wsimg, f = rbRet().bonnen[im.dataset.wsimg]; im.onclick = () => im.classList.toggle('groot');
+    let u = await iget(k); /* 1.95: plaatje van Brood Opzet (tijdelijke link) één keer ophalen en op het toestel bewaren */
+    if (!u && typeof f.img === 'string') try { const bl = await (await fetch(f.img)).blob(); if (/image/.test(bl.type)) { u = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(bl); }); iset(k, u); } } catch (e) { }
+    if (u) im.src = u; else im.remove(); });
   const klaar = () => { if (e.rij) { rbRij.shift(); rbTel.n++; if (!rbRij.length) rbTel = { n: 0, tot: 0 }; rbRijBewaar(); } ui.rbEdit = e.rij && rbRij.length ? Object.assign({ i: -1 }, rbRij[0], { rij: 1 }) : null; renderRetour(); window.scrollTo(0, 0); };
   $('#rbTerug').onclick = () => { ui.rbEdit = null; renderRetour(); };
   if ($('#rbSkip')) $('#rbSkip').onclick = klaar;
