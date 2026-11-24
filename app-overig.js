@@ -220,7 +220,7 @@ function renderActies() {
 
 /* ---------- actietafels ---------- */
 const TKLEUR = ['#f17d04', '#2e6fb7', '#2e9d4f', '#c0392b', '#8e44ad', '#d4a017', '#16a085', '#e84393', '#6d4c41', '#546e7a'];
-function tafelWeek() { if (!ui.tafelWeek) ui.tafelWeek = weekSleutel(C.today()); return ui.tafelWeek; }
+function tafelWeek() { if (!ui.tafelWeek) ui.tafelWeek = (S.acties || []).map(a => a.id).sort().pop() || weekSleutel(C.today()); return ui.tafelWeek; } // 2.08: de laatst opgehaalde week
 function tafelLijst() { return Object.values(S.tafels || {}).filter(t => !t.weg).sort((a, b) => (a.volg || 0) - (b.volg || 0) || (a.naam || '').localeCompare(b.naam || '')); }
 function indelingVan(week, id) { return S.indeling[week + '|' + id] || { items: [] }; }
 function tafelTelling(week) {
@@ -257,13 +257,16 @@ function tafelPas(root) {
     m.remove();
   });
 }
-function tafelWeken() { const s = new Set([weekSleutel(C.add(C.today(), -7)), weekSleutel(C.today()), weekSleutel(C.add(C.today(), 7))]); for (const a of S.acties || []) if (a.id >= weekSleutel(C.today())) s.add(a.id); for (const w of Object.keys(S.kwplan || {})) if (w >= weekSleutel(C.today())) s.add(w); return [...s].sort(); }
+function tafelWeken() { const s = new Set([tafelWeek(), weekSleutel(C.today()), weekSleutel(C.add(C.today(), 7))]); for (const a of S.acties || []) if (a.id >= weekSleutel(C.today())) s.add(a.id); for (const w of Object.keys(S.kwplan || {})) if (w >= weekSleutel(C.today())) s.add(w); return [...s].sort(); }
+// 2.08: oude weken onder "Vorige weken"
+function tafelOud() { const nu = weekSleutel(C.today()); return [...new Set((S.acties || []).map(a => a.id).concat(Object.keys(S.indeling || {}).map(k => k.split('|')[0])))].filter(w => /^\d{4}-\d{2}$/.test(w) && w < nu).sort(); }
+function vorigeWeken(l, kies) { sheet(`<h2 style="margin:0 0 6px">🕘 Vorige weken</h2>${l.slice().reverse().map(([w, t]) => `<button class="belrij" data-ow="${w}"><span class="ic">📅</span><span><b>Week ${+w.slice(5)} · ${w.slice(0, 4)}</b><small>${esc(t)}</small></span><span class="pijl">›</span></button>`).join('')}<button class="btn sec" data-x style="width:100%;margin-top:8px">Sluiten</button>`, (e, ov) => { const b = e.target.closest('[data-ow]'); if (b) { ov.remove(); kies(b.dataset.ow); } }); }
 function slaIndelingOp(week, id, data, stil) { write('tafel_indeling', [{ week, tafel_id: id, data }], stil); }
 function renderTafels() {
   const v = $('#view'); const week = tafelWeek(); const kanIn = mag('tafels'); const kanAf = mag('schap') || kanIn;
   const t = ui.tafel && S.tafels[ui.tafel] && !S.tafels[ui.tafel].weg ? S.tafels[ui.tafel] : null;
   const wk = tafelWeken(); const ap = (S.acties || []).find(a => a.id === week);
-  let h = `<div class="bar"><div class="chips">${wk.map(w => `<button class="chip ${w === week ? 'on' : ''}" data-tw="${w}"><b>Week ${+w.split('-')[1]}</b><span>${C.fmtDag(weekMaandag(w))}${(S.acties || []).some(a => a.id === w) ? ' · acties' : ''}</span></button>`).join('')}</div></div>`;
+  let h = `<div class="bar"><div class="chips">${wk.map(w => `<button class="chip ${w === week ? 'on' : ''}" data-tw="${w}"><b>Week ${+w.split('-')[1]}</b><span>${C.fmtDag(weekMaandag(w))}${(S.acties || []).some(a => a.id === w) ? ' · acties' : ''}</span></button>`).join('')}${tafelOud().length ? '<button class="chip" id="twOud"><b>🕘 Vorige weken</b></button>' : ''}</div></div>`;
   if (!t) { if (!ui.versStap) ui.versStap = versActies(week).length ? 'sort' : 'in'; h += `<div class="seg kwseg"><button class="${ui.versStap === 'sort' ? 'on' : ''}" data-vst="sort">1 · Sorteren</button><button class="${ui.versStap === 'in' ? 'on' : ''}" data-vst="in">2 · Indelen</button><button data-vst="best">3 · Bestellen</button></div>`; }
   if (!t && ui.versStap === 'sort') h += versSorteren(week);
   else if (!t) {
@@ -282,6 +285,7 @@ function renderTafels() {
   }
   v.innerHTML = h; tafelPas(v);
   v.querySelectorAll('[data-tw]').forEach(b => b.onclick = () => { ui.tafelWeek = b.dataset.tw; ui.versStap = null; render(); });
+  if ($('#twOud')) $('#twOud').onclick = () => vorigeWeken(tafelOud().map(w => { const a = (S.acties || []).find(x => x.id === w), s = a ? versStatus(w) : null; return [w, [C.fmtDag(weekMaandag(w)), s && s.totaal ? `${s.gesorteerd}/${s.totaal} gesorteerd` : ''].filter(Boolean).join(' · ')]; }), w => { ui.tafelWeek = w; ui.versStap = null; render(); });
   v.querySelectorAll('[data-tt]').forEach(b => b.onclick = () => { ui.tafel = b.dataset.tt; render(); window.scrollTo(0, 0); });
   const ta = $('#tbAdd'); if (ta) ta.onclick = () => tafelBewerk(null);
   v.querySelectorAll('[data-vst]').forEach(b => b.onclick = () => { if (b.dataset.vst === 'best') return ga('acties'); ui.versStap = b.dataset.vst; render(); });

@@ -410,7 +410,7 @@ const HULP = {
   'tafels:sort': ['Vers-acties · 1 Sorteren', 'Tik per actie op de koeltafel waar hij komt, of op 📝 voor een notitie. Met 📄 Bekijken zie je de folder en de bestellijst.'],
   'tafels:in': ['Vers-acties · 2 Indelen', 'Tik op een koeltafel om hem in te delen. Met 👁️ Pdf bekijken krijg je per tafel een A4.'],
   'tafels:tafel': ['Koeltafel indelen', 'Tik een actie aan bij Nog plaatsen en daarna de vakken. Vink af wat klaar staat.'],
-  'kwacties:sort': ['KW-acties · 1 Sorteren', 'Tik per actie op de kop waar hij komt of op 📝 voor een notitie. 🛒 is het voorkoop-advies. Folder = staat in je Coop-folder of op de folder van de voorkooplijst; Instore = alleen inkoopvoordeel. Met <b>🔄 Opnieuw ophalen</b> haal je de voorkooplijst en folderplanning van deze week meteen opnieuw op; je indeling blijft staan. <b>🔗 Koppelen</b>: staan soorten van dezelfde actie los in de lijst (bv. 3 voor 5,00 op dezelfde pagina), tik op 🔗 en vink de andere acties aan. Ze worden één actie; met ✂️ Soorten los sorteren haal je ze weer uit elkaar. Onder <b>soorten</b> zie je per soort de verwachting en het advies in HE; het voorkoop-advies is de som daarvan.'],
+  'kwacties:sort': ['KW-acties · 1 Sorteren', 'Tik per actie op de kop waar hij komt of op 📝 voor een notitie. 🛒 is het voorkoop-advies. Folder = staat in je Coop-folder of op de folder van de voorkooplijst; Instore = alleen inkoopvoordeel. Met <b>🔄 Opnieuw ophalen</b> haal je de voorkooplijst en folderplanning van deze week meteen opnieuw op; je indeling blijft staan. <b>🔗 Koppelen</b>: staan soorten van dezelfde actie los in de lijst (bv. 3 voor 5,00 op dezelfde pagina), tik op 🔗 en vink de andere acties aan. Ze worden één actie; met ✂️ Soorten los sorteren haal je ze weer uit elkaar. Onder <b>soorten</b> zie je per soort de verwachting en het advies in HE; het voorkoop-advies is de som daarvan. Bovenaan staan de huidige en komende weken; oudere weken vind je onder <b>🕘 Vorige weken</b>.'],
   'kwacties:in': ['KW-acties · 2 Indelen', 'Tik op een kop om de planken in te delen. Tik op een blok voor 💬 Opmerking, bijvoorbeeld "Vullen vanuit restanten" of "1 hoog". Die staat ook in de pdf. Met 👁️ Pdf bekijken krijg je elke kop op een A4.'],
   'kwacties:kop': ['Kop indelen', 'Tik een actie aan bij Nog plaatsen en daarna de vakken op de plank. Past iets niet meer? Tik op <b>↪ Verplaats</b> om het naar een andere kop, het vak of terug naar sorteren te sturen. Veeg met je vinger over een rij om meerdere vakjes tegelijk aan of uit te zetten.'],
   acties: ['Actie planning · 3 Bestellen', 'De acties van de komende week met per artikel het advies.'],
@@ -455,7 +455,9 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['🔄', 'Updates zoals in Brood Opzet', 'Een groene balk bovenaan als er een nieuwe versie is. Na het bijwerken blijf je ingelogd. Zet je "Updates tonen" uit (Meer › App-instellingen), dan werkt de app zichzelf stil bij.'],
+const NIEUWS = [['⚡', 'Sneller bijwerken', 'Open je de app of tik je op de melding "Nieuwe versie", dan werkt hij zichzelf meteen bij. Je blijft ingelogd op hetzelfde scherm.'],
+  ['🕘', 'Vorige weken', 'Bij de actieplanning zie je alleen nog de huidige en komende weken; oude weken staan onder 🕘 Vorige weken. Hij opent op de laatst opgehaalde week.'],
+  ['🔄', 'Updates zoals in Brood Opzet', 'Een groene balk bovenaan als er een nieuwe versie is. Na het bijwerken blijf je ingelogd. Zet je "Updates tonen" uit (Meer › App-instellingen), dan werkt de app zichzelf stil bij.'],
   ['🔗', 'Acties koppelen', 'Staan soorten van dezelfde actie los in KW-acties? Tik op 🔗 en vink ze aan. Met ✂️ Soorten los sorteren haal je ze weer uit elkaar.'],
   ['🛒', 'Advies per soort', 'Onder "soorten" zie je per soort hoeveel HE. Het voorkoop-advies is de som daarvan.'],
   ['🔍', 'Retourbonnen zoeken en filteren', 'Zoek op bonnummer, filter op Fout, Open of Goed en sorteer op weekstaat, datum, bedrag of nummer.'],
@@ -494,7 +496,8 @@ if (!DEMO) { setInterval(() => { if (!document.hidden) zoekUpdate(true); }, 30 *
   document.addEventListener('visibilitychange', () => { if (document.hidden && nieuweVersie && !updTonen()) setTimeout(() => { if (document.hidden) werkBij(true); }, 1500); }); }
 // 1.61: via de pushmelding "Nieuwe versie" meteen bijwerken
 function updateVanMelding() { zoekUpdate(true, true); }
-let updLaatst = 0; document.addEventListener('visibilitychange', () => { if (!DEMO && !document.hidden && Date.now() - updLaatst > 60000) { updLaatst = Date.now(); zoekUpdate(true); } });
+// 2.08: bij openen meteen controleren en een klaarstaande versie direct installeren (je blijft ingelogd)
+let updLaatst = 0; document.addEventListener('visibilitychange', () => { if (!DEMO && !document.hidden && Date.now() - updLaatst > 5000) { updLaatst = Date.now(); zoekUpdate(true, true); } });
 if (!DEMO && /[?&]update=1/.test(location.search)) { history.replaceState(null, '', location.pathname); setTimeout(updateVanMelding, 500); }
 if (!DEMO && 'serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.update) updateVanMelding(); });
 

@@ -92,11 +92,11 @@ function kwItemKaart(wk, p, it, kan) {
 function renderKwActies() {
   kwMigreer(); kwHerlees();
   const v = $('#view'); const nu = weekSleutel(C.today()); const weken = Object.keys(S.kwplan || {}).sort();
-  if (!ui.kwWeek || !S.kwplan[ui.kwWeek]) ui.kwWeek = weken.find(w => w >= nu) || weken[weken.length - 1] || null;
+  if (!ui.kwWeek || !S.kwplan[ui.kwWeek]) ui.kwWeek = weken[weken.length - 1] || null; // 2.08: de laatst opgehaalde week
   const wk = ui.kwWeek; const p = wk ? kwPas(S.kwplan[wk]) : null; if (p) kwNormPlan(p); const f = p && p.folder; const kan = magKwPlan();
   const volg = [1, 2, 3, 4, 5, 6].map(n => { const d = C.add(C.monday(C.today()), 7 * n); const x = C.isoWeek(d); return { y: x.y, w: x.w, k: weekSleutel(d) }; }).filter(x => !S.kwplan[x.k]);
   const stap = ui.kwStap || 'sort';
-  let h = `<div class="bar"><div class="chips">${weken.filter(w => w >= weekSleutel(C.add(C.today(), -21))).map(w => `<button class="chip ${w === wk ? 'on' : ''}" data-kw="${w}"><b>Week ${+w.slice(5)}</b></button>`).join('')}${kan ? volg.slice(0, 2).map(x => `<button class="chip" data-haal="${x.y}|${x.w}"><b>+ Week ${x.w} ophalen</b></button>`).join('') : ''}</div>
+  let h = `<div class="bar"><div class="chips">${weken.filter(w => w >= nu || w === wk).map(w => `<button class="chip ${w === wk ? 'on' : ''}" data-kw="${w}"><b>Week ${+w.slice(5)}</b></button>`).join('')}${kan ? volg.slice(0, 2).map(x => `<button class="chip" data-haal="${x.y}|${x.w}"><b>+ Week ${x.w} ophalen</b></button>`).join('') : ''}${weken.some(w => w < nu) ? '<button class="chip" id="kwOud"><b>🕘 Vorige weken</b></button>' : ''}</div>
   ${f ? `<div class="seg kwseg"><button class="${stap === 'sort' ? 'on' : ''}" data-kst="sort">1 · Sorteren</button><button class="${stap === 'in' ? 'on' : ''}" data-kst="in">2 · Indelen</button><button data-kst="best">3 · Bestellen</button></div>${stap === 'in' && kwPlekken().some(y => y.tafel && S.tafels[y.tafel] && !S.tafels[y.tafel].weg) ? `<button class="btn kwpdfknop" id="kwPdf1">👁️ Pdf bekijken${ui.kwKop ? ' · ' + esc(ui.kwKop) : ''}</button>` : ''}` : ''}</div>`;
   if (!f) h += `<div class="empty">Nog geen folderplanning. ${kan ? 'Tik op "Week ophalen" of kies de pdf hieronder.' : 'De beheerder zet hem klaar.'}</div>`;
   else if (stap === 'sort') {
@@ -136,6 +136,7 @@ function renderKwActies() {
   if (kan) h += `<div class="blk"><h2>Instellen</h2><div class="row" style="gap:8px;flex-wrap:wrap"><label class="btn sm sec">📄 Pdf kiezen<input type="file" id="kwPdf" accept=".pdf" class="hide"></label>${mag('instellingen') ? '<button class="btn sm sec" id="kwPl">⚙️ Plekken</button>' : ''}</div></div>`;
   v.innerHTML = h; tafelPas(v);
   v.querySelectorAll('[data-kw]').forEach(b => b.onclick = () => { ui.kwWeek = b.dataset.kw; ui.kwSel = null; render(); });
+  if ($('#kwOud')) $('#kwOud').onclick = () => vorigeWeken(weken.filter(w => w < nu).map(w => { const f = (S.kwplan[w] || {}).folder || {}, l = (f.items || []).filter(i => i.soort === 'kw' && !i.instore); return [w, [f.thema, f.van ? `${C.fmtDag(f.van)} t/m ${C.fmtDag(f.tm)}` : '', l.length ? `${l.filter(i => kwStatus(S.kwplan[w], i.id)).length}/${l.length} geplaatst` : ''].filter(Boolean).join(' · ')]; }), w => { ui.kwWeek = w; ui.kwSel = null; render(); });
   v.querySelectorAll('[data-kst]').forEach(b => b.onclick = () => { if (b.dataset.kst === 'best') return ga('acties'); ui.kwStap = b.dataset.kst; ui.kwKop = null; ui.kwSel = null; render(); window.scrollTo(0, 0); });
   v.querySelectorAll('[data-haal]').forEach(hb => hb.onclick = async () => { const [y, w] = hb.dataset.haal.split('|').map(Number); hb.disabled = true; hb.innerHTML = '<b>Ophalen…</b>'; try { ui.kwWeek = await folderOphalen(y, w); toast('✓ Folderplanning opgehaald'); log('acties', `Folderplanning week ${w} opgehaald`); } catch (e) { toast(e.message, 5000); } render(); });
   const pi = $('#kwPdf'); if (pi) pi.onchange = async e => { const fl = e.target.files[0]; e.target.value = ''; if (!fl) return; try { const buf = await fl.arrayBuffer(); const r = await kwPdfLezen(buf, fl.name); ui.kwWeek = r.wk; toast(r.tekst, 4000); log('acties', r.tekst.replace('✓ ', '') + ' (geüpload)'); } catch (x) { toast('Niet gelukt: ' + x.message, 5000); } render(); };

@@ -222,7 +222,7 @@ async function start() {
   tourAlsNodig(); nieuwsNaStart(); toonUpdateBalk(); setTimeout(kwAutoHaal, 4000); setTimeout(boekAutoHaal, 12000); setTimeout(versAutoHaal, 6000); setTimeout(pdfOpruimen, 8000);
 }
 // 1.65: verder waar je was (per persoon, max 12 uur)
-function plekBewaar() { if (!OPEN || !mw || !M) return; const u = {}; for (const k in ui) if (k !== 'q' && ['string', 'number', 'boolean'].includes(typeof ui[k])) u[k] = ui[k]; ls.set('cba-plek-' + wieSleutel(), { u, y: Math.round(window.scrollY), ts: Date.now() }); }
+function plekBewaar() { if (!OPEN || !mw || !M) return; const u = {}; for (const k in ui) if (k !== 'q' && k !== 'kwWeek' && k !== 'tafelWeek' && ['string', 'number', 'boolean'].includes(typeof ui[k])) u[k] = ui[k]; ls.set('cba-plek-' + wieSleutel(), { u, y: Math.round(window.scrollY), ts: Date.now() }); }
 let plekT = 0; window.addEventListener('scroll', () => { clearTimeout(plekT); plekT = setTimeout(plekBewaar, 400); }, { passive: true });
 document.addEventListener('visibilitychange', () => { if (document.hidden) plekBewaar(); });
 function startTab() { const s = (S.pref && S.pref.start) || 'waar';
