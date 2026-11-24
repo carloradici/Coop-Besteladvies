@@ -60,6 +60,24 @@ async function kwHaalOp(jaar, week, alleenVk) {
   if (alleenVk) throw vkFout || new Error('Geen voorkooplijst');
   const buf = await haal(''); const kop = buf.slice(0); const fp = C.parseFolder(await C.pdfVlakken(await pdfjs(), buf)); const wkf = bewaarFolder(fp, 'opgehaald'); pdfBewaar(wkf, 'folder', kop); return { wk: wkf, soort: 'folder' };
 }
+/* 2.06: acties aan elkaar koppelen (terug met ✂️ Soorten los sorteren) */
+function kwKoppelKies(wk, id) {
+  const p = S.kwplan[wk], it = p.folder.items.find(x => x.id === id); if (!it) return;
+  const z = x => !!it.pag && x.pag === it.pag && (x.mech || '') === (it.mech || ''), L = p.folder.items.filter(x => x.id !== id && x.bron === 'voorkoop' && x.soort === it.soort), A = L.filter(z), B = L.filter(x => !z(x));
+  const rij = x => `<label class="belrij"><input type="checkbox" value="${esc(x.id)}" style="width:24px;height:24px;flex:none"><span><b>${esc(x.naam)}</b><small>${[(x.prijs || []).length ? '€ ' + x.prijs.map(v => v.toFixed(2).replace('.', ',')).join(' – ') : '', x.mech, x.pag ? 'pag. ' + String(x.pag).split(' ')[0] : ''].filter(Boolean).map(esc).join(' · ')}</small></span></label>`;
+  sheet(`<h2 style="margin:0">🔗 Koppelen</h2><p class="small">Welke acties horen bij <b>${esc(it.naam)}</b>?</p>${A.length ? '<h3>Zelfde actie?</h3>' + A.map(rij).join('') : ''}${B.length ? '<h3>Andere acties</h3>' + B.map(rij).join('') : ''}<button class="btn" id="kwKp" style="width:100%;margin-top:8px">Koppelen</button><button class="btn sec" data-x style="width:100%;margin-top:8px">Annuleren</button>`, (e, ov) => {
+    if (e.target.id !== 'kwKp') return; const ids = [...ov.querySelectorAll('input:checked')].map(x => x.value); if (!ids.length) return toast('Vink eerst een actie aan'); ov.remove(); kwKoppel(wk, id, ids); });
+}
+function kwKoppel(wk, id, ids) {
+  const p = S.kwplan[wk], it = p.folder.items.find(x => x.id === id), mee = p.folder.items.filter(x => ids.includes(x.id)); if (!it || !mee.length) return;
+  const arts = x => (x.arts || []).length ? x.arts : [{ naam: x.naam, nr: (x.nrs || [])[0], ean: (x.nrs || [])[1], cvoor: (x.prijs || [])[0], cvan: (x.streep || [])[0] }];
+  const al = [it, ...mee], pr = al.flatMap(x => x.prijs || []), sp = al.flatMap(x => x.streep || []);
+  Object.assign(it, { arts: al.flatMap(arts), nrs: [...new Set(al.flatMap(x => x.nrs || []))], prijs: pr.length ? [...new Set([Math.min(...pr), Math.max(...pr)])] : it.prijs, streep: sp.length ? [Math.max(...sp)] : [] });
+  p.folder.items = p.folder.items.filter(x => !ids.includes(x.id));
+  for (const k of ['plek', 'notitie']) if (ids.some(i => (p[k] || {})[i])) { p[k] = Object.assign({}, p[k]); ids.forEach(i => delete p[k][i]); }
+  for (const x of kwPlekken()) { if (!x.tafel) continue; const ind = indelingVan(wk, x.tafel); if ((ind.items || []).some(y => ids.includes(y.kw))) { const ni = JSON.parse(JSON.stringify(ind)); ni.items = ni.items.filter(y => !ids.includes(y.kw)); slaIndelingOp(wk, x.tafel, ni, true); } }
+  kwPlanOpslaan(wk); toast(`Gekoppeld · ${it.arts.length} soorten`); render(true);
+}
 function kwSplits(wk, id) {
   const p = S.kwplan[wk]; const i = p.folder.items.findIndex(x => x.id === id); const it = p.folder.items[i]; if (!it || !(it.arts || []).length) return;
   const los = it.arts.map((a, j) => Object.assign({}, it, { id: it.id + '-' + (j + 1), naam: a.naam, variant: '', nrs: [a.nr, a.ean].filter(Boolean), prijs: a.cvoor ? [a.cvoor] : it.prijs, streep: a.cvan && a.cvan !== a.cvoor ? [a.cvan] : [], arts: [a] }));
@@ -175,9 +193,10 @@ function terugRegel(naam, besteld, verk) {
   return `<div class="it"><span style="flex:1"><b>${esc(naam)}</b><br><span class="small">besteld ${C.fmt(Math.round(besteld))} · verkocht ${C.fmt(Math.round(verk))}${over ? ` · over ${C.fmt(Math.round(over))}` : ''} · <span class="${/te veel|meer verkocht/.test(tip) ? 'rood' : /goed/.test(tip) ? 'groen' : ''}">${tip}</span></span></span></div>`;
 }
 function terugblikHtml(van, tm, rijen) { if (tm >= C.today()) return ''; if (M.dagLijst[M.dagLijst.length - 1] < tm) return `<div class="blk"><h2>↩ Terugblik</h2><p class="small">Komt zodra de verkoop t/m ${C.fmtDag(tm)} binnen is.</p></div>`; return `<div class="blk"><h2>↩ Terugblik</h2><p class="small">Per actie wat er besteld en verkocht is (in stuks).</p><div class="list">${rijen.map(r => terugRegel(r[0], besteldVoor(r[1], van, tm), verkochtIn(r[1], van, tm))).join('') || '<div class="small">Geen acties.</div>'}</div></div>`; }
-function voorkoopAdvies(it, wk, ver, vg) {
+function voorkoopAdvies(it, wk, ver, vg, sa) {
   if (it.bron !== 'voorkoop' || it.instore || !ver || ver.uit) return '';
   let he = ver.geen ? 0 : Math.ceil(ver.he || 0); if (!he && vg && vg.verk) he = Math.ceil(vg.verk / Math.max(1, (M.art[kwKeys(it)[0]] || {}).he || 1));
+  if (sa && sa.some(x => x.he)) he = sa.reduce((t, x) => t + x.he, 0);
   if (!he) return '';
   let tip = ''; if (vg && vg.verk !== null) { const p = S.kwplan[`${wk.slice(0, 4)}-${String(vg.week).padStart(2, '0')}`]; const f = p && p.folder; const x = f && f.items.find(y => (y.nrs || []).some(n => (it.nrs || []).includes(n))); if (x) { const b = besteldVoor(kwKeys(x), f.van, f.tm); if (b > vg.verk * 1.3) tip = ` · vorige keer ${Math.round((b / Math.max(vg.verk, 1) - 1) * 100)}% over`; } }
   return `<div class="small voorkoop">🛒 Voorkoop-advies: <b>${he} HE</b>${tip}</div>`;
