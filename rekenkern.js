@@ -55,6 +55,19 @@ C.lines = items => {
   out.forEach(l => { l.it.sort((a, b) => a.x - b.x); l.txt = l.it.map(i => i.s).join(' ').replace(/\s+/g, ' ').trim(); });
   return out;
 };
+/* 1.96: Van Tol-weekstaat, één bladzijde "Retouremballage" (regels als tekst) → per "Uw referentie" een blok; er kunnen meerdere bonnen op één bladzijde staan */
+C.wsRetour = L => {
+  const t = L.join('\n'), dm = m => m ? `${m[3]}-${m[2]}-${m[1]}` : '', kop = { d: dm(t.match(/Doc\.?datum\s*:\s*(\d\d)\.(\d\d)\.(\d{4})/)), fnr: (t.match(/Interne ref\.?\s*:\s*(\d+)/) || [])[1] || '' }, out = {}; let cur = null;
+  if (!/Retouremballage/i.test(t)) return out;
+  for (const x of L) {
+    const r = x.match(/Uw referentie:\s*(\d{6,})/); if (r) { cur = out[r[1]] = Object.assign({}, kop, { d: dm(x.match(/Datum\s+(\d\d)\.(\d\d)\.(\d{4})/)) || kop.d, regels: [] }); continue; }
+    const m = cur && x.match(/^(\d{1,4})\s+(-?\d+)\s*-\s*[A-Z]{1,4}\s+(.+)$/); if (!m) continue;
+    const tk = m[3].split(/\s+/), i = tk.findIndex(w => /^-?[\d.]+,\d\d$/.test(w)), eur = Math.abs(C.num(tk[tk.length - 1]));
+    if (i < 1 || !(eur >= 0)) continue; cur.regels.push({ art: m[1], n: Math.abs(+m[2]), oms: tk.slice(0, i).join(' ').replace(/\s+VAN TOL$/i, ''), eur });
+  }
+  for (const k in out) out[k].eur = Math.round(out[k].regels.reduce((a, r) => a + r.eur, 0) * 100) / 100;
+  return out;
+};
 C.detectPdf = pages => {
   const t = pages.slice(0, 9).flat().map(i => i.s).join(' ');
   if (/VOORKOOPLIJST/i.test(t)) return 'voorkoop';
