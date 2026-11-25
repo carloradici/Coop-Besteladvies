@@ -165,7 +165,8 @@ async function scanStart(od, opVondst) {
   } catch (e) { const m = $('#scM', ov); if (m) m.textContent = /Permission|NotAllowed/i.test(e && (e.name + e.message)) ? 'Geen toegang tot de camera. Typ het nummer hieronder.' : 'Camera lukt niet. Typ het nummer hieronder.'; }
 }
 /* ---------- 1.50: naar de terminal (QR per afgevinkt artikel) ---------- */
-function terminalLijst(od, cur) { return cur ? lijstArtikelen(od).filter(a => { const b = S.bestel[a.key + '|' + cur.besteldag]; return b && b.besteld && C.num(b.aantal) > 0; }) : []; }
+// 2.21: in de volgorde waarin je ze hebt afgevinkt (eerst besteld = eerst)
+function terminalLijst(od, cur) { if (!cur) return []; const t = a => (S.bestel[a.key + '|' + cur.besteldag] || {}).besteld_om || ''; return lijstArtikelen(od).filter(a => { const b = S.bestel[a.key + '|' + cur.besteldag]; return b && b.besteld && C.num(b.aantal) > 0; }).sort((x, y) => t(x) < t(y) ? -1 : t(x) > t(y) ? 1 : 0); }
 function terminalModus(od, cur, alles) {
   // 1.70: per artikel onthouden wat al op de terminal staat; opnieuw openen = alleen de rest
   const dk = 'cba-termok-' + od + '-' + cur.besteldag, ok = new Set(ls.get(dk) || []), bewaar = () => ls.set(dk, [...ok]);
@@ -180,7 +181,7 @@ function terminalModus(od, cur, alles) {
     const a = arts[i], al = totaal.filter(x => ok.has(x.key)).length;
     if (!a) { ov.innerHTML = `<div class="telkop"><span></span><button id="tmX">Sluiten</button></div><div class="tmeind">✅<b>${arts.length ? 'Klaar' : 'Alles staat al op de terminal'}</b><span>${al} van ${totaal.length} artikelen op de terminal</span></div><div class="telacties tm2"><button id="tmA">Alles opnieuw tonen</button><button class="hoofd" id="tmK">Klaar</button></div>`; }
     else {
-      const n = C.num(S.bestel[a.key + '|' + cur.besteldag].aantal), nr = a.eigen ? '' : String(a.nr || ''), qr = qrSvg(nr), pad = routePad(a);
+      const n = C.num(S.bestel[a.key + '|' + cur.besteldag].aantal), nr = String((a.eigen ? a.artNr : a.nr) || ''), qr = qrSvg(nr), pad = routePad(a);
       ov.innerHTML = `<div class="telkop"><span>${i + 1} van ${arts.length}${al ? ` · ${al} al ingevoerd` : ''}</span><button id="tmX">Sluiten</button></div><div class="telbalk"><div style="width:${i / arts.length * 100}%"></div></div>
       <div class="tmpad">${pad ? `Pad ${pad} · ` : ''}${esc(groepVan(a) || '')}</div>
       <div class="tmqr">${qr || '<span class="small">Geen bestelnummer: typ het artikel zelf in</span>'}</div><div class="tmnr">${esc(nr)}</div><div class="tmuitleg">Scan de code met de terminal, typ het aantal en tik ✓. Daarna hier Volgende of veeg.</div>

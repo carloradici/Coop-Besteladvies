@@ -457,7 +457,7 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['📍', 'Actieweek bij de plek', 'Bij een artikel met een actieplek staat nu ook de week erbij (bv. wk 49, 30-11 t/m 6-12). Tik erop en je gaat naar de actieplanning van die week.']];
+const NIEUWS = [['📲', 'Naar de terminal op volgorde', 'De QR-codes komen nu in de volgorde waarin je de artikelen hebt afgevinkt. Ook zelf toegevoegde artikelen met een bestelnummer krijgen een QR-code.']];
 let nieuweVersie = null;
 const updTonen = () => (S.pref || {}).upd ?? rol === 'admin';
 async function zoekUpdate(stil, forceer) {
