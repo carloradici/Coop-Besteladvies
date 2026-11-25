@@ -1,0 +1,29 @@
+# Edge Functions automatisch live zetten in Supabase zodra hun code verandert (geen Deploy-knop meer).
+# Nodig: geheim SUPABASE_ACCESS_TOKEN in GitHub en VERKOOP_SLEUTEL in Supabase (Edge Functions › Secrets).
+name: functies-live
+on:
+  push:
+    branches: [main]
+    paths: [stuur-push.js, dagexport.js, folder.js, verkoop-export.js, 'supabase/functions/**', .github/workflows/functies.yml]
+  workflow_dispatch:
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      P: qgrexmttlceegavnkmkx
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Controleren
+        run: '[ -n "$SUPABASE_ACCESS_TOKEN" ] || { echo "Geheim SUPABASE_ACCESS_TOKEN ontbreekt in GitHub"; exit 1; }'
+      - name: Gedeelde code klaarzetten
+        run: mkdir -p supabase/functions/_shared && cp stuur-push.js dagexport.js folder.js verkoop-export.js supabase/functions/_shared/
+      - name: Live zetten
+        run: |
+          supabase functions deploy stuur-push --project-ref $P --no-verify-jwt
+          supabase functions deploy dagexport --project-ref $P --no-verify-jwt
+          supabase functions deploy folder --project-ref $P
+          supabase secrets list --project-ref $P | grep -q VERKOOP_SLEUTEL && supabase functions deploy verkoop-export --project-ref $P --no-verify-jwt || echo "verkoop-export overgeslagen: geheim VERKOOP_SLEUTEL ontbreekt in Supabase"

@@ -39,7 +39,7 @@ Web-app (PWA) van Coop Vogelenzang die per artikel een bestel-advies geeft (vers
 | app-retour.js | retourbonnen Van Tol: scans (pdf iPhone-scanner) + gedrukte tekst lezen (Tesseract), invullen, saldo, Excel import/export, nakijken (vt) + claimrapport-pdf (cl = geclaimd), karren tellen (tab 'karren', RB.tel); opgeslagen in voorkeuren wie='retour', scans lokaal (iget 'rbscan:'+nr) én in privé bucket 'retour' (map per winkel, policies gekopieerd van bucket 'pdfs'); bedragen alleen voor beheerder (rbGeld) |
 | app-start.js | opstarten |
 
-Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js`, `verkoop-export.js` (kassaverkoop per PLU voor Brood Opzet, koppelcode in de stub) (vaste naam, Supabase heeft alleen een stub die ze importeert). Brood Opzet-gegevens komen van de Edge Function `brood-export` in het Brood Opzet-project (bestand `brood-export.js` in repo Broodkarren); adres + koppelcode staan in `S.inst.bo`.
+Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js`, `verkoop-export.js` (kassaverkoop per PLU voor Brood Opzet). Code blijft in deze bestanden; `supabase/functions/<naam>/index.ts` is de ingang. **Automatisch live** via `.github/workflows/functies.yml` (Supabase CLI, geheim SUPABASE_ACCESS_TOKEN in GitHub) zodra zo'n bestand verandert: geen Deploy-knop meer. Koppelcode verkoop-export = geheim VERKOOP_SLEUTEL in Supabase (nooit in de openbare repo). verify_jwt: alleen folder aan. Brood Opzet-gegevens komen van de Edge Function `brood-export` in het Brood Opzet-project (bestand `brood-export.js` in repo Broodkarren); adres + koppelcode staan in `S.inst.bo`.
 
 ## Nieuwe versie (1.31, 1.32 …)
 1. `app-basis.js`: `const VERSIE = 'x.y'`.
@@ -73,4 +73,4 @@ Updates (2.07, zoals Brood Opzet): groene balk bij nieuwe versie; instelling "Up
 - Lukt pushen niet, dan als terugval een zip `coop-besteladvies-X.Y-github.zip` met alleen de gewijzigde bestanden (plat, geen mappen).
 - Supabase: SQL als platte tekst in de chat, compacte delen zonder commentaar (max ~5 KB per deel), altijd met link naar de juiste Supabase-pagina. Nooit "vervang één regel": altijd het hele bestand. Niets nodig? Zeg: "Voor Supabase hoef je niets te doen".
 - Pushmelding "Nieuwe versie": `.github/workflows/update-melding.yml` roept na elke versie stuur-push (soort update) aan; de cron doet het ook als reserve.
-- Na oplevering alleen: wat nieuw is, dat het op GitHub staat, of Supabase iets nodig heeft (SQL, of Deploy tikken bij een gewijzigde Edge Function).
+- Na oplevering alleen: wat nieuw is, dat het op GitHub staat, of Supabase iets nodig heeft (alleen nog SQL; Edge Functions gaan automatisch live, controleer de run van functies-live).

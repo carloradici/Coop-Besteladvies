@@ -1,5 +1,5 @@
 // Coop Besteladvies – kassaverkoop per PLU voor Brood Opzet (Supabase Edge Function "verkoop-export"). Alleen lezen.
-// Supabase heeft alleen een korte stub die dit bestand van GitHub haalt. Bijwerken = uploaden + Deploy.
+// Wordt automatisch live gezet door .github/workflows/functies.yml; koppelcode = geheim VERKOOP_SLEUTEL in Supabase.
 export function start(createClient, SLEUTEL) {
   const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type, x-sleutel", "Access-Control-Allow-Methods": "GET, OPTIONS" };
   const js = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });

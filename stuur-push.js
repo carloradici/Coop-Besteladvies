@@ -1,5 +1,5 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
-// Wordt door de korte stuur-push in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
+// Wordt automatisch live gezet door .github/workflows/functies.yml (supabase/functions/stuur-push/index.ts).
 // Soorten: update (nieuwe app-versie op GitHub, per versie één keer; ook in cron), test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
 export const FUNCTIE_VERSIE = '1.29';
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };

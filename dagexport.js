@@ -1,5 +1,5 @@
 // Coop Besteladvies – automatisch dagexports ontvangen (Supabase Edge Function "dagexport").
-// Wordt door de korte code in Supabase opgehaald van GitHub. Bijwerken = dit bestand uploaden en in Supabase op Deploy tikken.
+// Wordt automatisch live gezet door .github/workflows/functies.yml (supabase/functions/dagexport/index.ts).
 export const FUNCTIE_VERSIE = '1.12';
 const num = v => { if (v === null || v === undefined || v === '') return 0; if (typeof v === 'number') return isFinite(v) ? v : 0; let s = String(v).trim().replace(/[€\s]/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); const n = parseFloat(s); return isFinite(n) ? n : 0; };
 const rnd = (n, d = 1) => { const f = 10 ** d; return Math.round(n * f) / f; };
