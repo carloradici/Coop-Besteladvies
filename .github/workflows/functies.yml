@@ -1,4 +1,4 @@
-# Edge Functions automatisch live zetten in Supabase zodra hun code verandert (geen Deploy-knop meer).
+# Edge Functions automatisch live zetten in Supabase zodra hun code verandert (geen Deploy-knop meer). Handmatig: Actions › functies-live › Run workflow.
 # Nodig: geheim SUPABASE_ACCESS_TOKEN in GitHub en VERKOOP_SLEUTEL in Supabase (Edge Functions › Secrets).
 name: functies-live
 on:
