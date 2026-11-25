@@ -24,7 +24,7 @@ jobs:
       - name: Live zetten
         run: |
           F=0
-          d(){ n=$1; shift; if o=$(supabase functions deploy $n --project-ref $P "$@" 2>&1); then echo "::notice title=$n::live"; else echo "$o"; echo "::error title=$n::$(echo "$o" | tail -6 | tr '\n' ' ')"; F=1; fi; }
+          d(){ n=$1; shift; if o=$(supabase functions deploy $n --project-ref $P --yes "$@" 2>&1); then echo "::notice title=$n::live"; else echo "$o"; echo "::error title=$n::$(echo "$o" | tail -6 | tr '\n' ' ')"; F=1; fi; }
           d stuur-push --no-verify-jwt
           d dagexport --no-verify-jwt
           d folder
