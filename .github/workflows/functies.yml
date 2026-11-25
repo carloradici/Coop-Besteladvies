@@ -30,3 +30,12 @@ jobs:
           d folder
           if supabase secrets list --project-ref $P 2>&1 | grep -q VERKOOP_SLEUTEL; then d verkoop-export --no-verify-jwt; else echo "::warning title=verkoop-export::overgeslagen, geheim VERKOOP_SLEUTEL ontbreekt in Supabase"; fi
           exit $F
+      - name: Controleren of ze werken
+        run: |
+          U=https://$P.supabase.co/functions/v1; K=sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me; F=0
+          t(){ n=$1; c=$(curl -s -m 60 -o /tmp/o -w '%{http_code}' -H "apikey: $K" -H "Authorization: Bearer $K" "${@:2}"); b=$(head -c 120 /tmp/o | tr -dc '[:print:]'); if [ "$c" -ge 500 ] || [ "$c" = 000 ]; then echo "::error title=$n::antwoord $c $b"; F=1; else echo "::notice title=$n werkt::antwoord $c $b"; fi; }
+          t stuur-push -X POST -H 'Content-Type: application/json' -d '{"soort":"controle"}' $U/stuur-push
+          t folder "$U/folder?jaar=$(date +%G)&week=$((10#$(date +%V)))"
+          t verkoop-export $U/verkoop-export
+          t dagexport $U/dagexport
+          exit $F
