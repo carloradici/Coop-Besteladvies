@@ -457,7 +457,7 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['➕', 'Onbekend artikel? Toevoegen en bestellen', 'Scan je een artikel dat niet in het bestelboek staat, tik dan "Toevoegen en bestellen": geef het een naam en je bestelt het meteen. De volgende keer kent de app het.']];
+const NIEUWS = [['📍', 'Actieweek bij de plek', 'Bij een artikel met een actieplek staat nu ook de week erbij (bv. wk 49, 30-11 t/m 6-12). Tik erop en je gaat naar de actieplanning van die week.']];
 let nieuweVersie = null;
 const updTonen = () => (S.pref || {}).upd ?? rol === 'admin';
 async function zoekUpdate(stil, forceer) {
