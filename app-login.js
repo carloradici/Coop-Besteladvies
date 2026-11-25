@@ -236,7 +236,7 @@ function shell() {
   $('#wieB').onclick = () => { if (OEFEN) return toast('Stop eerst met oefenen'); inlogScherm(); };
   $('.koplogo').src = logoSrc(); setSync(); oefenBalk();
 }
-const MEER_SUB = ['retour', 'tafels', 'kwacties', 'rapport', 'gebruik', 'route', 'medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer', 'uitleg', 'hoegoed', 'leverancier', 'levering', 'eerder'];
+const MEER_SUB = ['retour', 'karren', 'tafels', 'kwacties', 'rapport', 'gebruik', 'route', 'medewerkers', 'mwedit', 'winkel', 'meldingen', 'appinst', 'vandaag', 'export', 'beheer', 'uitleg', 'hoegoed', 'leverancier', 'levering', 'eerder'];
 const SCROLL = {}; let scrollSleutel = '';
 function schermSleutel() { return [ui.tab, ui.bsub || '', ui.meerG || '', ui.tafel || '', ui.kwKop || '', ui.kwStap || '', ui.versStap || ''].join('|'); }
 function zoekKruis(root) { (root || document).querySelectorAll('input[type=search]:not([data-kr])').forEach(i => { i.dataset.kr = 1; const w = document.createElement('span'); w.className = 'zwrap'; const cs = getComputedStyle(i); w.style.flex = cs.flex; if (i.style.width) w.style.width = i.style.width; i.parentNode.insertBefore(w, i); w.appendChild(i); i.style.width = '100%'; const k = document.createElement('button'); k.type = 'button'; k.className = 'zkruis'; k.textContent = '✕'; k.setAttribute('aria-label', 'Wissen'); k.onclick = () => { i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); i.focus(); }; w.appendChild(k); w.classList.toggle('vol', !!i.value); }); }

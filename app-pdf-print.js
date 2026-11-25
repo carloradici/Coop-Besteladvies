@@ -192,6 +192,7 @@ const BEL_JIJ = new Set(BESTEL_OD.concat(['levering', 'tafels', 'taken']));
 function belItems() {
   const out = belItemsBasis().map(x => Object.assign({ jij: BEL_JIJ.has(x.ga) }, x));
   for (const od of BESTEL_OD) { if (od === 'gm' || !mag('o_' + od) || !mag('tellen')) continue; const cur = besteldag(od).cur; if (!cur || cur.besteldag !== C.today()) continue; const t = telKeuze(od, cur); if (t.open.length) out.push({ ic: '🔢', t: `${odNaam(od)}: tel ${t.open.length} artikelen`, sub: 'Dan wordt het advies beter', ga: od, jij: true }); }
+  if (isBeheer()) { const R = RB || ls.get('cba-retour'), n = R ? (R.bonnen || []).filter(b => b.cl && C.diff(b.cl, C.today()) >= 28 && rbFout(rbStatus(b))).length : 0; if (n) out.push({ ic: '📨', t: `${n} geclaimde ${n === 1 ? 'retourbon' : 'retourbonnen'} nog niet opgelost`, sub: 'Al 4 weken of langer: vraag Van Tol na', fn: () => { ls.set('cba-rbfil', 'gecl'); ui.rbEdit = null; ga('retour'); } }); }
   if (updTonen() && ls.get('cba-gezien-' + wieSleutel()) !== VERSIE) out.unshift({ ic: '✨', t: `Nieuw in versie ${VERSIE}`, sub: 'Wat er veranderd is', fn: toonNieuws });
   for (const r of openTaken()) out.unshift({ ic: r.soort === 'bericht' ? '✉️' : '☑️', t: r.tekst, sub: r.soort === 'bericht' ? `Bericht van ${r.wie || ''}` : `Taak van ${r.wie || ''}`, ga: 'taken', jij: true, taak: true });
   return out;
@@ -239,6 +240,7 @@ function meerItems() {
     [kantoorMag() ? 'bestellen' : 'snel', 'mRoute', '🚶', 'Looproute', 'Bestellijst in de volgorde waarin je door de winkel loopt', 'looproute route pad paden volgorde lopen winkel stelling bestelvolgorde', mag('bestellen') || mag('afvinken'), () => ga('route')],
     [kantoorMag() ? 'bestellen' : 'snel', 'mEer', '📜', 'Eerdere bestellingen', 'Terugkijken wat er per besteldag besteld is', 'eerder vorige bestellingen geschiedenis historie besteld terugkijken', mag('bestellen') || mag('afvinken'), () => { ui.eTerug = null; ga('eerder'); }],
     ['snel', 'mLc', '📦', 'Leverdag-check', 'Afvinken bij het uitpakken, ontbrekende artikelen doorgeven', 'levering controle uitpakken ontbreekt niet geleverd', true, () => ga('levering')],
+    ['snel', 'mKar', '🛒', 'Karren tellen', 'Karren en planken in de winkel tellen', 'karren tellen planken rolcontainers containers saldo van tol', true, () => { ui.karT = null; ga('karren'); }],
     ['bestellen', 'mRet', '🛒', 'Retourbonnen', 'Karren en kratten retour naar Van Tol', 'retourbon retour karren kratten statiegeld van tol container bigbag saldo bon', kantoorMag(), () => { ui.rbEdit = null; ga('retour'); }],
     ['bestellen', 'mRap', '📊', 'Rapporten', 'Vorige week, hoe goed het advies was, acties terugblik', 'week overzicht samenvatting vorige week derving weggooien resultaat hoe goed advies controle terugblik rapport', kantoorMag(), () => ga('rapport')],
     [kantoorMag() ? 'bestellen' : 'snel', 'mExp', '📤', 'Exporteren', 'Bestellijst, verkoop of acties naar Excel', 'excel export exporteren delen bestand', kU || mag('bestellen'), () => ga('export')],

@@ -36,7 +36,7 @@ Web-app (PWA) van Coop Vogelenzang die per artikel een bestel-advies geeft (vers
 | app-brood.js | koppeling met Brood Opzet: ophalen (boHaal), advies per weekdag (M.bo), voorraad, waarschuwing "komt niet uit", koppelscherm |
 | app-route.js | looproute: paden per onderdeel (ROUTE_STD), pad per artikel, leren bij bestellen (routeTik), route-scherm; opgeslagen in voorkeuren wie='route' |
 | app-kantoor.js | werkvloer/kantoor (kantoorMag, KANTOOR_G incl. 'geav' = Geavanceerd, alleen beheerder), Start hier, Rapporten, testpakket, teller 'Wat wordt gebruikt' |
-| app-retour.js | retourbonnen Van Tol: scans (pdf iPhone-scanner) + gedrukte tekst lezen (Tesseract), invullen, saldo, Excel import/export; opgeslagen in voorkeuren wie='retour', scans lokaal (iget 'rbscan:'+nr) |
+| app-retour.js | retourbonnen Van Tol: scans (pdf iPhone-scanner) + gedrukte tekst lezen (Tesseract), invullen, saldo, Excel import/export, nakijken (vt) + claimrapport-pdf (cl = geclaimd), karren tellen (tab 'karren', RB.tel); opgeslagen in voorkeuren wie='retour', scans lokaal (iget 'rbscan:'+nr) én in privé bucket 'retour' (map per winkel, policies gekopieerd van bucket 'pdfs'); bedragen alleen voor beheerder (rbGeld) |
 | app-start.js | opstarten |
 
 Edge Functions: `stuur-push.js`, `dagexport.js`, `folder.js`, `verkoop-export.js` (kassaverkoop per PLU voor Brood Opzet, koppelcode in de stub) (vaste naam, Supabase heeft alleen een stub die ze importeert). Brood Opzet-gegevens komen van de Edge Function `brood-export` in het Brood Opzet-project (bestand `brood-export.js` in repo Broodkarren); adres + koppelcode staan in `S.inst.bo`.
