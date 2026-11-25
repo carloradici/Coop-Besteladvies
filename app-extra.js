@@ -121,20 +121,32 @@ function vindCode(code) {
   for (const c of kand) { for (const b of ['vers', 'kw']) { const a = M.art[b + ':' + c]; if (a) return a; } for (const a of Object.values(M.art)) if (a.eigen && a.artNr === c) return a; }
   return null;
 }
+/* 2.19: onbekend gescand artikel (wel bestelbaar, niet in het bestelboek) direct toevoegen en bestellen */
+function eigenSnel(code, od) {
+  const nr = /^\d{8,14}$/.test(code) ? '' : code.replace(/\D/g, '').slice(0, 6), ean = nr ? '' : code; od = BESTEL_OD.includes(od) ? od : BESTEL_OD.includes(ui.tab) ? ui.tab : 'kw';
+  const ov = sheet(`<h2 style="margin:0">➕ Toevoegen en bestellen</h2><p class="small">Staat niet in het bestelboek, maar is wel bestelbaar. ${nr ? 'Bestelnummer' : 'Barcode'} <b>${esc(code)}</b>.</p><div class="form">
+    <label>Naam</label><input type="text" id="esN" value="Onbekend ${esc(code)}" placeholder="Bijv. Lay's chips paprika">
+    <label>Afdeling</label><select id="esO">${BESTEL_OD.filter(o => mag('o_' + o)).map(o => `<option value="${o}"${o === od ? ' selected' : ''}>${esc(odNaam(o))}</option>`).join('')}</select></div>
+    <div class="row" style="margin-top:10px"><button class="btn sec" data-x style="flex:1">Annuleren</button><button class="btn" id="esS" style="flex:1">Opslaan en bestellen</button></div>`);
+  const i = ov.querySelector('#esN'); setTimeout(() => { i.focus(); i.select(); }, 150);
+  ov.querySelector('#esS').onclick = () => { const naam = i.value.trim() || 'Onbekend ' + code, o = ov.querySelector('#esO').value || od, id = 'E' + Date.now().toString(36).toUpperCase();
+    write('eigen_artikelen', [{ id, data: { naam, nr, ean, od: o, groep: 'Niet in bestelboek', perHE: false, he: 1, ehNaam: 'HE', lev: isKw(o) ? 'vantol' : 'versunie', prijs: '', foto: '', volgen: true, sinds: C.today() }, door: mijnNaam() }]);
+    log('eigen', 'Artikel toegevoegd via scan: ' + naam); ov.remove(); rebuild(); const a = vindCode(code); toast('✓ Toegevoegd: ' + naam); if (a) naarArtikel(a); else render(true); };
+}
 function naarArtikel(a) {
   const od = onderdeelVan(a); if (!mag('o_' + od)) return toast('Dit artikel hoort bij ' + odNaam(od) + ', dat mag je niet zien');
   if (!mag('bestellen') && !mag('afvinken') && mag('tellen')) return telModus(od, [a]);
-  const vorig = ui.vanScan ? { m: ui.vanScan.m, fA: ui.vanScan.fA } : ui.tab === od && !ui.q ? { m: ui.modus, fA: ui.fAlles } : null; ga(od); ui.spring = null; ui.vanScan = Object.assign({ key: a.key, m: ui.modus, fA: ui.fAlles }, vorig); ui.q = a.eigen ? a.naam : a.nr; ui.modus = 'alles'; if (assStatus(a) !== 'in' || a.uit) ui.fAlles = true; ui.fAdv = false; ui.fOpen = false; ui.fActie = false; render();
+  const vorig = ui.vanScan ? { m: ui.vanScan.m, fA: ui.vanScan.fA } : ui.tab === od && !ui.q ? { m: ui.modus, fA: ui.fAlles } : null; ga(od); ui.spring = null; ui.vanScan = Object.assign({ key: a.key, m: ui.modus, fA: ui.fAlles }, vorig); ui.q = a.eigen ? (a.artNr || a.naam) : a.nr; ui.modus = 'alles'; if (assStatus(a) !== 'in' || a.uit) ui.fAlles = true; ui.fAdv = false; ui.fOpen = false; ui.fActie = false; render();
 }
 let scanStop = null;
 async function scanStart(od, opVondst) {
   const ov = document.createElement('div'); ov.className = 'scanner';
-  ov.innerHTML = `<video playsinline muted></video><div class="scankader"></div><div class="scanbalk"><div id="scM">Houd de telefoon 20 tot 30 cm van de barcode, recht in het kader</div><div class="row" style="width:100%;max-width:400px"><input type="text" id="scI" inputmode="numeric" placeholder="Of typ het nummer" style="flex:1"><button class="btn sm" id="scZ">Zoek</button></div><label class="btn" style="text-align:center">📸 Lukt het niet? Maak een foto<input type="file" id="scF" accept="image/*" capture="environment" class="hide"></label><button class="btn sec" id="scX" style="background:#fff">Sluiten</button></div>`;
+  ov.innerHTML = `<video playsinline muted></video><div class="scankader"></div><div class="scanbalk"><div id="scM">Houd de telefoon 20 tot 30 cm van de barcode, recht in het kader</div><button class="btn" id="scNw" hidden style="width:100%;max-width:400px">➕ Toevoegen en bestellen</button><div class="row" style="width:100%;max-width:400px"><input type="text" id="scI" inputmode="numeric" placeholder="Of typ het nummer" style="flex:1"><button class="btn sm" id="scZ">Zoek</button></div><label class="btn" style="text-align:center">📸 Lukt het niet? Maak een foto<input type="file" id="scF" accept="image/*" capture="environment" class="hide"></label><button class="btn sec" id="scX" style="background:#fff">Sluiten</button></div>`;
   document.body.appendChild(ov);
   let strm = null; const stop = () => { try { strm && strm.getTracks().forEach(t => t.stop()); } catch (e) { } ov.remove(); scanStop = null; scanHook = null; };
   scanStop = stop;
   geluidKlaar();
-  const gevonden = code => { const a = vindCode(code), m = $('#scM', ov), k = $('.scankader', ov); if (!a) { m.textContent = `❌ Onbekend artikel: ${code}`; m.className = 'fout'; k.classList.remove('fout'); void k.offsetWidth; k.classList.add('fout'); klank(false); return false; } { const v = vorigeBestel(a.key, besteldag(onderdeelVan(a)).cur); klank(v && v.weg ? 'let' : true); } stop(); if (opVondst) opVondst(a); else naarArtikel(a); return true; };
+  const gevonden = code => { const a = vindCode(code), m = $('#scM', ov), k = $('.scankader', ov); if (!a) { m.textContent = `❌ Onbekend artikel: ${code}`; m.className = 'fout'; const nw = $('#scNw', ov); if (!opVondst && (mag('bestellen') || mag('afvinken'))) { nw.hidden = false; nw.onclick = () => { stop(); eigenSnel(code, od); }; } k.classList.remove('fout'); void k.offsetWidth; k.classList.add('fout'); klank(false); return false; } { const v = vorigeBestel(a.key, besteldag(onderdeelVan(a)).cur); klank(v && v.weg ? 'let' : true); } stop(); if (opVondst) opVondst(a); else naarArtikel(a); return true; };
   scanHook = c => gevonden(c);
   $('#scX', ov).onclick = stop; $('#scZ', ov).onclick = () => gevonden($('#scI', ov).value.trim()); $('#scI', ov).onkeydown = e => { if (e.key === 'Enter') gevonden(e.target.value.trim()); };
   try { // 1.71: zxing-cpp (WebAssembly) via BarcodeDetector; leest ook lastige barcodes op zakken en flessen. Alleen het kader wordt bekeken.

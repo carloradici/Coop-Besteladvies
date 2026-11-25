@@ -434,7 +434,7 @@ const HULP = {
   route: ['Looproute', 'De bestellijst staat per pad in de volgorde waarin je loopt; de app leert bij elke bestelling waar een artikel staat. Pad zelf kiezen: open het artikel en tik op 🚶 Pad. Tik op een kopje met ▾ om het open of dicht te klappen.'],
   uitleg: ['Uitleg', 'Bovenaan de woordenlijst, daaronder uitleg per scherm.'],
   eigen: ['Eigen artikelen', 'Artikelen die niet in het bestelboek staan voeg je zelf toe met "+ Artikel toevoegen" onderaan de lijst. Vul de EAN of PLU in, dan koppelt de app de verkoop uit de dag-export en krijg je een advies zoals bij de rest. Tik op de naam om het aan te passen of te verwijderen. Komt het artikel later in het bestelboek, dan meldt de app dat en neem je het boekartikel over.'],
-  scannen: ['Barcode scannen', 'Tik in de lijst op "📷 Scannen" en richt de camera op de barcode van het product of het schapkaartje. De app springt naar het artikel. Lukt scannen niet, typ dan het nummer.'],
+  scannen: ['Barcode scannen', 'Tik in de lijst op "📷 Scannen" en richt de camera op de barcode van het product of het schapkaartje. De app springt naar het artikel. Lukt scannen niet, typ dan het nummer. Kent de app het artikel niet maar is het wel bestelbaar (bv. alleen een schapkaartje met bestelnummer), tik dan <b>➕ Toevoegen en bestellen</b>: geef een naam, kies de afdeling en je bestelt het meteen. Het komt in de groep <b>Niet in bestelboek</b>.'],
   tellen: ['Tellen', '1. Kies je afdeling.<br>2. Tik in hoeveel er liggen en tik op <b>Opslaan</b>.<br>3. Liggen er ook volle dozen? Tik op <b>+ 1 doos</b> per doos, en tik de losse stuks in.<br><br>Stop je tussendoor, dan ga je de volgende keer verder waar je was. Wat kort geleden al geteld is, slaat de app over.'],
   printen: ['Printen', 'Tik in de lijst op Printen. Kies alles, alleen met advies of alleen wat ingevuld is, en of elke groep op een nieuwe pagina moet. De barcodes zijn dezelfde als in het bestelboek, zodat je ze direct kunt scannen. In de kolom Besteld vul je met de hand in.']
 };
@@ -457,7 +457,7 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['🔎', 'Strenger vergelijken', 'Opnieuw vergelijken stelt alleen nog bonnen voor waarvan de inhoud klopt: zelfde bedrag, of 1 cijfer anders met evenveel karren.']];
+const NIEUWS = [['➕', 'Onbekend artikel? Toevoegen en bestellen', 'Scan je een artikel dat niet in het bestelboek staat, tik dan "Toevoegen en bestellen": geef het een naam en je bestelt het meteen. De volgende keer kent de app het.']];
 let nieuweVersie = null;
 const updTonen = () => (S.pref || {}).upd ?? rol === 'admin';
 async function zoekUpdate(stil, forceer) {

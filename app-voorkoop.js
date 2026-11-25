@@ -328,8 +328,8 @@ function scannerCode(code) {
   const a = vindCode(code);
   if (!a) {
     piep(); document.querySelectorAll('.sheet').forEach(x => x.remove());
-    const ov = sheet(`<h2 style="margin:0">Niet gevonden</h2><p class="small">Barcode <b>${esc(code)}</b> staat niet in het bestelboek en is nog niet via de kassa verkocht.</p>${mag('saneren') ? '<button class="btn" id="snE" style="width:100%">➕ Als eigen artikel toevoegen</button>' : ''}<button class="btn sec" data-x style="width:100%;margin-top:8px">Sluiten</button>`);
-    const e = ov.querySelector('#snE'); if (e) e.onclick = () => { ov.remove(); eigenBewerk(null, BESTEL_OD.includes(ui.tab) ? ui.tab : 'vers', /^\d{8,14}$/.test(code) ? { ean: code } : { nr: code.replace(/\D/g, '').slice(0, 6) }); };
+    const ov = sheet(`<h2 style="margin:0">Niet gevonden</h2><p class="small">Barcode <b>${esc(code)}</b> staat niet in het bestelboek en is nog niet via de kassa verkocht.</p>${mag('bestellen') || mag('afvinken') ? '<button class="btn" id="snE" style="width:100%">➕ Toevoegen en bestellen</button>' : ''}<button class="btn sec" data-x style="width:100%;margin-top:8px">Sluiten</button>`);
+    const e = ov.querySelector('#snE'); if (e) e.onclick = () => { ov.remove(); eigenSnel(code, ui.tab); };
     return;
   }
   if (navigator.vibrate) navigator.vibrate(60);
