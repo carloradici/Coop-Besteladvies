@@ -457,7 +457,8 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['📄', 'Claimrapport voor Van Tol', 'Kijk een foute retourbon na (✓ Bon klopt, Van Tol fout) en maak een pdf met alle foute bonnen, het totaal en de scans. Geclaimde bonnen worden vanzelf opgelost als Van Tol alsnog crediteert.'],
+const NIEUWS = [['➕', 'Alle soorten van de retourbon', 'Onder "+ Meer soorten" staan nu ook DPB KST, CHEP pallet, CBL krat, lege kratten en flessen, met prijs en controle tegen de weekstaat.'],
+  ['📄', 'Claimrapport voor Van Tol', 'Kijk een foute retourbon na (✓ Bon klopt, Van Tol fout) en maak een pdf met alle foute bonnen, het totaal en de scans. Geclaimde bonnen worden vanzelf opgelost als Van Tol alsnog crediteert.'],
   ['🛒', 'Karren en planken tellen', 'Tel wat er in de winkel staat en zie direct het verschil met het saldo van Van Tol.'],
   ['☁️', 'Scans veilig bewaard', 'De scans van je retourbonnen staan nu ook in een afgeschermde opslag, niet alleen op je telefoon.'],
   ['🛍️', 'Bigbags beter geteld', 'Leest de app hetzelfde Bag-ID een keer verkeerd, dan telt hij dat niet meer als tweede bigbag.'],

@@ -1,6 +1,9 @@
 /* ---------- 1.83: retourbonnen Van Tol (karren- en krattensaldo) ---------- */
 /* velden in de volgorde van de bon: [sleutel, tekst, statiegeld €] */
-const RB_V = [['k', 'Containers totaal', 100], ['bk', 'Bierkrat + 16/24 fles', 3.9], ['b12', 'Bierkrat + 12 fles', 1.95], ['fk', 'Friskrat + 24/28 fles', 5], ['bl', 'Leeg krat bier 24 fles', 1.5], ['fl', 'Bierfles los', 0.1], ['bb', 'Bigbag', 0], ['pl', 'Plank Van Tol', 12.5], ['ep', 'Euro pallet', 7.5], ['rad', 'RAD', 30]];
+const RB_V = [['k', 'Containers totaal', 100], ['bk', 'Bierkrat + 16/24 fles', 3.9], ['b12', 'Bierkrat + 12 fles', 1.95], ['fk', 'Friskrat + 24/28 fles', 5], ['bl', 'Leeg krat bier 24 fles', 1.5], ['fl', 'Bierfles los', 0.1], ['bb', 'Bigbag', 0], ['pl', 'Plank Van Tol', 12.5], ['ep', 'Euro pallet', 7.5], ['rad', 'RAD', 30],
+  /* 2.14: overige regels van de bon (onder "+ Meer soorten") */
+  ['dpb', 'DPB KST', 22.5], ['chep', 'CHEP pallet', 0], ['cbl', 'CBL krat', 3.86], ['lb16', 'Leeg krat beugels 16 × 0,45', 0.7], ['lb12', 'Leeg krat bier 12 fles', 0.75], ['lf12', 'Leeg krat fris 12 fles', 2], ['lf28', 'Leeg krat fris 28 fles', 2.2], ['lh', 'Leeg krat Hero/Coca Cola 24 × 0,2', 2.6], ['fg', 'Fles Grolsch 0,45 ltr', 0.2], ['fp', 'Fles glas + pet 1,0/1,5 ltr', 0.25]];
+const RB_N = 10;
 /* kolommen C t/m L van de Excel */
 const RB_X = [['k', 'karren retour'], ['bb', 'bigbags retour'], ['bk', 'bierkratten'], ['bl', 'bierkrat leeg'], ['fk', 'friskratten'], ['rad', 'RAD'], ['pl', 'plank'], ['ep', 'euro pallet'], ['b12', 'bierkrat 12 flessen'], ['fl', 'bierfles los']];
 LIB.ocr = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
@@ -68,8 +71,8 @@ async function rbOpschonen() {
 const rbRbs = x => String(x || '').split(/[^0-9]+/).filter(Boolean);
 /* 1.94: weekstaten komen uit Brood Opzet (S.bo.retour) én uit eigen upload (RB.ws, plaatjes lokaal 'rbws:'+ref) */
 const rbRet = () => { const bo = (S.bo || {}).retour || {}, d1 = bo.dragers, d2 = RB && RB.dr; return { bonnen: Object.assign({}, bo.bonnen, RB && RB.ws), dragers: d1 && d2 ? (d2.d > d1.d ? d2 : d1) : d1 || d2 }; }, rbKey = nr => String(nr || '').replace(/\D/g, '');
-const RB_ART = { 101: 'k', 39: 'b12', 67: 'bk', 19: 'bk', 68: 'fk', 20: 'fk', 6: 'bl', 1: 'fl', 102: 'pl', 103: 'ep', 112: 'rad' }, rbSoort = r => RB_ART[+r.art] || (RB_OMS.find(([re]) => re.test(r.oms || '')) || [])[1];
-const RB_OMS = [[/CONTAINER/i, 'k'], [/PLANK/i, 'pl'], [/PALLET/i, 'ep'], [/\bRAD\b/i, 'rad'], [/BIG ?BAG/i, 'bb'], [/FRIS/i, 'fk'], [/LEEG/i, 'bl'], [/12/, 'b12'], [/KRAT/i, 'bk'], [/FLES/i, 'fl']];
+const RB_ART = { 101: 'k', 39: 'b12', 67: 'bk', 19: 'bk', 68: 'fk', 20: 'fk', 6: 'bl', 1: 'fl', 102: 'pl', 103: 'ep', 112: 'rad', 105: 'dpb', 104: 'chep', 110: 'cbl', 51: 'lb16', 33: 'lb12', 57: 'lf12', 9: 'lf28', 13: 'lh', 2: 'fg', 3: 'fp' }, rbSoort = r => RB_ART[+r.art] || (RB_OMS.find(([re]) => re.test(r.oms || '')) || [])[1];
+const RB_OMS = [[/DPB/i, 'dpb'], [/CHEP/i, 'chep'], [/CBL/i, 'cbl'], [/BEUGEL/i, 'lb16'], [/HERO|COCA/i, 'lh'], [/GROLSCH/i, 'fg'], [/PET\b/i, 'fp'], [/CONTAINER/i, 'k'], [/PLANK/i, 'pl'], [/PALLET/i, 'ep'], [/\bRAD\b/i, 'rad'], [/BIG ?BAG/i, 'bb'], [/FRIS/i, 'fk'], [/LEEG/i, 'bl'], [/12/, 'b12'], [/KRAT/i, 'bk'], [/FLES/i, 'fl']];
 function rbStatus(b) {
   if (!RB_V.some(([k]) => +b[k])) return { v: 0, st: 'leeg' };
   const f = (rbRet().bonnen || {})[rbKey(b.nr)], w = rbWaarde(b);
@@ -135,7 +138,7 @@ async function renderRetour() {
 
 function rbForm(v) {
   const e = ui.rbEdit, b = e.b, veld = (k, t, x = '') => `<div class="f"><label>${t}${rbGeld() ? `<small class="rbpr">${RB_P[k] ? rbEuro(RB_P[k]) + ' per stuk' : 'geen statiegeld'}</small>` : ''}</label><input data-rf="${k}" type="text" inputmode="decimal" value="${esc(b['_' + k] ?? (b[k] || ''))}" ${x}><span class="rbis" data-ris="${k}"></span></div>`;
-  const blok2 = RB_V.slice(1).map(([k, t]) => veld(k, t)).join('');
+  const ex = RB_V.slice(RB_N), blok2 = RB_V.slice(1, RB_N).concat(ex.filter(([k]) => +b[k])).map(([k, t]) => veld(k, t)).join('') + (ex.some(([k]) => !+b[k]) ? `<details class="rbmeer"><summary>+ Meer soorten (DPB KST, CHEP, CBL, lege kratten, flessen)</summary>${ex.filter(([k]) => !+b[k]).map(([k, t]) => veld(k, t)).join('')}<p class="small">Leeg krat Nutricia 24 fles vul je in bij Leeg krat bier 24 fles: Van Tol gebruikt daarvoor dezelfde code.</p></details>` : '');
   v.innerHTML = `${e.img ? `<div class="rbkop" style="background-image:url(${e.img})" role="img" aria-label="Kop van de bon met het bonnummer"></div>` : ''}
     <div class="blk form rbf">${e.rij ? `<p class="small">Bon ${rbTel.n + 1} van ${rbTel.tot}</p>` : ''}${e.fout ? `<p class="small rood">⚠️ ${esc(e.fout)}</p>` : ''}
     <label class="rbnrl" for="rbNr">Bonnummer</label><input id="rbNr" class="rbnr" type="text" inputmode="numeric" value="${esc(b.nr || 'BGR ')}" placeholder="BGR 202606941"><p class="small rood" id="rbNrW"></p>
@@ -269,13 +272,13 @@ async function rbImport(f) {
 async function rbExport() {
   try { await loadScript(LIB.xlsx); } catch (e) { return toast(e.message); }
   const B = RB.bonnen, L = 'CDEFGHIJKL', n = B.length + 1, prijs = Object.fromEntries(RB_V.map(([k, , p]) => [k, p]));
-  const aoa = [['gecontroleerd', 'retourbon nummer', ...RB_X.map(x => x[1]), 'opmerking', 'datum', 'retourbon producten', 'gecrediteerd €', 'verschil €', 'weekstaat']].concat(B.map(b => { const s = rbStatus(b); return [rbGec(b, s), b.nr, ...RB_X.map(([k]) => b[k] || null), b.opm || null, b.datum || null, b.rb || null, s.f ? Math.abs(+s.f.eur || 0) : null, ['wacht', 'ok', 'leeg'].includes(s.st) ? null : s.v, s.f ? s.f.ws : null]; }));
+  const aoa = [['gecontroleerd', 'retourbon nummer', ...RB_X.map(x => x[1]), 'opmerking', 'datum', 'retourbon producten', 'gecrediteerd €', 'verschil €', 'weekstaat', ...RB_V.slice(RB_N).map(x => x[1])]].concat(B.map(b => { const s = rbStatus(b); return [rbGec(b, s), b.nr, ...RB_X.map(([k]) => b[k] || null), b.opm || null, b.datum || null, b.rb || null, s.f ? Math.abs(+s.f.eur || 0) : null, ['wacht', 'ok', 'leeg'].includes(s.st) ? null : s.v, s.f ? s.f.ws : null, ...RB_V.slice(RB_N).map(([k]) => b[k] || null)]; }));
   const ws = XLSX.utils.aoa_to_sheet(aoa), cel = (a, v) => ws[a] = v;
   cel('B' + (n + 2), { t: 's', v: 'totaal' }); cel('B' + (n + 3), { t: 's', v: 'waarde €' }); cel('B' + (n + 5), { t: 's', v: 'totale waarde €' });
   RB_X.forEach(([k], j) => { const c = L[j]; cel(c + (n + 2), { t: 'n', f: `SUM(${c}2:${c}${n})` }); if (prijs[k]) cel(c + (n + 3), { t: 'n', f: `${c}${n + 2}*${prijs[k]}` }); });
   cel('C' + (n + 5), { t: 'n', f: RB_X.map(([k], j) => prijs[k] ? L[j] + (n + 3) : '').filter(Boolean).join('+') });
   cel('P' + (n + 2), { t: 's', v: 'nog te ontvangen' }); cel('Q' + (n + 2), { t: 'n', f: `SUMIF(Q2:Q${n},">0")` });
-  ws['!ref'] = 'A1:R' + (n + 5); ws['!cols'] = [{ wch: 13 }, { wch: 17 }, ...RB_X.map(() => ({ wch: 11 })), { wch: 30 }, { wch: 11 }, { wch: 14 }];
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: n + 4, c: 17 + RB_V.length - RB_N } }); ws['!cols'] = [{ wch: 13 }, { wch: 17 }, ...RB_X.map(() => ({ wch: 11 })), { wch: 30 }, { wch: 11 }, { wch: 14 }];
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'bonnen');
   const file = new File([XLSX.write(wb, { type: 'array', bookType: 'xlsx' })], 'retourbonnen van tol.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) try { return await navigator.share({ files: [file], title: 'Retourbonnen Van Tol' }); } catch (e) { return; }
