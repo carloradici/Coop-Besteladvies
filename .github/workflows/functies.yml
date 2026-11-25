@@ -23,7 +23,10 @@ jobs:
         run: mkdir -p supabase/functions/_shared && cp stuur-push.js dagexport.js folder.js verkoop-export.js supabase/functions/_shared/
       - name: Live zetten
         run: |
-          supabase functions deploy stuur-push --project-ref $P --no-verify-jwt
-          supabase functions deploy dagexport --project-ref $P --no-verify-jwt
-          supabase functions deploy folder --project-ref $P
-          supabase secrets list --project-ref $P | grep -q VERKOOP_SLEUTEL && supabase functions deploy verkoop-export --project-ref $P --no-verify-jwt || echo "verkoop-export overgeslagen: geheim VERKOOP_SLEUTEL ontbreekt in Supabase"
+          F=0
+          d(){ n=$1; shift; if o=$(supabase functions deploy $n --project-ref $P "$@" 2>&1); then echo "::notice title=$n::live"; else echo "$o"; echo "::error title=$n::$(echo "$o" | tail -6 | tr '\n' ' ')"; F=1; fi; }
+          d stuur-push --no-verify-jwt
+          d dagexport --no-verify-jwt
+          d folder
+          if supabase secrets list --project-ref $P 2>&1 | grep -q VERKOOP_SLEUTEL; then d verkoop-export --no-verify-jwt; else echo "::warning title=verkoop-export::overgeslagen, geheim VERKOOP_SLEUTEL ontbreekt in Supabase"; fi
+          exit $F
