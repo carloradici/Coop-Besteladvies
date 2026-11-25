@@ -94,10 +94,10 @@ function rbMist(B) {
   for (let i = 1; i < nrs.length; i++) { const d = nrs[i] - nrs[i - 1]; if (d > 1 && d <= 4) for (let x = nrs[i - 1] + 1; x < nrs[i]; x++) if (!neg.has(String(x)) && !(rbRet().bonnen || {})[x]) gat.push(String(x)); }
   return { ws, gat };
 }
-/* 2.17: opnieuw vergelijken: bonnen die missen naast weekstaat-regels die bij geen bon horen (zelfde bedrag binnen 14 dagen, of 1-2 cijfers anders) */
+/* 2.17/2.18: opnieuw vergelijken: bonnen die missen naast weekstaat-regels die bij geen bon horen: zelfde bedrag binnen 14 dagen, of 1 cijfer anders + evenveel karren + hooguit € 12,50 verschil */
 function rbVoorstel(B) { const W = rbMist(B).ws, uit = [], bez = new Set(), dg = (a, b) => a && b ? Math.abs(C.diff(a, b)) : 99;
   const kand = B.map((b, i) => [b, i, rbStatus(b)]).filter(([, , s]) => !s.f && s.st !== 'leeg').flatMap(([b, i]) => W.map(([k, f]) => { const n = rbKey(b.nr), d = n.length === k.length ? [...n].filter((c, j) => c !== k[j]).length : 9, eur = Math.abs(rbWaarde(b) - Math.abs(+f.eur || 0)) < 0.01, dd = dg(b.datum, f.d);
-    if ((b.wsNee || []).includes(k) || !(d <= 2 || (eur && dd <= 14))) return null; return { i, k, f, sc: d * 10 + (eur ? 0 : 5) + Math.min(dd, 30) / 10, r: [d <= 2 ? `${d} ${d === 1 ? 'cijfer' : 'cijfers'} anders` : '', eur ? 'zelfde bedrag' : '', dd < 99 ? `${dd} ${dd === 1 ? 'dag' : 'dagen'} verschil` : ''].filter(Boolean).join(', ') }; }).filter(Boolean));
+    const nv = rbVt(f), dv = Math.abs(rbWaarde(b) - Math.abs(+f.eur || 0)); if ((b.wsNee || []).includes(k) || !((eur && dd <= 14) || (d <= 1 && (+b.k || 0) === (nv.k || 0) && dv <= 12.5 && dd <= 21))) return null; return { i, k, f, sc: d * 10 + (eur ? 0 : 5) + Math.min(dd, 30) / 10, r: [d <= 2 ? `${d} ${d === 1 ? 'cijfer' : 'cijfers'} anders` : '', eur ? 'zelfde bedrag' : '', dd < 99 ? `${dd} ${dd === 1 ? 'dag' : 'dagen'} verschil` : ''].filter(Boolean).join(', ') }; }).filter(Boolean));
   kand.sort((a, b) => a.sc - b.sc).forEach(x => { if (!bez.has(x.k) && !uit.some(y => y.i === x.i)) { bez.add(x.k); uit.push(x); } }); return uit; }
 function rbVoorstelSheet() { const l = rbVoorstel(RB.bonnen); let j = 0, n = 0; if (!l.length) return toast('Geen nieuwe voorstellen');
   const inh = o => RB_V.filter(([k]) => k !== 'bb' && +o[k]).map(([k, t]) => `${+o[k]} × ${t}`).join(' · '), ov = sheet('<div id="vsI"></div>', (e, o) => { const k = e.target.closest('[data-vs]'); if (!k) return; const x = l[j], b = RB.bonnen[x.i];
