@@ -242,9 +242,10 @@ function renderWinkel() {
   const v = $('#view'); const w = S.winkel || {}; const tot = w.tot ? new Date(w.tot) : null; const verlopen = tot && tot < new Date();
   const datum = tot ? `${tot.getDate()}-${tot.getMonth() + 1}-${tot.getFullYear()}` : '';
   let h = `<div class="blk"><h2>📱 Toestellen koppelen</h2><p class="small">Medewerkerstelefoons en de winkeltelefoon koppel je met deze code. Open Besteladvies op het toestel, kies <b>Met koppelcode</b> en vul hem in.</p><div class="koppelcode">${esc(codeTekst(w.code))}</div>
-  <p class="small" style="text-align:center">${verlopen ? '<b class="rood">Verlopen</b>' : `Geldig tot ${datum} · vaker te gebruiken`} · ${w.toestellen ?? '?'} toestel${w.toestellen === 1 ? '' : 'len'} gekoppeld</p>
-  <div class="row"><button class="btn sm" id="wDeel" style="flex:1">Delen</button><button class="btn sm sec" id="wVerl" style="flex:1">30 dagen verlengen</button></div>
-  <button class="btn sm red" id="wNieuw" style="width:100%;margin-top:10px">Nieuwe code maken</button><p class="small">Een nieuwe code ontkoppelt alle toestellen van deze winkel. Gebruik dit als een toestel kwijt is.</p></div>
+  <p class="small" style="text-align:center">${!tot || verlopen ? '<b class="rood">Geen geldige code · tik Nieuwe code</b>' : `Geldig tot ${datum} ${String(tot.getHours()).padStart(2, '0')}:${String(tot.getMinutes()).padStart(2, '0')} · <b>één keer</b> te gebruiken`} · ${w.toestellen ?? '?'} toestel${w.toestellen === 1 ? '' : 'len'} gekoppeld</p>
+  <p class="small">Een code werkt één keer en hooguit 24 uur. Na het koppelen is hij op; tik dan op <b>Nieuwe code</b> voor het volgende toestel. Gekoppelde toestellen merken hier niets van.</p>
+  <div class="row"><button class="btn sm" id="wVerl" style="flex:1">Nieuwe code</button><button class="btn sm sec" id="wDeel" style="flex:1">Delen</button></div>
+  <button class="btn sm red" id="wNieuw" style="width:100%;margin-top:10px">Alle toestellen loskoppelen</button><p class="small">Alleen als een toestel kwijt is: alle toestellen (behalve die van de eigenaar) moeten daarna opnieuw koppelen.</p></div>
   <div class="blk"><h2>Winkelgegevens</h2><div class="form"><div class="f"><label>Plaats (voor het weer)</label><input type="text" id="wPl" value="${esc(plaatsNu())}"></div><button class="btn" id="wSave">Opslaan</button></div></div>`;
   if (eigenaar) h += `<div class="blk"><h2>Winkels</h2><div class="list">${winkels.map(x => `<div class="it"><span><b>${esc(x.naam)}</b><br><span class="small">${esc(x.plaats || '')}</span></span>${x.id === W ? '<span class="small">huidig</span>' : `<button class="btn sm sec" data-ww="${x.id}">Wisselen</button>`}</div>`).join('')}</div>
   <h3>Nieuwe winkel</h3><div class="form"><input type="text" id="nwN" placeholder="Naam, bijv. Coop Lisse"><input type="text" id="nwP" placeholder="Plaats"><button class="btn sm" id="nwB">Winkel aanmaken</button></div>
@@ -252,9 +253,9 @@ function renderWinkel() {
   v.innerHTML = h;
   const tekst = `Toestel koppelen voor ${(WINKEL && WINKEL.naam) || 'de winkel'}:\n1. Open ${location.origin + location.pathname} en zet de app op je beginscherm.\n2. Open de app en kies "Met koppelcode".\n3. Vul deze code in: ${w.code}\nDaarna kies je je naam en vul je je pincode in.`;
   $('#wDeel').onclick = async () => { try { if (navigator.share) await navigator.share({ text: tekst }); else { await navigator.clipboard.writeText(tekst); toast('Gekopieerd'); } } catch (e) { try { await navigator.clipboard.writeText(tekst); toast('Gekopieerd'); } catch (x) { toast(w.code); } } };
-  const codeActie = (fn, args, txt) => adminDo(async () => { if (DEMO) { S.winkel = Object.assign({}, w, fn === 'nieuwe_koppelcode' ? { code: Math.random().toString(36).slice(2, 10).toUpperCase(), toestellen: 0 } : {}, { tot: new Date(Date.now() + 30 * 864e5).toISOString() }); return; } const r = await rpc(fn, args); S.winkel = Object.assign({}, w, { code: r.code, tot: r.tot }, fn === 'nieuwe_koppelcode' ? { toestellen: 0 } : {}); log('team', txt); });
-  $('#wVerl').onclick = () => codeActie('verleng_code', { w: W, dagen: 30 }, 'Koppelcode verlengd');
-  $('#wNieuw').onclick = () => { if (!ask('Nieuwe koppelcode maken? Alle gekoppelde toestellen moeten daarna opnieuw koppelen.')) return; codeActie('nieuwe_koppelcode', { w: W, dagen: 30 }, 'Nieuwe koppelcode gemaakt'); };
+  const codeActie = (fn, args, txt) => adminDo(async () => { if (DEMO) { S.winkel = Object.assign({}, w, { code: Math.random().toString(36).slice(2, 10).toUpperCase(), tot: new Date(Date.now() + 864e5).toISOString() }, fn === 'nieuwe_koppelcode' ? { toestellen: 0 } : {}); return; } const r = await rpc(fn, args); S.winkel = Object.assign({}, w, { code: r.code, tot: r.tot }, fn === 'nieuwe_koppelcode' ? { toestellen: 0 } : {}); log('team', txt); });
+  $('#wVerl').onclick = () => codeActie('verse_code', { w: W }, 'Nieuwe koppelcode (eenmalig, 24 uur)');
+  $('#wNieuw').onclick = () => { if (!ask('Alle toestellen loskoppelen? Ze moeten daarna allemaal opnieuw koppelen met een nieuwe code.')) return; codeActie('nieuwe_koppelcode', { w: W, dagen: 1 }, 'Alle toestellen losgekoppeld'); };
   $('#wSave').onclick = async () => { const pl = $('#wPl').value.trim(); const data = Object.assign({}, S.inst || {}, { plaats: pl }); if ($('#wNaam')) data.beheerNaam = $('#wNaam').value.trim(); if (pl && pl !== (S.inst || {}).plaats) { const g = await geocode(pl); if (g) { data.lat = g.lat; data.lon = g.lon; } } saveInst(data); };
   v.querySelectorAll('[data-ww]').forEach(b => b.onclick = async () => { await saveCache(); W = b.dataset.ww; ls.set('cba-w', W); S.dagen = {}; S.dagMeta = {}; S.boeken = {}; S.kassa = {}; M = null; start(); });
   const nb = $('#nwB'); if (nb) nb.onclick = () => { const n = $('#nwN').value.trim(), p = $('#nwP').value.trim(); if (!n) return toast('Vul een naam in'); if (DEMO) return toast('Niet in de testversie'); adminDo(async () => { const id = await rpc('nieuwe_winkel', { naam: n, plaats: p }); winkels = await rpc('mijn_winkels'); toast(`${n} aangemaakt. Wissel ernaartoe om hem in te richten.`, 4000); }); };
@@ -428,7 +429,7 @@ const HULP = {
   export: ['Exporteren', 'Maak een Excel-bestand van de bestellijst, de verkoop of de actieresultaten.'],
   medewerkers: ['Medewerkers', 'Voeg medewerkers toe; zij kiezen zelf een pincode. Tik op een naam voor rechten of pincode resetten.'],
   mwedit: ['Rechten', 'Kies Vakkenvuller, Afdelingsleider of Beheerder en pas daarna per vinkje aan. Beginnersmodus: alleen bestellen en tellen.'],
-  winkel: ['Winkel', 'Met de koppelcode koppel je een toestel van de winkel. Een nieuwe code ontkoppelt alle toestellen.'],
+  winkel: ['Winkel', 'Met de koppelcode koppel je een nieuw toestel van de winkel. Een code werkt <b>één keer</b> en hooguit 24 uur: is hij gebruikt of verlopen, tik dan op <b>Nieuwe code</b>. Gekoppelde toestellen merken daar niets van. Laat de code het liefst op je eigen scherm zien in plaats van hem via WhatsApp te sturen. <b>Alle toestellen loskoppelen</b> gebruik je alleen als een toestel kwijt is.'],
   meldingen: ['Meldingen', 'Kies welke pushmeldingen dit toestel krijgt. Op de iPhone werkt dit alleen als de app op je beginscherm staat.'],
   appinst: ['App-instellingen', 'Licht of donker, tekstgrootte en korte lijst. Bij <b>Pincode opnieuw vragen</b> kies je hoe lang de app buiten beeld mag zijn voordat hij je pincode vraagt (alleen voor deze telefoon). <b>Updates tonen</b>: aan = een groene balk bij een nieuwe versie en daarna een overzicht van wat er nieuw is; uit = de app werkt zichzelf stil bij als hij op de achtergrond staat. Na een update blijf je ingelogd.'],
   route: ['Looproute', 'De bestellijst staat per pad in de volgorde waarin je loopt; de app leert bij elke bestelling waar een artikel staat. Pad zelf kiezen: open het artikel en tik op 🚶 Pad. Tik op een kopje met ▾ om het open of dicht te klappen.'],
@@ -457,7 +458,7 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['🔒', 'Beter beveiligd', 'Retourbonnen en hun scans zijn nu ook in de database alleen voor de beheerder. Karren tellen blijft voor iedereen.']];
+const NIEUWS = [['🔑', 'Koppelcode eenmalig', 'Een koppelcode werkt nu één keer en hooguit 24 uur. Voor elk nieuw toestel tik je op Nieuwe code (Meer › Winkel en koppelcode). Gekoppelde toestellen merken niets.']];
 let nieuweVersie = null;
 const updTonen = () => (S.pref || {}).upd ?? rol === 'admin';
 async function zoekUpdate(stil, forceer) {

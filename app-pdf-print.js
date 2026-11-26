@@ -316,7 +316,7 @@ function nieuwChecklist(naam) {
   <div class="ckrij ${m ? 'ok' : ''}"><b>1. Naam toevoegen</b><span class="small">${m ? 'Gedaan.' : 'Meer → Medewerkers → Medewerker toevoegen.'}</span></div>
   <div class="ckrij"><b>2. Rol en rechten kiezen</b><span class="small">Vakkenvuller, Afdelingsleider of Beheerder. Daarna per vinkje aanpassen.</span>${m ? `<button class="btn sm sec" data-ckr="${m.id}">Rechten openen</button>` : ''}</div>
   <div class="ckrij"><b>3. Beginnersmodus aan (aangeraden)</b><span class="small">De eerste weken alleen bestellen en tellen. Staat bij de rechten onder Weergave.</span></div>
-  <div class="ckrij"><b>4. Toestel koppelen</b><span class="small">Stuur de koppelcode via Meer → Winkel en app → Winkel en koppelcode → Delen.</span>${mag('team') ? '<button class="btn sm sec" data-ckw="1">Koppelcode delen</button>' : ''}</div>
+  <div class="ckrij"><b>4. Toestel koppelen</b><span class="small">Maak een nieuwe code via Meer → Winkel en app → Winkel en koppelcode (één keer te gebruiken, 24 uur geldig).</span>${mag('team') ? '<button class="btn sm sec" data-ckw="1">Koppelcode delen</button>' : ''}</div>
   <div class="ckrij"><b>5. Eerste keer inloggen</b><span class="small">De medewerker kiest zijn naam en zelf een pincode. Daarna krijgt hij de rondleiding.</span></div>
   <div class="ckrij"><b>6. Oefenen</b><span class="small">Laat hem via Meer → Hulp → Oefenen alles uitproberen. Er verandert dan niets echt.</span></div></div><button class="btn" data-x style="width:100%;margin-top:10px">Klaar</button>`, (e, ov) => {
     const r = e.target.closest('[data-ckr]'); if (r) { ov.remove(); ui.mwId = r.dataset.ckr; ga('mwedit'); }
