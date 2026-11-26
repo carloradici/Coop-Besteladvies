@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
     paths: [version.json]
+permissions:
+  contents: read
 jobs:
   melding:
     runs-on: ubuntu-latest

@@ -192,6 +192,8 @@ const BEL_JIJ = new Set(BESTEL_OD.concat(['levering', 'tafels', 'taken']));
 function belItems() {
   const out = belItemsBasis().map(x => Object.assign({ jij: BEL_JIJ.has(x.ga) }, x));
   for (const od of BESTEL_OD) { if (od === 'gm' || !mag('o_' + od) || !mag('tellen')) continue; const cur = besteldag(od).cur; if (!cur || cur.besteldag !== C.today()) continue; const t = telKeuze(od, cur); if (t.open.length) out.push({ ic: '🔢', t: `${odNaam(od)}: tel ${t.open.length} artikelen`, sub: 'Dan wordt het advies beter', ga: od, jij: true }); }
+  // 2.25: medewerkers bij wie de pincode na veel fouten geblokkeerd is (mogelijk iemand die probeert te raden)
+  if (mag('team') && (window.__pinBlok || []).length) out.unshift({ ic: '⚠️', t: `Pincode geblokkeerd: ${window.__pinBlok.map(x => esc(x.naam)).join(', ')}`, sub: 'Na herhaald foute pogingen. Was jij dit niet, praat erover met het team.', ga: 'team' });
   if (isBeheer()) { const R = RB || ls.get('cba-retour'), n = R ? (R.bonnen || []).filter(b => b.cl && C.diff(b.cl, C.today()) >= 28 && rbFout(rbStatus(b))).length : 0; if (n) out.push({ ic: '📨', t: `${n} geclaimde ${n === 1 ? 'retourbon' : 'retourbonnen'} nog niet opgelost`, sub: 'Al 4 weken of langer: vraag Van Tol na', fn: () => { ls.set('cba-rbfil', 'gecl'); ui.rbEdit = null; ga('retour'); } }); }
   if (updTonen() && ls.get('cba-gezien-' + wieSleutel()) !== VERSIE) out.unshift({ ic: '✨', t: `Nieuw in versie ${VERSIE}`, sub: 'Wat er veranderd is', fn: toonNieuws });
   for (const r of openTaken()) out.unshift({ ic: r.soort === 'bericht' ? '✉️' : '☑️', t: r.tekst, sub: r.soort === 'bericht' ? `Bericht van ${r.wie || ''}` : `Taak van ${r.wie || ''}`, ga: 'taken', jij: true, taak: true });

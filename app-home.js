@@ -237,8 +237,10 @@ function renderMwEdit() {
   const rs = $('#mwReset'); if (rs) rs.onclick = () => { if (!ask('Pincode resetten? De medewerker kiest de volgende keer een nieuwe.')) return; mwOpslaan(async () => { if (DEMO) m.heeft_pin = false; else await rpc('reset_pin', { w: W, mid: m.id }); }); };
   $('#mwWeg').onclick = () => { if (!ask(`${m.naam} verwijderen?`)) return; mwOpslaan(async () => { if (DEMO) DEMO_MW.splice(DEMO_MW.indexOf(m), 1); else await rest(wq('medewerkers?id=eq.' + m.id), { method: 'PATCH', body: { actief: false }, headers: { Prefer: 'return=minimal' }, noBody: true }); }).then(() => ga('medewerkers')); };
 }
-function codeTekst(c) { return String(c || '–'); }
+function codeTekst(c) { return c ? String(c).replace(/(.{4})(?=.)/g, '$1 ') : '–'; }
 function renderWinkel() {
+  // 2.25: de koppelcode alleen ophalen voor wie toestellen mag koppelen (niet meer in de gedeelde gegevens)
+  if (!DEMO && mag('team') && !renderWinkel.bezig && Date.now() - ((S.winkel || {}).codeOm || 0) > 60000) { renderWinkel.bezig = 1; rpc('koppelcode_info', { w: W }).then(r => { S.winkel = Object.assign({}, S.winkel, { code: r && r.code, tot: r && r.tot, codeOm: Date.now() }); }).catch(() => { S.winkel = Object.assign({}, S.winkel, { codeOm: Date.now() }); }).finally(() => { renderWinkel.bezig = 0; if (ui.tab === 'winkel') renderWinkel(); }); }
   const v = $('#view'); const w = S.winkel || {}; const tot = w.tot ? new Date(w.tot) : null; const verlopen = tot && tot < new Date();
   const datum = tot ? `${tot.getDate()}-${tot.getMonth() + 1}-${tot.getFullYear()}` : '';
   let h = `<div class="blk"><h2>📱 Toestellen koppelen</h2><p class="small">Medewerkerstelefoons en de winkeltelefoon koppel je met deze code. Open Besteladvies op het toestel, kies <b>Met koppelcode</b> en vul hem in.</p><div class="koppelcode">${esc(codeTekst(w.code))}</div>
@@ -253,7 +255,7 @@ function renderWinkel() {
   v.innerHTML = h;
   const tekst = `Toestel koppelen voor ${(WINKEL && WINKEL.naam) || 'de winkel'}:\n1. Open ${location.origin + location.pathname} en zet de app op je beginscherm.\n2. Open de app en kies "Met koppelcode".\n3. Vul deze code in: ${w.code}\nDaarna kies je je naam en vul je je pincode in.`;
   $('#wDeel').onclick = async () => { try { if (navigator.share) await navigator.share({ text: tekst }); else { await navigator.clipboard.writeText(tekst); toast('Gekopieerd'); } } catch (e) { try { await navigator.clipboard.writeText(tekst); toast('Gekopieerd'); } catch (x) { toast(w.code); } } };
-  const codeActie = (fn, args, txt) => adminDo(async () => { if (DEMO) { S.winkel = Object.assign({}, w, { code: Math.random().toString(36).slice(2, 10).toUpperCase(), tot: new Date(Date.now() + 864e5).toISOString() }, fn === 'nieuwe_koppelcode' ? { toestellen: 0 } : {}); return; } const r = await rpc(fn, args); S.winkel = Object.assign({}, w, { code: r.code, tot: r.tot }, fn === 'nieuwe_koppelcode' ? { toestellen: 0 } : {}); log('team', txt); });
+  const codeActie = (fn, args, txt) => adminDo(async () => { if (DEMO) { S.winkel = Object.assign({}, w, { code: Math.random().toString(36).slice(2, 10).toUpperCase(), tot: new Date(Date.now() + 864e5).toISOString() }, fn === 'nieuwe_koppelcode' ? { toestellen: 0 } : {}); return; } const r = await rpc(fn, args); S.winkel = Object.assign({}, w, { code: r.code, tot: r.tot, codeOm: Date.now() }, fn === 'nieuwe_koppelcode' ? { toestellen: 0 } : {}); log('team', txt); });
   $('#wVerl').onclick = () => codeActie('verse_code', { w: W }, 'Nieuwe koppelcode (eenmalig, 24 uur)');
   $('#wNieuw').onclick = () => { if (!ask('Alle toestellen loskoppelen? Ze moeten daarna allemaal opnieuw koppelen met een nieuwe code.')) return; codeActie('nieuwe_koppelcode', { w: W, dagen: 1 }, 'Alle toestellen losgekoppeld'); };
   $('#wSave').onclick = async () => { const pl = $('#wPl').value.trim(); const data = Object.assign({}, S.inst || {}, { plaats: pl }); if ($('#wNaam')) data.beheerNaam = $('#wNaam').value.trim(); if (pl && pl !== (S.inst || {}).plaats) { const g = await geocode(pl); if (g) { data.lat = g.lat; data.lon = g.lon; } } saveInst(data); };
@@ -458,7 +460,9 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['🔑', 'Koppelcode eenmalig', 'Een koppelcode werkt nu één keer en hooguit 24 uur. Voor elk nieuw toestel tik je op Nieuwe code (Meer › Winkel en koppelcode). Gekoppelde toestellen merken niets.']];
+const NIEUWS = [['🛡️', 'Beveiliging aangescherpt', 'Na een controle door een tweede AI zijn alle gevonden gaten gedicht. Bij ontkoppelen of uitloggen wordt nu alles van de winkel van het toestel gewist.'],
+  ['🔑', 'Koppelcode alleen voor de beheerder', 'De koppelcode en de Brood Opzet-koppeling zijn niet meer zichtbaar voor medewerkers.'],
+  ['🔢', 'Pincode beter beschermd', 'Na herhaald foute pincodes duurt de wachttijd steeds langer. Je kunt alleen je eigen pincode wijzigen.']];
 let nieuweVersie = null;
 const updTonen = () => (S.pref || {}).upd ?? rol === 'admin';
 async function zoekUpdate(stil, forceer) {
@@ -532,7 +536,7 @@ function renderMeldingen() {
   const aan = $('#pAan'); if (aan) aan.onclick = async () => { try { const p = await Notification.requestPermission(); if (p !== 'granted') { toast('Meldingen zijn niet toegestaan'); return render(); } await pushOpslaan([]); toast('Meldingen staan aan'); render(); } catch (e) { toast('Aanzetten mislukt: ' + e.message, 5000); } };
   const huidigUit = () => { const u = new Set((ls.get('cba-push') || {}).uit || []); v.querySelectorAll('[data-ps]').forEach(x => x.checked ? u.delete(x.dataset.ps) : u.add(x.dataset.ps)); return [...u]; };
   v.querySelectorAll('[data-ps]').forEach(c => c.onchange = async () => { try { await pushOpslaan(huidigUit()); toast('Opgeslagen'); } catch (e) { toast('Opslaan mislukt: ' + e.message, 5000); } });
-  const t = $('#pTest'); if (t) t.onclick = async () => { try { t.disabled = true; const row = await pushOpslaan(huidigUit()); const r = await fetch(`${SB_URL}/functions/v1/stuur-push`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY }, body: JSON.stringify({ soort: 'test', endpoint: row.endpoint }) }); const j = await r.json().catch(() => ({})); toast(r.ok ? 'Testmelding verstuurd' + (j.versie ? ' (functie ' + j.versie + ')' : '') : 'Mislukt: ' + (j.fout || j.message || j.msg || r.status), 6000); } catch (e) { toast('Mislukt: ' + e.message, 6000); } finally { t.disabled = false; } };
+  const t = $('#pTest'); if (t) t.onclick = async () => { try { t.disabled = true; const row = await pushOpslaan(huidigUit()); const r = await fetch(`${SB_URL}/functions/v1/stuur-push`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY, Authorization: 'Bearer ' + await token() }, body: JSON.stringify({ soort: 'test', endpoint: row.endpoint, winkel: W }) }); const j = await r.json().catch(() => ({})); toast(r.ok ? 'Testmelding verstuurd' + (j.versie ? ' (functie ' + j.versie + ')' : '') : 'Mislukt: ' + (j.fout || j.message || j.msg || r.status), 6000); } catch (e) { toast('Mislukt: ' + e.message, 6000); } finally { t.disabled = false; } };
   const ts = $('#tSave'); if (ts) ts.onclick = () => saveInst(Object.assign({}, S.inst || {}, { push: { bestel: $('#tB').value || '08:30', export: $('#tE').value || '10:00', inout: $('#tI').value || '11:00' } }));
 }
 async function pushBoek(bron, nieuw, uit) {

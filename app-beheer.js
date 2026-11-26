@@ -114,7 +114,7 @@ function saveAgenda(row) { return adminDo(async () => { if (!DEMO) await upW('ag
 
 /* ---------- uploads ---------- */
 const libs = {};
-function loadScript(src) { return libs[src] || (libs[src] = new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Kon onderdeel niet laden (offline?)')); document.head.appendChild(s); })); }
+function loadScript(src) { return libs[src] || (libs[src] = new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; if (SRI[src]) { s.integrity = SRI[src]; s.crossOrigin = 'anonymous'; } s.onload = res; s.onerror = () => rej(new Error('Kon onderdeel niet laden (offline?)')); document.head.appendChild(s); })); }
 async function pdfjs() { await loadScript(LIB.pdf); const p = window.pdfjsLib; if (!p.GlobalWorkerOptions.workerSrc) p.GlobalWorkerOptions.workerSrc = LIB.pdfw; return p; }
 async function uploads(files, regels) {
   const ulog = $('#upLog') || document.createElement('div'); ulog.classList.remove('hide'); ulog.innerHTML = '';
@@ -152,7 +152,7 @@ async function uploads(files, regels) {
           const nieuwBoek = oud && (!oud.datum || !b.datum || b.datum !== oud.datum);
           const prijs = nieuwBoek ? (() => { const o = new Map(oud.artikelen.map(x => [x.nr, x])); return b.artikelen.filter(x => o.has(x.nr) && +o.get(x.nr).cons > 0 && +x.cons > 0 && Math.abs(+o.get(x.nr).cons - +x.cons) > 0.004).map(x => ({ nr: x.nr, oud: +o.get(x.nr).cons, nieuw: +x.cons })); })() : (oud && oud.prijs) || [];
           const row = { bron: soort, datum: b.datum, week: b.week || C.isoWeek(b.datum).w, artikelen: b.artikelen, nieuw: cmp.nieuw, uit: cmp.uit, prijs, bestand: f.name, geupload: new Date().toISOString() };
-          if (!DEMO) await upW('boeken', [row]);
+          if (!DEMO) await boekOp(row);
           S.boeken[soort] = row;
           const nUit = cmp.uit.filter(a => !a.arch).length; if (cmp.nieuw.length || nUit) pushBoek(soort, cmp.nieuw.length, nUit);
           L(`✓ Bestelboek ${soort === 'vers' ? 'Vers' : 'KW'}: ${b.artikelen.length} artikelen · ${cmp.nieuw.length} nieuw · ${nUit} uit assortiment${prijs.length ? ` · ${prijs.length} prijswijzigingen` : ''}`, 'ok'); n++;
@@ -192,7 +192,7 @@ async function boekArchHaal() {
 async function boekArch(soort, arts) {
   const b = S.boeken[soort]; if (!b) return 0; const ken = new Set(b.artikelen.concat(b.uit || []).map(a => a.nr));
   const erbij = arts.filter(a => !ken.has(a.nr)).map(C.archA); if (!erbij.length) return 0;
-  b.uit = (b.uit || []).concat(erbij); if (!DEMO) await upW('boeken', [b]); return erbij.length;
+  b.uit = (b.uit || []).concat(erbij); if (!DEMO) await boekOp(b); return erbij.length;
 }
 
 /* ---------- 1.13: telvragen ---------- */

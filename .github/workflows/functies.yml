@@ -4,8 +4,10 @@ name: functies-live
 on:
   push:
     branches: [main]
-    paths: [stuur-push.js, dagexport.js, folder.js, verkoop-export.js, 'supabase/functions/**', .github/workflows/functies.yml]
+    paths: [stuur-push.js, dagexport.js, folder.js, verkoop-export.js, bo.js, 'supabase/functions/**', .github/workflows/functies.yml]
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   live:
     runs-on: ubuntu-latest
@@ -20,7 +22,7 @@ jobs:
       - name: Controleren
         run: '[ -n "$SUPABASE_ACCESS_TOKEN" ] || { echo "Geheim SUPABASE_ACCESS_TOKEN ontbreekt in GitHub"; exit 1; }'
       - name: Gedeelde code klaarzetten
-        run: mkdir -p supabase/functions/_shared && cp stuur-push.js dagexport.js folder.js verkoop-export.js supabase/functions/_shared/
+        run: mkdir -p supabase/functions/_shared && cp stuur-push.js dagexport.js folder.js verkoop-export.js bo.js supabase/functions/_shared/
       - name: Live zetten
         run: |
           F=0
@@ -28,6 +30,7 @@ jobs:
           d stuur-push --no-verify-jwt
           d dagexport --no-verify-jwt
           d folder
+          d bo --no-verify-jwt
           if supabase secrets list --project-ref $P 2>&1 | grep -q VERKOOP_SLEUTEL; then d verkoop-export --no-verify-jwt; else echo "::warning title=verkoop-export::overgeslagen, geheim VERKOOP_SLEUTEL ontbreekt in Supabase"; fi
           exit $F
       - name: Controleren of ze werken
@@ -38,4 +41,5 @@ jobs:
           t folder "$U/folder?jaar=$(date +%G)&week=$((10#$(date +%V)))"
           t verkoop-export $U/verkoop-export
           t dagexport $U/dagexport
+          t bo $U/bo
           exit $F

@@ -3,7 +3,7 @@ async function loadCache() {
   outbox = (await iget('outbox')) || [];
   if (!W) return false;
   const c = await iget('cache:' + W); if (!c) return false;
-  Object.assign(S, c, { schapOk: new Set(c.schapOk || []) });
+  Object.assign(S, c, { schapOk: new Set(c.schapOk || []) }); for (const t of ['eigen', 'tafels']) for (const k in S[t] || {}) S[t][k] = schoon(S[t][k]);
   S.dagen = {}; for (const d of Object.keys(S.dagMeta || {})) { const v = await iget('d:' + W + ':' + d); if (v) S.dagen[d] = v; }
   rol = c.rol || rol; WINKEL = c.WINKEL || WINKEL; winkels = c.winkels || winkels;
   applyOutboxLocal();
@@ -32,7 +32,7 @@ async function sync(full) {
       rest(wq('instellingen?select=data')), rest(wq('agenda?select=*')), rest(wq('boeken?select=bron,geupload')), rest(wq('acties?select=*&order=van.asc')),
       getAll(wq(`dagverkoop?select=dag,geupload&dag=gte.${C.add(C.today(), -460)}&order=dag.asc`)),
       getAll(wq(`voorraad?dag=gte.${C.add(C.today(), -35)}`)), rest(wq(`bestellingen?besteldag=gte.${C.add(C.today(), -21)}`)), rest(wq('schap_ok?select=bron,nr,ok')), rest(wq('inout?select=*')),
-      rest(wq('medewerkers?select=id,naam,rol,rechten,actief,heeft_pin,email&order=naam.asc')), getAll(wq('assortiment?select=*')), rest(wq('notities?select=*')), rest(`winkels?id=eq.${W}&select=koppelcode,code_tot,naam,plaats`),
+      rest(wq('medewerkers?select=id,naam,rol,rechten,actief,heeft_pin,email&order=naam.asc')), getAll(wq('assortiment?select=*')), rest(wq('notities?select=*')), rest(`winkels?id=eq.${W}&select=naam,plaats`),
       rest(wq('eigen_artikelen?select=id,data')).catch(() => []), rest(wq('schap_min?select=bron,nr,min')).catch(() => []),
       rest(wq('overdracht?klaar=eq.false&select=*')).catch(() => []), rest(wq(`levercheck?lever=gte.${C.add(C.today(), -35)}&select=*`)).catch(() => []), getAll(wq(`derving?dag=gte.${C.add(C.today(), -60)}&select=*`)).catch(() => []),
       rest(wq('prijs_ok?select=bron,nr,prijs')).catch(() => []), rest(wq('tafels?select=id,data')).catch(() => []), rest(wq(`tafel_indeling?week=gte.${weekSleutel(C.add(C.today(), -63))}&select=week,tafel_id,data`)).catch(() => []),
@@ -44,15 +44,16 @@ async function sync(full) {
     S.lever = {}; lvc.forEach(r => S.lever[r.bron + ':' + r.nr + '|' + r.lever] = r);
     S.derving = {}; drv.forEach(r => S.derving[r.id] = r);
     S.prijsOk = {}; pok.forEach(r => S.prijsOk[r.bron + ':' + r.nr] = +r.prijs);
-    S.tafels = {}; tfl.forEach(r => S.tafels[r.id] = Object.assign({ id: r.id }, r.data || {}));
+    S.tafels = {}; tfl.forEach(r => S.tafels[r.id] = schoon(Object.assign({}, r.data || {}, { id: r.id })));
     S.indeling = {}; tfi.forEach(r => S.indeling[r.week + '|' + r.tafel_id] = r.data || { items: [] });
-    S.eigen = {}; eig.forEach(r => S.eigen[r.id] = Object.assign({ id: r.id }, r.data || {}));
+    S.eigen = {}; eig.forEach(r => S.eigen[r.id] = schoon(Object.assign({}, r.data || {}, { id: r.id })));
     S.min = {}; mins.forEach(r => { if (+r.min > 0) S.min[r.bron + ':' + r.nr] = +r.min; });
     rol = eigenaar ? 'admin' : 'winkel'; S.medewerkers = mws.filter(m => m.actief !== false);
-    S.winkel = Object.assign({}, S.winkel || {}, wr[0] ? { code: wr[0].koppelcode, tot: wr[0].code_tot, naam: wr[0].naam, plaats: wr[0].plaats } : {});
+    S.winkel = Object.assign({}, S.winkel || {}, wr[0] ? { naam: wr[0].naam, plaats: wr[0].plaats } : {});
     if (eigenaar) { try { const t = await rest(wq('toestellen?select=uid')); S.winkel.toestellen = t.length; } catch (e) { } }
+    if (mag('team')) rpc('pin_blokkades', { w: W }).then(r => { window.__pinBlok = r || []; belTel(); }).catch(() => { });
     S.inst = inst[0] ? inst[0].data : null; S.agenda = agenda; S.acties = acties;
-    for (const b of boekMeta) { const cur = S.boeken[b.bron]; if (full || !cur || cur.geupload !== b.geupload) { const r = await rest(wq(`boeken?bron=eq.${b.bron}`)); if (r[0]) S.boeken[b.bron] = r[0]; } }
+    for (const b of boekMeta) { const cur = S.boeken[b.bron]; if (full || !cur || cur.geupload !== b.geupload) { const r = await rest(wq(`boeken?bron=eq.${b.bron}`)); if (r[0]) { if (mag('inkoop')) try { const k = await rest(wq(`inkoop?bron=eq.${b.bron}&select=data`)), m = (k[0] || {}).data || {}; for (const a of (r[0].artikelen || []).concat(r[0].uit || [])) if (m[a.nr] && !+a.ink) a.ink = m[a.nr]; } catch (e) { } S.boeken[b.bron] = r[0]; } } }
     for (const k of Object.keys(S.boeken)) if (!boekMeta.some(b => b.bron === k)) delete S.boeken[k];
     const want = {}; dagMeta.forEach(d => want[d.dag] = d.geupload);
     const need = Object.keys(want).filter(d => full || S.dagMeta[d] !== want[d] || !S.dagen[d]);
@@ -96,9 +97,9 @@ function applyLocal(o) {
     if (o.t === 'leeg') { S.leeg = S.leeg || {}; S.leeg[r.bron + ':' + r.nr + '|' + r.dag] = r; }
     if (o.t === 'kw_acties') { S.kwplan = S.kwplan || {}; S.versplan = S.versplan || {}; if (/\|vers$/.test(r.week)) S.versplan[r.week.slice(0, -5)] = Object.assign({}, r.data || {}); else S.kwplan[r.week] = Object.assign({ week: r.week }, r.data || {}); }
     if (o.t === 'prijs_ok') S.prijsOk[r.bron + ':' + r.nr] = +r.prijs;
-    if (o.t === 'tafels') S.tafels[r.id] = Object.assign({ id: r.id }, r.data || {});
+    if (o.t === 'tafels') S.tafels[r.id] = schoon(Object.assign({}, r.data || {}, { id: r.id }));
     if (o.t === 'tafel_indeling') S.indeling[r.week + '|' + r.tafel_id] = r.data || { items: [] };
-    if (o.t === 'eigen_artikelen') S.eigen[r.id] = Object.assign({ id: r.id }, r.data || {});
+    if (o.t === 'eigen_artikelen') S.eigen[r.id] = schoon(Object.assign({}, r.data || {}, { id: r.id }));
     if (o.t === 'schap_min') { if (+r.min > 0) S.min[r.bron + ':' + r.nr] = +r.min; else delete S.min[r.bron + ':' + r.nr]; }
   }
 }

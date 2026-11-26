@@ -20,13 +20,18 @@ export async function haal(jaar, week, f = fetch, soort = '') {
 export const magLink = l => { try { const u = new URL(l); return u.protocol === 'https:' && (u.hostname === 'static.reto.media' || (/\.cloudfront\.net$/.test(u.hostname) && /mailcenter_reto/i.test(u.pathname))); } catch (e) { return false; } };
 export async function haalLink(l, f = fetch) {
   if (!magLink(l)) return { status: 400, fout: 'Deze link wordt niet ondersteund. Alleen links van Reto (static.reto.media of de Reto-mail).' };
-  try { const r = await f(l); if (!r.ok) return { status: 404, fout: 'Bestand niet gevonden (' + r.status + ')' }; const b = new Uint8Array(await r.arrayBuffer()); if (b.length > 20 * 1024 * 1024) return { status: 413, fout: 'Bestand is te groot' }; return { status: 200, pdf: b, url: l, type: r.headers.get('content-type') || '' }; } catch (e) { return { status: 502, fout: 'Ophalen mislukt' }; }
+  // 2.25: redirects zelf controleren (alleen naar Reto), en alleen echte pdf- of Excel-bestanden doorgeven met een vast type
+  try { let r = await f(l, { redirect: 'manual' }), n = 0; while (r.status >= 300 && r.status < 400 && n++ < 3) { const v = new URL(r.headers.get('location') || '', l).href; if (!magLink(v)) return { status: 400, fout: 'Deze link wordt niet ondersteund.' }; l = v; r = await f(l, { redirect: 'manual' }); }
+    if (!r.ok) return { status: 404, fout: 'Bestand niet gevonden (' + r.status + ')' }; const b = new Uint8Array(await r.arrayBuffer()); if (b.length > 20 * 1024 * 1024) return { status: 413, fout: 'Bestand is te groot' };
+    const pdf = b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46, zip = b[0] === 0x50 && b[1] === 0x4b;
+    if (!pdf && !zip) return { status: 415, fout: 'Dit is geen pdf- of Excel-bestand' };
+    return { status: 200, pdf: b, url: l, type: pdf ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }; } catch (e) { return { status: 502, fout: 'Ophalen mislukt' }; }
 }
 export function start() {
   Deno.serve(async req => {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
     const u = new URL(req.url); const r = u.searchParams.get('url') ? await haalLink(u.searchParams.get('url')) : await haal(u.searchParams.get('jaar'), u.searchParams.get('week'), fetch, ['voorkoop', 'vers'].includes(u.searchParams.get('soort')) ? u.searchParams.get('soort') : '');
-    if (r.pdf) return new Response(r.pdf, { headers: Object.assign({ 'Content-Type': r.type || 'application/pdf', 'X-Bron': r.url }, CORS) });
+    if (r.pdf) return new Response(r.pdf, { headers: Object.assign({ 'Content-Type': r.type || 'application/pdf', 'X-Bron': r.url, 'X-Content-Type-Options': 'nosniff' }, CORS) });
     return new Response(JSON.stringify({ fout: r.fout }), { status: r.status, headers: Object.assign({ 'Content-Type': 'application/json; charset=utf-8' }, CORS) });
   });
 }

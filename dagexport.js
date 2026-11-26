@@ -87,6 +87,6 @@ export function start(XLSX, webpush, createClient) {
       const body = test ? null : await req.arrayBuffer();
       const r = await verwerk({ sb, XLSX, webpush: wp, sleutel, bestand, body, test });
       const { status, ...rest } = r; return json(rest, status);
-    } catch (e) { return json({ fout: String(e && e.message || e) }, 500); }
+    } catch (e) { console.error(e); return json({ fout: 'Er ging iets mis' }, 500); }
   });
 }

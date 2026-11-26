@@ -44,19 +44,26 @@ function showLogin(msg) {
   `<p>${ui.pinVergeten ? 'Log in met je e-mail. Daarna kies je een nieuwe pincode.' : 'Voor de eigenaar van de winkel. Daarna log je in met je pincode.'}</p><div class="form"><label for="lE">E-mailadres</label><input type="email" id="lE" placeholder="voorbeeld@voorbeeld.nl" autocomplete="username"><label for="lP">Wachtwoord</label><input type="password" id="lP" autocomplete="current-password"><button class="btn" id="lB">Inloggen</button><div class="msg" id="lM">${esc(msg || '')}</div></div>`}`);
   document.querySelectorAll('[data-mo]').forEach(b => b.onclick = () => { ui.loginModus = b.dataset.mo; showLogin(); });
   if (modus === 'code') {
-    const go = async () => { const code = $('#lC').value.trim().toUpperCase(); if (!code) return; $('#lM').textContent = 'Bezig…'; try { if (!sess || sess.kind !== 'anon') await anoniem(); const w = await rpc('koppel', { code }); if (!w) throw new Error('Deze koppelcode klopt niet, is verlopen of is al gebruikt. Vraag de beheerder om een nieuwe code.'); W = w; ls.set('cba-w', W); mw = null; ls.del('cba-mw'); start(); } catch (e) { $('#lM').textContent = !navigator.onLine || /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Geen internet. Koppelen kan alleen met internet.' : e.message; } };
+    const go = async () => { const code = $('#lC').value.replace(/\s+/g, '').toUpperCase(); if (!code) return; $('#lM').textContent = 'Bezig…'; try { if (!sess || sess.kind !== 'anon') await anoniem(); const w = await rpc('koppel', { code }); if (!w) throw new Error('Deze koppelcode klopt niet, is verlopen of is al gebruikt. Vraag de beheerder om een nieuwe code.'); W = w; ls.set('cba-w', W); mw = null; ls.del('cba-mw'); start(); } catch (e) { $('#lM').textContent = !navigator.onLine || /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Geen internet. Koppelen kan alleen met internet.' : e.message; } };
     $('#lK').onclick = go; $('#lC').onkeydown = e => { if (e.key === 'Enter') go(); };
   } else {
     const go = async () => { $('#lM').textContent = 'Bezig…'; try { await authCall('password', { email: $('#lE').value.trim(), password: $('#lP').value }); mw = null; ls.del('cba-mw'); OPEN = false; VERS_IN = true; start(); } catch (e) { $('#lM').textContent = /Invalid login/i.test(e.message) ? 'E-mailadres of wachtwoord klopt niet.' : !navigator.onLine || /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Geen internet. Inloggen met e-mail kan alleen met internet.' : e.message; } };
     $('#lB').onclick = go; $('#lP').onkeydown = e => { if (e.key === 'Enter') go(); };
   }
 }
-function ontkoppeld() { sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); showLogin('Dit toestel is niet (meer) gekoppeld. Vraag de beheerder om de koppelcode.'); }
+/* 2.25: bij ontkoppelen of uitloggen niets van de winkel op het toestel laten staan */
+async function wisLokaal() { try { const d = await dbp; if (d) d.close(); } catch (e) { } for (const n of ['coop-besteladvies', 'cba-pdf']) try { indexedDB.deleteDatabase(n); } catch (e) { }
+  try { Object.keys(localStorage).filter(k => k.startsWith('cba-') && k !== 'cba-updopen').forEach(k => localStorage.removeItem(k)); } catch (e) { } try { (await caches.keys()).forEach(k => k.startsWith('cba-data') && caches.delete(k)); } catch (e) { } }
+function ontkoppeld() { wisLokaal(); sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); showLogin('Dit toestel is niet (meer) gekoppeld. Vraag de beheerder om de koppelcode.'); }
 function geenWinkel() { loginKader('Geen winkel', '<p>Dit account hoort nog bij geen enkele winkel. Vraag de eigenaar om je als beheerder toe te voegen.</p><div class="form"><button class="btn sec" id="lUit">Uitloggen</button></div>'); $('#lUit').onclick = () => { sess = null; ls.del('cba-sess'); showLogin(); }; }
 function kiesWinkel() {
   loginKader('Kies een winkel', `<div class="form namen">${winkels.map(w => `<button class="btn" data-w="${w.id}">${esc(w.naam)}<small>${esc(w.plaats || '')}</small></button>`).join('')}</div>`);
   document.querySelectorAll('[data-w]').forEach(b => b.onclick = async () => { await saveCache(); W = b.dataset.w; ls.set('cba-w', W); mw = null; ls.del('cba-mw'); OPEN = false; S.dagen = {}; S.dagMeta = {}; S.boeken = {}; S.kassa = {}; M = null; start(); });
 }
+// 2.25: offline-pincode met PBKDF2 en zout (oude SHA-256 wordt bij de eerstvolgende online login vervangen)
+async function pinHash2(id, pin, zout) { const z = zout || [...crypto.getRandomValues(new Uint8Array(16))].map(x => x.toString(16).padStart(2, '0')).join(''), k = await crypto.subtle.importKey('raw', new TextEncoder().encode(id + ':' + pin), 'PBKDF2', false, ['deriveBits']);
+  const b = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode(z), iterations: 200000, hash: 'SHA-256' }, k, 256); return 'p2:' + z + ':' + [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+const pinCheck = async (h, id, pin) => !!h && (h.startsWith('p2:') ? h === await pinHash2(id, pin, h.split(':')[1]) : h === await pinHash(id, pin));
 async function pinHash(id, pin) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id + ':' + pin)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); } catch (e) { return id + ':' + pin; } }
 /* ---------- inloggen: naam + pincode, elke keer bij openen ---------- */
 function berekenEigenaar() { if (!WINKEL || WINKEL.rol !== 'beheer' || !mw) return false; if (DEMO) return mw.id === 'd1'; const em = ls.get('cba-emw:' + W); return !!(isMail() && em && em.id === mw.id); }
@@ -140,19 +147,20 @@ async function probeerPin(g) {
   else {
     const lok = ls.get('cba-pin') || {}; let r = null;
     try { r = await rpc('pin_login', { w: W, mid: g.id, pin: p }); }
-    catch (e) { if (!lok[g.id]) return pinFout('Geen internet. Probeer het opnieuw zodra je verbinding hebt.'); }
-    if (r) {
+    catch (e) { if (/^\d{3}:/.test(e.message)) return pinFout('Inloggen lukt nu niet. Vraag de beheerder of je account nog actief is.');
+      if (!lok[g.id] || Date.now() - (ls.get('cba-online') || 0) > 3 * 864e5) return pinFout('Geen internet. Probeer het opnieuw zodra je verbinding hebt.'); }
+    IN.online = !!r; if (r) {
       ok = !!r.ok;
       if (r.wacht) { IN.blokTot = Date.now() + r.wacht * 1000; return pinFout(`5 keer fout. Wacht ${r.wacht} seconden.`); }
       if (r.mail) { IN.eerste = null; return pinFout('Deze pincode stel je eenmalig in op je eigen telefoon (inloggen met e-mail).'); }
       if (!ok) { IN.eerste = null; return pinFout(r.fout ? `Pincode klopt niet (${r.fout} van 5).` : 'Pincode klopt niet.'); }
     } else {
-      ok = lok[g.id] === await pinHash(g.id, p);
+      ok = await pinCheck(lok[g.id], g.id, p);
       if (!ok) { const f = (ls.get('cba-pinfout') || 0) + 1; if (f >= 5) { ls.set('cba-pinfout', 0); IN.blokTot = Date.now() + 30000; return pinFout('5 keer fout. Wacht 30 seconden.'); } ls.set('cba-pinfout', f); return pinFout(`Pincode klopt niet (${f} van 5).`); }
     }
   }
   if (!ok) return pinFout('Pincode klopt niet.');
-  const lok = ls.get('cba-pin') || {}; lok[g.id] = await pinHash(g.id, p); ls.set('cba-pin', lok); ls.set('cba-pinfout', 0);
+  const lok = ls.get('cba-pin') || {}; lok[g.id] = await pinHash2(g.id, p); ls.set('cba-pin', lok); ls.set('cba-pinfout', 0); if (IN.online) ls.set('cba-online', Date.now());
   g.heeft_pin = true; ingelogd(g);
 }
 async function faceLogin(auto) {
@@ -246,5 +254,5 @@ addEventListener('scroll', () => { if (scrollSleutel) SCROLL[scrollSleutel] = wi
 function ga(tab) { const u = $('#undoBalk'); if (u) u.remove(); if (tab === 'plekken') tab = ui.plekSoort === 'kop' ? 'kwacties' : 'tafels'; if (BESTEL_OD.includes(tab) && ui.tab !== tab && !window.__E2E_ALLES) { ui.modus = (ls.get('cba-modus-' + wieSleutel()) || {})[tab] || 'todo'; ui.spring = true; ui.vanScan = null; } ui.tab = tab; ui.q = ''; ui.groep = ''; ui.blijf = null; render(); }
 async function logout() {
   if (!ask(sess && sess.kind === 'anon' ? 'Dit toestel ontkoppelen? Daarna is de koppelcode weer nodig.' : 'Uitloggen op dit apparaat?')) return;
-  sess = null; ls.del('cba-sess'); mw = null; ls.del('cba-mw'); OPEN = false; outbox = []; await iset('outbox', []); showLogin();
+  sess = null; mw = null; OPEN = false; outbox = []; await wisLokaal(); setTimeout(() => location.reload(), 300);
 }

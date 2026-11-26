@@ -1,12 +1,14 @@
 // Coop Besteladvies – kassaverkoop per PLU voor Brood Opzet (Supabase Edge Function "verkoop-export"). Alleen lezen.
 // Wordt automatisch live gezet door .github/workflows/functies.yml; koppelcode = geheim VERKOOP_SLEUTEL in Supabase.
-export function start(createClient, SLEUTEL) {
+// 2.25: sleutel in constante tijd vergelijken; altijd alleen de eigen winkel (geen winkel-parameter van buiten)
+const gelijk = (a, b) => { let d = a.length ^ b.length; for (let i = 0; i < b.length; i++) d |= (a.charCodeAt(i) || 0) ^ b.charCodeAt(i); return d === 0; };
+export function start(createClient, SLEUTEL, WINKEL) {
   const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type, x-sleutel", "Access-Control-Allow-Methods": "GET, OPTIONS" };
   const js = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
   const kaal = (s) => String(s ?? "").trim().replace(/^0+(?=\d)/, "");
   Deno.serve(async (req) => {
     if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-    if (!SLEUTEL || req.headers.get("x-sleutel") !== SLEUTEL) return js({ ok: false, fout: "Verkeerde koppelcode" }, 401);
+    if (!SLEUTEL || !gelijk(req.headers.get("x-sleutel") || "", SLEUTEL)) return js({ ok: false, fout: "Verkeerde koppelcode" }, 401);
     try {
       const u = new URL(req.url), plus = new Set((u.searchParams.get("plu") || "").split(",").map(kaal).filter(Boolean));
       if (!plus.size) return js({ ok: false, fout: "Geen PLU opgegeven" }, 400);
@@ -15,7 +17,7 @@ export function start(createClient, SLEUTEL) {
       const k = await sb.from("dagverkoop").select("winkel_id").gte("dag", van).limit(5000);
       if (k.error) throw k.error;
       const n = {}; for (const x of k.data) n[x.winkel_id] = (n[x.winkel_id] || 0) + 1;
-      const w = u.searchParams.get("winkel") || Object.keys(n).sort((a, b) => n[b] - n[a])[0], dagen = {};
+      const w = WINKEL || Object.keys(n).sort((a, b) => n[b] - n[a])[0], dagen = {};
       const r = w ? await sb.from("dagverkoop").select("dag,data").eq("winkel_id", w).gte("dag", van) : { data: [] };
       if (r.error) throw r.error;
       for (const x of r.data) { const d = {}; for (const [e, v] of Object.entries(x.data || {})) if (plus.has(kaal(e))) d[kaal(e)] = (d[kaal(e)] || 0) + (+(v?.[0]) || 0); dagen[x.dag] = d; }

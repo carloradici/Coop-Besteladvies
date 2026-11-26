@@ -152,7 +152,7 @@ async function renderRetour() {
   $('#rbImp').onchange = e => rbImport(e.target.files[0]);
   v.querySelectorAll('[data-pz]').forEach(x => x.onclick = () => { const [k, p, d] = x.dataset.pz.split('|'); RB.prijs = RB.prijs || {}; RB.prijs[k] = (RB.prijs[k] || []).filter(y => y[0] !== d).concat([[d, +p]]).sort((a, b) => a[0].localeCompare(b[0])); rbBewaar(); toast('✓ Nieuwe prijs overgenomen'); renderRetour(); });
   v.querySelectorAll('[data-pn]').forEach(x => x.onclick = () => { (RB.prijsNee = RB.prijsNee || []).push(x.dataset.pn); rbBewaar(); renderRetour(); });
-  if ($('#rbExp')) $('#rbExp').onclick = rbExport; if ($('#rbVs')) $('#rbVs').onclick = rbVoorstelSheet; if ($('#rbClaim')) $('#rbClaim').onclick = rbClaim; $('#rbKar').onclick = () => { ui.karT = null; ga('karren'); };
+  if ($('#rbExp')) $('#rbExp').onclick = rbExport; if ($('#rbVs')) $('#rbVs').onclick = rbVoorstelSheet; if ($('#rbClaim')) $('#rbClaim').onclick = rbClaim; if ($('#rbKar')) $('#rbKar').onclick = () => { ui.karT = null; ga('karren'); };
   if (!rbWolkSync.ok) { rbWolkSync.ok = 1; setTimeout(rbWolkSync, 2500); }
   $('#rbNieuw').onclick = () => { ui.rbEdit = { b: {}, i: -1 }; renderRetour(); };
   if ($('#rbVerder')) $('#rbVerder').onclick = () => { ui.rbEdit = Object.assign({ i: -1 }, rbRij[0], { rij: 1 }); renderRetour(); };
