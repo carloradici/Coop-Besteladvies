@@ -150,7 +150,7 @@ async function scanStart(od, opVondst) {
   scanHook = c => gevonden(c);
   $('#scX', ov).onclick = stop; $('#scZ', ov).onclick = () => gevonden($('#scI', ov).value.trim()); $('#scI', ov).onkeydown = e => { if (e.key === 'Enter') gevonden(e.target.value.trim()); };
   try { // 1.71: zxing-cpp (WebAssembly) via BarcodeDetector; leest ook lastige barcodes op zakken en flessen. Alleen het kader wordt bekeken.
-    await loadScript(LIB.bcd); const F = ['ean_13', 'ean_8', 'upc_a', 'upc_e']; let BD = window.BarcodeDetectionAPI.BarcodeDetector;
+    await loadScript(LIB.bcd); const F = ['ean_13', 'ean_8', 'upc_a', 'upc_e']; let BD = window.BarcodeDetectionAPI.BarcodeDetector; window.BarcodeDetectionAPI.setZXingModuleOverrides({ locateFile: (f, p) => f.endsWith('.wasm') ? new URL('lib/zxing_reader.wasm', location.href).href : p + f }); // 2.27: scanner-onderdeel uit de app zelf (CSP)
     try { if (window.BarcodeDetector && (await window.BarcodeDetector.getSupportedFormats()).includes('ean_13')) BD = window.BarcodeDetector; } catch (e) { }
     const det = new BD({ formats: F }), v = $('video', ov);
     // foto met de gewone camera (scherpstellen werkt daar altijd) en die foto uitlezen

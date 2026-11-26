@@ -460,7 +460,8 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['⭐', 'Meer-menu vernieuwd', 'Zoeken, favorieten met een sterretje bovenaan en groepen die je open- en dichtklapt, net als in Brood Opzet.'],
+const NIEUWS = [['📷', 'Scannen werkt weer', 'De barcodescanner zit nu in de app zelf, dus hij werkt weer en ook sneller zonder internet.'],
+  ['⭐', 'Meer-menu vernieuwd', 'Zoeken, favorieten met een sterretje bovenaan en groepen die je open- en dichtklapt, net als in Brood Opzet.'],
   ['🛡️', 'Beveiliging aangescherpt', 'Na een controle door een tweede AI zijn alle gevonden gaten gedicht. Bij ontkoppelen of uitloggen wordt nu alles van de winkel van het toestel gewist.'],
   ['🔑', 'Koppelcode alleen voor de beheerder', 'De koppelcode en de Brood Opzet-koppeling zijn niet meer zichtbaar voor medewerkers.'],
   ['🔢', 'Pincode beter beschermd', 'Na herhaald foute pincodes duurt de wachttijd steeds langer. Je kunt alleen je eigen pincode wijzigen.']];

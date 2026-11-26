@@ -13,7 +13,7 @@ Web-app (PWA) van Coop Vogelenzang die per artikel een bestel-advies geeft (vers
 - `index.html`: alleen HTML-geraamte + laadscript met `LADEN`.
 - `rekenkern.js`: rekenkern en inleesfuncties (`window.C`), los script.
 - `qrcode.min.js`: QR-bibliotheek (MIT, Kazuhiko Arase), los script vóór rekenkern; gebruikt door "Naar de terminal".
-- `lib/`: pdf.js, xlsx, html2canvas, jspdf lokaal (LIB in app-basis). Scripts van jsdelivr alleen met SRI (`SRI` in app-basis). CSP staat als meta in index.html: nieuw extern adres = daar toevoegen. LADEN staat op regel 23.
+- `lib/`: pdf.js, xlsx, html2canvas, jspdf, barcode-detector + zxing_reader.wasm (2.27, locateFile in app-extra) lokaal (LIB in app-basis). Scripts van jsdelivr alleen met SRI (`SRI` in app-basis). CSP staat als meta in index.html: nieuw extern adres = daar toevoegen. LADEN staat op regel 23.
 - De `app-*.js`-bestanden zijn stukken van één script: het laadscript zet ze in volgorde van `LADEN` binnen `(function(){'use strict'; … })();` en voert ze als één geheel uit. Functies mogen naar elkaar verwijzen over bestanden heen. Zet géén eigen `'use strict'` of wrapper in die bestanden. Nieuw bestand? Zet het in `LADEN` (index.html) én in `APP` (sw.js).
 - `style.css`: alle opmaak. Coop-oranje #f17d04, grote knoppen, simpele Nederlandse teksten.
 
@@ -62,6 +62,7 @@ Updates (2.07, zoals Brood Opzet): groene balk bij nieuwe versie; instelling "Up
 ## Testen
 - Test bij telscherm-wijzigingen ook de volgorde: eerst "+ 1 doos", dan cijfers (en andersom).
 - Grote versie: volledige Playwright-test, ook een ronde als medewerker; testversie in Claude bijwerken.
+- Na elke wijziging aan CSP of `lib/`: scannertest (barcode lezen via http-server met CSP aan, geen CSP-meldingen).
 - Kleine fix: snelle controle (app laadt zonder fouten, het aangepaste scherm werkt).
 - Testen lokaal: `python3 -m http.server`, dan `http://localhost:8000/` (laadt niet via file://). Demo: zet vóór het laden `window.DEMO_DATA={dagen:{},kassa:{},boeken:{},acties:[],agenda:[],inst:{},assort:{}}` (of de data van de testversie), kies beheerder of medewerker, pincode 1234.
 - Proefronde nieuwe medewerker: `_proef.js`-aanpak (zonder uitleg taken uitvoeren, tikken tellen; elke taak max 3 tikken navigatie).

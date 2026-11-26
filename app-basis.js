@@ -1,14 +1,14 @@
-const VERSIE = '2.26';
+const VERSIE = '2.27';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
-const SRI = { 'https://cdn.jsdelivr.net/npm/barcode-detector@2.3.1/dist/iife/pure.js': 'sha384-k0XKrdi+idBm7sDm70x/MSs2EHSmKl/UMNu1y9c0yorOKDVDT5Efv4nimSNd5uVM', 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js': 'sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F' };
+const SRI = { 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js': 'sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F' };
 const LIB = {
   // 2.25: vaste bibliotheken op de eigen site (geen afhankelijkheid van een CDN); de rest met controle-vingerafdruk (SRI)
   pdf: 'lib/pdf.min.js',
   pdfw: 'lib/pdf.worker.min.js',
   xlsx: 'lib/xlsx.full.min.js',
-  bcd: 'https://cdn.jsdelivr.net/npm/barcode-detector@2.3.1/dist/iife/pure.js',
+  bcd: 'lib/barcode-detector.js',
   h2c: 'lib/html2canvas.min.js',
   jspdf: 'lib/jspdf.umd.min.js'
 };

@@ -1,4 +1,4 @@
-const V = 'cba-2.26';
+const V = 'cba-2.27';
 const APP = ['style.css', 'qrcode.min.js', 'rekenkern.js', 'app-basis.js', 'app-sync.js', 'app-login.js', 'app-home.js', 'app-deadlines.js', 'app-beheer.js', 'app-uploaden.js', 'app-pdf-print.js', 'app-extra.js', 'app-advies.js', 'app-acties.js', 'app-plekken.js', 'app-voorkoop.js', 'app-overig.js', 'app-brood.js', 'app-route.js', 'app-kantoor.js', 'app-retour.js', 'app-start.js'].map(f => './' + f + '?b=' + V.split('-')[1]);
 const SHELL = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', ...APP];
 // 2.11: icoontjes, manifest en QR-bibliotheek veranderen niet: overnemen uit de vorige versie (sneller bijwerken)
