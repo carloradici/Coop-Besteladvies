@@ -460,7 +460,8 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['📷', 'Scannen werkt weer', 'De barcodescanner zit nu in de app zelf, dus hij werkt weer en ook sneller zonder internet.'],
+const NIEUWS = [['🏷️', 'Schapkaartjes beter scannen', 'Licht wazige schapkaartjes worden vaker gelezen, en de app leest een kaartje pas als hij het zeker weet, zodat je niet bij een verkeerd artikel uitkomt.'],
+  ['📷', 'Scannen werkt weer', 'De barcodescanner zit nu in de app zelf, dus hij werkt weer en ook sneller zonder internet.'],
   ['⭐', 'Meer-menu vernieuwd', 'Zoeken, favorieten met een sterretje bovenaan en groepen die je open- en dichtklapt, net als in Brood Opzet.'],
   ['🛡️', 'Beveiliging aangescherpt', 'Na een controle door een tweede AI zijn alle gevonden gaten gedicht. Bij ontkoppelen of uitloggen wordt nu alles van de winkel van het toestel gewist.'],
   ['🔑', 'Koppelcode alleen voor de beheerder', 'De koppelcode en de Brood Opzet-koppeling zijn niet meer zichtbaar voor medewerkers.'],

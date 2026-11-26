@@ -98,20 +98,20 @@ function renderUitleg() {
 // 1.72: MSI-barcode van het schapkaartje (bestelnummer + 2 controlecijfers) zelf lezen uit een beeld
 function msiLees(d, w, h, veel) {
   const rijen = veel ? Array.from({ length: 60 }, (_, i) => 0.05 + i * 0.015) : [0.5, 0.4, 0.6, 0.3, 0.7, 0.45, 0.55];
-  for (const f of rijen) {
+  const tel = {}; // 2.28: foto: pas een nummer als meerdere regels hetzelfde lezen; live: de camera moet het 2× achter elkaar lezen
+  rij: for (const f of rijen) {
     const y = Math.round(h * f), g = new Float32Array(w), ps = new Float64Array(w + 1); for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; g[x] = d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11; ps[x + 1] = ps[x] + g[x]; }
     const R = Math.max(8, Math.round(w / 40)), gem = new Float32Array(w); for (let x = 0; x < w; x++) { const a = Math.max(0, x - R), b = Math.min(w, x + R + 1); gem[x] = (ps[b] - ps[a]) / (b - a); }
-    const bars = []; for (let x = 0; x < w;) { if (g[x] < gem[x] - 8) { const s = x; while (x < w && g[x] < gem[x] - 8) x++; bars.push([s, x - s]); } else x++; }
+    const bars = []; for (let x = 0; x < w;) { if (g[x] < gem[x] - 8) { const s = x; let k = 0; while (x < w && g[x] < gem[x] - 8) { k = Math.max(k, gem[x] - g[x]); x++; } bars.push([s, x - s, k]); } else x++; }
     for (let a = 0; a < bars.length - 10; a++) { // zoek een reeks met gelijke afstand tussen de streepjes
-      const P = bars[a + 1][0] - bars[a][0]; if (P < 3) continue; let e = a + 1; while (e + 1 < bars.length && Math.abs(bars[e + 1][0] - bars[e][0] - P) <= P * 0.3) e++;
-      const run = bars.slice(a, e + 1); if (run.length < 19) continue;
-      const ws = run.map(b => b[1]), m = (Math.max(...ws) + Math.min(...ws)) / 2, bits = ws.map(v => v > m ? 1 : 0);
-      for (const [s, t] of [[1, 2], [1, 1], [1, 3]]) { const kern = bits.slice(s, bits.length - t); if (bits[0] !== 1 || kern.length % 4) continue;
-        let c = ''; for (let i = 0; i < kern.length; i += 4) { const v = kern[i] * 8 + kern[i + 1] * 4 + kern[i + 2] * 2 + kern[i + 3]; if (v > 9) { c = ''; break; } c += v; }
-        if (c.length >= 5) { const nr = c.slice(0, -2); if (C.msiCode(nr) === c) return nr; } }
+      const P = bars[a + 1][0] - bars[a][0]; if (P < 3) continue; const run = [bars[a], bars[a + 1]]; for (let e = a + 1; e + 1 < bars.length; e++) { const t = bars[e + 1][0] - bars[e][0]; if (Math.abs(t - 2 * P) <= P * 0.3) run.push([bars[e][0] + P, 0, 0]); else if (Math.abs(t - P) > P * 0.3) break; run.push(bars[e + 1]); } if (run.length < 19) continue;
+      for (const kol of [1, 2]) { const ws = run.map(b => b[kol]), m = (Math.max(...ws) + Math.min(...ws)) / 2, bits = ws.map(v => v > m ? 1 : 0); // 2.28: breedte of donkerte (wazig beeld)
+        if (bits[0] === 1) for (let n = (bits.length - 3) >> 2; n >= 7; n--) { if (bits[1 + 4 * n]) continue; // stop = smal streepje; daarna mag er rommel volgen (tekst naast de barcode)
+          let c = ''; for (let i = 1; i < 1 + 4 * n; i += 4) { const v = bits[i] * 8 + bits[i + 1] * 4 + bits[i + 2] * 2 + bits[i + 3]; if (v > 9) { c = ''; break; } c += v; }
+          if (c) { const nr = c.slice(0, -2); if (C.msiCode(nr) === c) { if (!veel) return nr; tel[nr] = (tel[nr] || 0) + 1; continue rij; } } } }
     }
   }
-  return null;
+  const [z, y] = Object.entries(tel).sort((p, q) => q[1] - p[1]); return z && z[1] >= 3 && (!y || z[1] >= y[1] + 2) ? z[0] : null;
 }
 function vindCode(code) {
   code = String(code || '').trim(); if (!code) return null;
@@ -158,9 +158,9 @@ async function scanStart(od, opVondst) {
     const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
     strm = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] } }); v.srcObject = strm; await v.play();
     try { const tr = strm.getVideoTracks()[0], cp = tr.getCapabilities ? tr.getCapabilities() : {}; if (cp.zoom) await tr.applyConstraints({ advanced: [{ zoom: Math.min(2, cp.zoom.max) }] }); } catch (e) { } // 2× inzoomen: verder weg houden = scherp
-    let laatst = '';
+    let laatst = '', msV = '';
     const kijk = async () => { if (!ov.isConnected) return; try { const W = v.videoWidth, H = v.videoHeight; if (W) { const w = Math.round(W * 0.9), h = Math.round(H * 0.6); cv.width = w; cv.height = h; cx.drawImage(v, (W - w) / 2, (H - h) / 2, w, h, 0, 0, w, h);
-      const r = await det.detect(cv); const ms = r.length ? null : msiLees(cx.getImageData(0, 0, w, h).data, w, h); if (ms) r.push({ rawValue: ms }); if (r.length) { const t = r[0].rawValue; if (t !== laatst) { laatst = t; if (gevonden(t)) return; } } } } catch (e) { } setTimeout(kijk, 150); };
+      const r = await det.detect(cv); let ms = r.length ? null : msiLees(cx.getImageData(0, 0, w, h).data, w, h); if (ms && ms !== msV) { msV = ms; ms = null; } if (ms) r.push({ rawValue: ms }); if (r.length) { const t = r[0].rawValue; if (t !== laatst) { laatst = t; if (gevonden(t)) return; } } } } catch (e) { } setTimeout(kijk, 150); };
     kijk();
   } catch (e) { const m = $('#scM', ov); if (m) m.textContent = /Permission|NotAllowed/i.test(e && (e.name + e.message)) ? 'Geen toegang tot de camera. Typ het nummer hieronder.' : 'Camera lukt niet. Typ het nummer hieronder.'; }
 }
