@@ -25,8 +25,8 @@ const rbVt = f => { const n = {}; ((f && f.regels) || []).forEach(r => { const k
 function rbVaak(L) { const t = {}; L.forEach(([b, s]) => { const vt = rbVt(s.f); RB_V.forEach(([k, n]) => { if (k !== 'bb' && (+b[k] || 0) > (vt[k] || 0)) t[n] = (t[n] || 0) + 1; }); }); return Object.entries(t).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, x]) => `${n} ${x}×`).join(', '); }
 /* 2.13: scans ook veilig in Supabase (privé bucket 'retour', map per winkel, geen publieke link) */
 const rbWolkPad = nr => `${W}/${rbKey(nr)}.jpg`, rbWolkH = async () => ({ apikey: SB_KEY, Authorization: 'Bearer ' + await token() });
-async function rbWolkOp(nr, img) { if (DEMO || OEFEN || !W || !img || !navigator.onLine) return false; try { const bl = await (await fetch(img)).blob(); return (await fetch(`${SB_URL}/storage/v1/object/retour/${rbWolkPad(nr)}`, { method: 'POST', headers: Object.assign(await rbWolkH(), { 'Content-Type': 'image/jpeg', 'x-upsert': 'true' }), body: bl })).ok; } catch (e) { return false; } }
-async function rbWolkHaal(nr) { if (DEMO || OEFEN || !W || !navigator.onLine) return null; try { const r = await fetch(`${SB_URL}/storage/v1/object/authenticated/retour/${rbWolkPad(nr)}`, { headers: await rbWolkH() }); if (!r.ok) return null; const bl = await r.blob(), u = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(bl); }); iset('rbscan:' + nr, u); return u; } catch (e) { return null; } }
+async function rbWolkOp(nr, img) { if (DEMO || OEFEN || !W || !img || !navigator.onLine) return false; try { const bl = await (await fetch(img)).blob(); return (await fetch(`${SB_URL}/storage/v1/object/retour/${rbWolkPad(nr)}`, { method: 'POST', headers: Object.assign(await rbWolkH(), { 'Content-Type': 'image/jpeg', 'x-upsert': isBeheer() ? 'true' : 'false' }), body: bl }).then(r => r.ok || (!isBeheer() && r.status === 409 || /exists|Duplicate/i.test(r.statusText)) ? { ok: true } : r)).ok; } catch (e) { return false; } }
+async function rbWolkHaal(nr) { if (!isBeheer() || DEMO || OEFEN || !W || !navigator.onLine) return null; try { const r = await fetch(`${SB_URL}/storage/v1/object/authenticated/retour/${rbWolkPad(nr)}`, { headers: await rbWolkH() }); if (!r.ok) return null; const bl = await r.blob(), u = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(bl); }); iset('rbscan:' + nr, u); return u; } catch (e) { return null; } }
 function rbWolkWeg(nr) { if (!DEMO && !OEFEN && W) rbWolkH().then(h => fetch(`${SB_URL}/storage/v1/object/retour/${rbWolkPad(nr)}`, { method: 'DELETE', headers: h })).catch(() => { }); }
 async function rbWolkSync() { if (rbWolkSync.bezig || DEMO || OEFEN || !RB) return; rbWolkSync.bezig = 1; let n = 0;
   try { for (const b of RB.bonnen) { if (!b.scan || b.wolk) continue; const img = await iget('rbscan:' + b.nr); if (!img) continue; if (!await rbWolkOp(b.nr, img)) { rbWolkSync.fout = 1; break; } b.wolk = 1; n++; rbWolkSync.fout = 0; } } finally { rbWolkSync.bezig = 0; }
@@ -345,7 +345,7 @@ async function rbClaimPdf(L, sc, vaak) {
     V.forEach(([b, s]) => { tx(`${b.nr}${b.wsnr ? ' (bij Van Tol ' + b.wsnr + ')' : ''} · ${dat(b.datum)} · weekstaat ${s.f.ws}${s.f.fnr ? ' · factuur ' + s.f.fnr : ''} · ${rbEuro(s.v)} te weinig${b.scan ? '' : ' · scan niet beschikbaar'}`, { b: 1, na: 0.5 }); tx(s.dif.join(' · ') || `Bon ${rbEuro(rbWaarde(b))}, gecrediteerd ${rbEuro(Math.abs(+s.f.eur || 0))}`, { c: '#444444', na: 3 }); }); lijn(); }
   if (N.length) { tx(`Niet gecrediteerd: staat op geen enkele weekstaat (${N.length})`, { s: 12, b: 1, na: 2 });
     N.forEach(([b, s]) => { tx(`${b.nr} · ${dat(b.datum)} · ${rbEuro(s.v)}${b.scan ? '' : ' · scan niet beschikbaar'}`, { b: 1, na: 0.5 }); tx(inh(b), { c: '#444444', na: 3 }); }); lijn(); }
-  const T = (RB.tel || [])[0]; if (T && (T.vk != null || T.vp != null)) { tx('Eigen telling in de winkel', { s: 12, b: 1, na: 2 });
+  const T = ((await karLaad()).tel || [])[0]; if (T && (T.vk != null || T.vp != null)) { tx('Eigen telling in de winkel', { s: 12, b: 1, na: 2 });
     tx(`${dat(T.d)}: ${T.k} karren${T.vk != null ? ` (saldo Van Tol ${T.vk})` : ''} · ${T.pl} planken${T.vp != null ? ` (saldo Van Tol ${T.vp})` : ''}`, { na: 3 }); }
   if (sc) for (const [b, s] of L) { const img = await rbScan(b.nr); if (!img) continue; d.addPage(); y = M; tx(`${b.nr} · ${dat(b.datum)} · ${rbEuro(s.v)} te weinig`, { s: 12, b: 1, na: 3 });
     const im = new Image(); im.src = img; await im.decode(); let w = BR, h = BR * im.height / im.width; if (h > 297 - y - M) { h = 297 - y - M; w = h * im.width / im.height; } d.addImage(img, 'JPEG', M, y, w, h); }
@@ -354,13 +354,19 @@ async function rbClaimPdf(L, sc, vaak) {
 
 /* 2.13: karren en planken tellen en vergelijken met het saldo van Van Tol (alleen karren en planken houdt Van Tol bij) */
 function rbSaldo(k) { const dr = rbRet().dragers; if (!dr) return null; const e = Object.entries(dr.items || {}).find(([n]) => k === 'k' ? /CONTAINER|KAR/i.test(n) : /PLANK/i.test(n)); return e ? +e[1] : null; }
+/* 2.23: karrentellingen los van de retourbonnen (voorkeuren wie='karren'); de retourbonnen zijn in de database alleen voor de beheerder */
+let KT = null;
+async function karLaad() { if (KT) return KT; KT = ls.get('cba-karren') || { tel: [] };
+  if (!DEMO && navigator.onLine) try { const r = await rest(wq('voorkeuren?wie=eq.karren')); if (r[0] && r[0].data && r[0].data.tel) KT = r[0].data; } catch (e) { }
+  if (!KT.tel.length && RB && (RB.tel || []).length) { KT.tel = RB.tel; karBewaar(); } ls.set('cba-karren', KT); return KT; }
+function karBewaar() { ls.set('cba-karren', KT); write('voorkeuren', [{ wie: 'karren', data: KT }], true); }
 async function renderKarren() {
-  const v = $('#view'); if (!RB) { v.innerHTML = '<div class="empty">Laden…</div>'; await rbLaad(); if (ui.tab !== 'karren') return; }
-  const T = RB.tel || [], dr = rbRet().dragers, t = ui.karT || (ui.karT = { k: '', pl: '' }), geld = rbGeld(), oud = dr && dr.d ? C.diff(dr.d, C.today()) : 0;
+  const v = $('#view'); if (!RB || !KT) { v.innerHTML = '<div class="empty">Laden…</div>'; if (isBeheer()) await rbLaad(); else RB = RB || { bonnen: [] }; await karLaad(); if (ui.tab !== 'karren') return; }
+  const T = KT.tel || [], dr = rbRet().dragers, t = ui.karT || (ui.karT = { k: '', pl: '' }), geld = rbGeld(), oud = dr && dr.d ? C.diff(dr.d, C.today()) : 0;
   const rij = (k, nm, p) => { const vt = rbSaldo(k), n = t[k] === '' ? null : +t[k], vs = vt !== null && n !== null ? vt - n : null;
     return `<div class="blk"><h2>${nm}</h2><div class="karrij"><button class="btn sec" data-km="${k}" aria-label="Eén minder">−</button><input type="text" inputmode="numeric" data-kv="${k}" value="${t[k]}" placeholder="0" aria-label="Aantal ${nm.toLowerCase()}"><button class="btn sec" data-kp="${k}" aria-label="Eén meer">+</button></div>
       <p class="small">${vt === null ? 'Saldo Van Tol nog niet bekend' : `Van Tol: <b>${vt}</b>${vs === null ? '' : vs === 0 ? ' · <span class="rbgoed">✓ klopt</span>' : ` · <span class="rood">verschil ${Math.abs(vs)}${geld ? ` × ${rbEuro(p)} = ${rbEuro(Math.abs(vs) * p)}` : ''} ${vs > 0 ? 'te veel op je saldo' : 'te weinig op je saldo'}</span>`}`}</p></div>`; };
-  v.innerHTML = `<p class="small">${dr ? `Saldo Van Tol op ${dr.d ? C.fmtDag(dr.d) : '?'} (weekstaat ${esc(dr.ws)})${oud > 7 ? ` · <span class="rood">${oud} dagen oud: tel het liefst op de dag dat de weekstaat binnenkomt</span>` : ''}` : 'Nog geen saldo van Van Tol: lees een weekstaat in bij Retourbonnen.'}</p>
+  v.innerHTML = `<p class="small">${dr ? `Saldo Van Tol op ${dr.d ? C.fmtDag(dr.d) : '?'} (weekstaat ${esc(dr.ws)})${oud > 7 ? ` · <span class="rood">${oud} dagen oud: tel het liefst op de dag dat de weekstaat binnenkomt</span>` : ''}` : isBeheer() ? 'Nog geen saldo van Van Tol: lees een weekstaat in bij Retourbonnen.' : 'Tel de karren en planken en tik Telling opslaan. Het saldo van Van Tol ziet alleen de beheerder.'}</p>
     ${rij('k', 'Karren', rbP('k'))}${rij('pl', 'Planken', rbP('pl'))}
     <button class="btn" id="karSla" style="width:100%">Telling opslaan</button>
     ${T.length ? `<div class="blk"><h2>Eerdere tellingen</h2>${T.slice(0, 10).map(x => `<div class="rbrij"><span class="rbtx"><b>${C.fmtDag(x.d)}</b><small>${x.k} karren${x.vk != null ? ` (Van Tol ${x.vk})` : ''} · ${x.pl} planken${x.vp != null ? ` (Van Tol ${x.vp})` : ''} · ${esc(x.wie || '')}</small></span></div>`).join('')}</div>` : ''}`;
@@ -368,5 +374,5 @@ async function renderKarren() {
   v.querySelectorAll('[data-km]').forEach(b => b.onclick = () => zet(b.dataset.km, (+t[b.dataset.km] || 0) - 1));
   v.querySelectorAll('[data-kp]').forEach(b => b.onclick = () => zet(b.dataset.kp, (+t[b.dataset.kp] || 0) + 1));
   v.querySelectorAll('[data-kv]').forEach(i => i.onchange = () => zet(i.dataset.kv, i.value.replace(/\D/g, '')));
-  $('#karSla').onclick = () => { if (t.k === '' && t.pl === '') return toast('Tel eerst de karren of planken'); (RB.tel = RB.tel || []).unshift({ d: C.today(), k: +t.k || 0, pl: +t.pl || 0, wie: mijnNaam(), vk: rbSaldo('k'), vp: rbSaldo('pl') }); RB.tel = RB.tel.slice(0, 30); rbBewaar(); ui.karT = null; toast('✓ Telling opgeslagen'); renderKarren(); };
+  $('#karSla').onclick = () => { if (t.k === '' && t.pl === '') return toast('Tel eerst de karren of planken'); (KT.tel = KT.tel || []).unshift({ d: C.today(), k: +t.k || 0, pl: +t.pl || 0, wie: mijnNaam(), vk: rbSaldo('k'), vp: rbSaldo('pl') }); KT.tel = KT.tel.slice(0, 30); karBewaar(); ui.karT = null; toast('✓ Telling opgeslagen'); renderKarren(); };
 }

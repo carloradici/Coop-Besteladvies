@@ -457,7 +457,7 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['🔐', 'Retoursleutel Brood Opzet', 'Retourgegevens komen alleen nog binnen met een retoursleutel. Die vul je als beheerder in bij Brood Opzet koppelen; hij blijft alleen op jouw toestel.']];
+const NIEUWS = [['🔒', 'Beter beveiligd', 'Retourbonnen en hun scans zijn nu ook in de database alleen voor de beheerder. Karren tellen blijft voor iedereen.']];
 let nieuweVersie = null;
 const updTonen = () => (S.pref || {}).upd ?? rol === 'admin';
 async function zoekUpdate(stil, forceer) {
