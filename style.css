@@ -725,3 +725,5 @@ svg.qrk{width:44px;height:44px;display:block;margin-top:3px}
 /* 2.16 */.rbprijs{border:1px solid var(--oranje);border-radius:12px;padding:8px 10px;margin:8px 0}.rbprijs .row{gap:8px}
 /* 2.17 */.lnk{background:none;border:0;color:var(--oranje);text-decoration:underline;font:inherit;padding:0 4px;cursor:pointer}
 /* 2.20 */button.lbl{background:none;font-family:inherit;line-height:inherit;cursor:pointer;text-align:left}
+.rijflex{display:flex;align-items:stretch;border-top:1px solid var(--lijn)}.rijflex:first-child{border-top:0}.rijflex .rijknop{flex:1;min-width:0;border-top:0}.ster{width:46px;flex:none;border:0;border-left:1px solid var(--lijn);background:none;color:var(--grijs);font-size:21px}.ster.aan{color:var(--oranje)}
+.meergroep,.lijstblok:has(.karkop){padding:0;overflow:hidden}.groepkop,.karkop{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:var(--merk);color:#1a1a1a;padding:12px 16px;font-size:16px;font-family:inherit}.groepkop span{font-size:13px;font-weight:600}.karkop b{font-size:17px}.meergroep .meerinhoud{display:none}.meergroep.open .meerinhoud{display:block}

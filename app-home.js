@@ -271,7 +271,7 @@ function pasPrefToe() {
   r.classList.toggle('tekst-groot', p.tekst === 'groot'); r.classList.toggle('tekst-xl', p.tekst === 'xl');
   document.body.classList.toggle('compact', !!p.compact); document.body.classList.toggle('eenvoudig', !!p.eenvoudig); document.body.classList.toggle('detailsaan', !!p.details); document.body.classList.toggle('kort', !!p.kort);
 }
-function zetPref(k, val) { S.pref = Object.assign({}, S.pref || {}, { [k]: val }); ls.set('cba-pref-' + wieSleutel(), S.pref); pasPrefToe(); write('voorkeuren', [{ wie: wieSleutel(), data: S.pref }]); render(); }
+function zetPref(k, val, stil) { S.pref = Object.assign({}, S.pref || {}, { [k]: val }); ls.set('cba-pref-' + wieSleutel(), S.pref); pasPrefToe(); write('voorkeuren', [{ wie: wieSleutel(), data: S.pref }]); if (!stil) render(); }
 function renderAppInst() {
   const p = S.pref || {}; const v = $('#view');
   const seg = (k, opts) => `<div class="segment licht">${opts.map(o => `<button class="${(p[k] || opts[0][0]) === o[0] ? 'aan' : ''}" data-pk="${k}" data-pv="${o[0]}">${o[1]}</button>`).join('')}</div>`;
@@ -393,8 +393,8 @@ const HULP = {
   overig: ['Overig', 'Artikelen die je niet via de terminal bestelt, met wat er verkocht is en wat de app verwacht.'],
   assort: ['Assortiment', 'Wat er nieuw is, uit het bestelboek gaat of gesaneerd is. Tik op <b>Schap klaar</b> zodra het schap klopt.'],
   taken: ['Taken', 'Wat de app vandaag vraagt, taken en berichten voor jou, meldingen en berichten voor collega\'s. Tik op ✓ Gedaan of Gelezen als het klaar is.'],
-  meer: ['Meer', 'Bovenaan staat wat je vaak nodig hebt. Onder <b>Kantoor</b> staan planning, bestanden en instellingen. Onder <b>Mijn app</b> je eigen instellingen en "Ander persoon". Zoek bovenaan als je iets niet vindt.'],
-  'meer:kantoor': ['Kantoor', 'Alles voor de beheerder: bestellen, medewerkers, actie planning, uploads en de winkel. Bovenaan staat <b>Start hier</b> met wat nog moet gebeuren.'],
+  meer: ['Meer', 'Zoek bovenaan een onderdeel. Tik op het <b>sterretje ☆</b> om iets als favoriet bovenaan te zetten. Tik op een oranje kop om een groep open of dicht te klappen; de app onthoudt dat voor jou. Onder <b>Kantoor</b> staan planning, bestanden en instellingen.'],
+  'meer:kantoor': ['Kantoor', 'Alles voor de beheerder: bestellen, medewerkers, actie planning, uploads en de winkel. Bovenaan staat <b>Start hier</b> met wat nog moet gebeuren. Tik op een oranje kop om een groep open of dicht te klappen.'],
   'meer:mij': ['Mijn app', 'Weergave, meldingen, pincode, wisselen van medewerker, updates en uitloggen.'],
   'meer:bestellen': ['Bestellen instellen', 'Looproute, rapporten, exporteren, besteldagen en advies-instellingen.'],
   'meer:team': ['Medewerkers', 'Medewerkers toevoegen, rechten en pincodes, wie deed wat, en taken geven.'],
@@ -460,7 +460,8 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['🛡️', 'Beveiliging aangescherpt', 'Na een controle door een tweede AI zijn alle gevonden gaten gedicht. Bij ontkoppelen of uitloggen wordt nu alles van de winkel van het toestel gewist.'],
+const NIEUWS = [['⭐', 'Meer-menu vernieuwd', 'Zoeken, favorieten met een sterretje bovenaan en groepen die je open- en dichtklapt, net als in Brood Opzet.'],
+  ['🛡️', 'Beveiliging aangescherpt', 'Na een controle door een tweede AI zijn alle gevonden gaten gedicht. Bij ontkoppelen of uitloggen wordt nu alles van de winkel van het toestel gewist.'],
   ['🔑', 'Koppelcode alleen voor de beheerder', 'De koppelcode en de Brood Opzet-koppeling zijn niet meer zichtbaar voor medewerkers.'],
   ['🔢', 'Pincode beter beschermd', 'Na herhaald foute pincodes duurt de wachttijd steeds langer. Je kunt alleen je eigen pincode wijzigen.']];
 let nieuweVersie = null;

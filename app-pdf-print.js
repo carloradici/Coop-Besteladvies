@@ -275,28 +275,35 @@ function meerItems() {
   return L.filter(x => x[6]).map((x, i) => { const o = m[x[1]] || (x[1] === 'pAct' && (m.pKop || m.pTaf)) || {}; return { g: o.g || x[0], id: x[1], ic: x[2], t: x[3], s: x[4], syn: x[5], go: x[7], o: o.o ?? i * 10 }; }).sort((a, b) => a.o - b.o);
 }
 function renderMeer() {
-  const v = $('#view'); const items = meerItems(); const q = ui.meerQ || '';
-  const knop = x => `<button class="rijknop" data-mi="${x.id}"><span class="meeric">${x.ic}</span><span style="flex:1"><b>${x.t}</b>${x.s ? `<br><span class="small">${x.s}</span>` : ''}</span><span class="pijl">›</span></button>`;
-  let h = `<div class="bar${ui.meerG ? ' hide' : ''}"><input type="search" id="meerQ" placeholder="🔍 Zoek een functie, bijv. pincode" value="${esc(q)}" autocomplete="off"></div><div id="meerRes">`;
+  const v = $('#view'); const items = meerItems(); const q = ui.meerQ || '', pr = S.pref || {}, mo = pr.meerOpen || {};
+  const veel = items.length > 9, fav = veel ? (pr.fav || []).filter(id => items.some(x => x.id === id)) : [];
+  const knop = x => { const r = `<button class="rijknop" data-mi="${x.id}"><span class="meeric">${x.ic}</span><span style="flex:1"><b>${x.t}</b>${x.s ? `<br><span class="small">${x.s}</span>` : ''}</span><span class="pijl">›</span></button>`; return veel ? `<div class="rijflex">${r}<button class="ster${fav.includes(x.id) ? ' aan' : ''}" data-fav="${x.id}" aria-label="Favoriet">${fav.includes(x.id) ? '★' : '☆'}</button></div>` : r; };
+  const groep = (g, ic, naam, l) => { const op = mo[g] ?? g === 'snel'; return `<div class="blk lijstblok meergroep${op ? ' open' : ''}" data-groep="${g}"><button class="groepkop" data-mgo="${g}"><b>${ic} ${naam}</b><span>${l.length} ${op ? '▴' : '▾'}</span></button><div class="meerinhoud">${l.map(knop).join('')}</div></div>`; };
+  const groepen = gs => gs.map(g => groep(g[0], g[1], g[2], items.filter(x => x.g === g[0]))).join('');
+  let h = `<div class="bar${ui.meerG || !veel ? ' hide' : ''}"><input type="search" id="meerQ" placeholder="🔍 Zoek een onderdeel" value="${esc(q)}" autocomplete="off"></div><div id="meerRes">`;
   const res = () => {
-    if (q.trim().length >= 2) {
+    if (veel && q.trim().length >= 2) {
       const sc = items.map(x => [Math.max((zoekScore(q, x.t) || -5) + 5, zoekScore(q, x.s), zoekScore(q, x.syn), zoekScore(q, (MEER_GROEPEN.find(g => g[0] === x.g) || [])[2])), x]).filter(z => z[0] > 0).sort((a, b) => b[0] - a[0]);
       return sc.length ? `<div class="blk lijstblok">${sc.slice(0, 12).map(([, x]) => knop(Object.assign({}, x, { s: `${(MEER_GROEPEN.find(g => g[0] === x.g) || [])[2] || ''}${x.s ? ' · ' + x.s : ''}` }))).join('')}</div>` : '<div class="empty">Niets gevonden. Probeer een ander woord.</div>';
     }
-    const grp = gs => `<div class="blk lijstblok">${gs.map(g => { if (g[0] === 'kantoor') { const o = startPunten().filter(p => !p[2]).length; return `<button class="rijknop" data-mg="kantoor"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${o ? `🚀 Start hier: nog ${o} ${o === 1 ? 'punt' : 'punten'}` : g[3]}</span></span>${o ? `<b class="telbadge">${o}</b>` : ''}<span class="pijl">›</span></button>`; } const n = items.filter(x => x.g === g[0]); return `<button class="rijknop" data-mg="${g[0]}"><span class="meeric">${g[1]}</span><span style="flex:1"><b>${g[2]}</b><br><span class="small">${n.length === 1 ? n[0].s || g[3] : g[3]}</span></span><span class="pijl">›</span></button>`; }).join('')}</div><p class="small" style="text-align:center">Coop Besteladvies · versie ${VERSIE}</p>`;
+    const voet = `<p class="small" style="text-align:center">Coop Besteladvies · versie ${VERSIE}</p>`;
     if (ui.meerG === 'indeling') return indelingHtml(items);
-    if (ui.meerG === 'kantoor') return startHtml() + grp(MEER_GROEPEN.filter(g => KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0])));
+    if (ui.meerG === 'kantoor') return startHtml() + groepen(MEER_GROEPEN.filter(g => KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0]))) + voet;
     if (ui.meerG) return `<div class="blk lijstblok">${items.filter(x => x.g === ui.meerG).map(knop).join('')}</div>`;
-    const snel = items.filter(x => x.g === 'snel');
-    return (snel.length ? `<div class="blk lijstblok">${snel.map(knop).join('')}</div>` : '') + grp(MEER_GROEPEN.filter(g => g[0] === 'kantoor' ? kantoorMag() : !KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0]))) + (isBeheer() ? '<button class="btn sec" data-mg="indeling" style="width:calc(100% - 32px);margin:4px 16px 16px">✏️ Indeling aanpassen</button>' : '');
+    if (!veel) return `<div class="blk lijstblok">${items.map(knop).join('')}</div>` + voet;
+    const o = startPunten().filter(p => !p[2]).length, snel = items.filter(x => x.g === 'snel');
+    return (fav.length ? `<div class="blk lijstblok"><div class="karkop"><b>★ Favorieten</b></div>${fav.map(id => knop(items.find(x => x.id === id))).join('')}</div>` : '')
+      + (snel.length ? groep('snel', '⚡', 'Snel', snel) : '')
+      + (kantoorMag() ? `<div class="blk lijstblok"><button class="rijknop" data-mg="kantoor"><span class="meeric">🏢</span><span style="flex:1"><b>Kantoor</b><br><span class="small">${o ? `🚀 Start hier: nog ${o} ${o === 1 ? 'punt' : 'punten'}` : 'Planning, bestanden en instellingen'}</span></span>${o ? `<b class="telbadge">${o}</b>` : ''}<span class="pijl">›</span></button></div>` : '')
+      + groepen(MEER_GROEPEN.filter(g => !['kantoor', 'indeling'].includes(g[0]) && !KANTOOR_G.includes(g[0]) && items.some(x => x.g === g[0])))
+      + (isBeheer() ? '<button class="btn sec" data-mg="indeling" style="width:calc(100% - 32px);margin:4px 16px 16px">✏️ Indeling aanpassen</button>' : '') + voet;
   };
   v.innerHTML = h + res() + '</div>';
-  const bind = () => {
-    v.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => { const x = items.find(y => y.id === b.dataset.mi); ui.meerQ = ''; if (x) x.go(); });
-    v.querySelectorAll('[data-mg]').forEach(b => b.onclick = () => { const n = items.filter(x => x.g === b.dataset.mg); if (n.length === 1) return n[0].go(); ui.meerG = b.dataset.mg; render(); });
-    startEvents(v); if (ui.meerG === 'indeling') indelingEvents(v, items);
-  };
-  bind();
+  v.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => { const x = items.find(y => y.id === b.dataset.mi); ui.meerQ = ''; if (x) x.go(); });
+  v.querySelectorAll('[data-mg]').forEach(b => b.onclick = () => { const n = items.filter(x => x.g === b.dataset.mg); if (n.length === 1) return n[0].go(); ui.meerG = b.dataset.mg; render(); });
+  v.querySelectorAll('[data-fav]').forEach(b => b.onclick = () => { const id = b.dataset.fav, f = (pr.fav || []).filter(x => x !== id); if (!fav.includes(id)) f.push(id); zetPref('fav', f); });
+  v.querySelectorAll('[data-mgo]').forEach(b => b.onclick = () => { const d = b.parentNode, op = !d.classList.contains('open'); d.classList.toggle('open', op); b.lastChild.textContent = b.lastChild.textContent.replace(/[▴▾]/, op ? '▴' : '▾'); zetPref('meerOpen', Object.assign({}, mo, { [b.dataset.mgo]: op }), true); });
+  startEvents(v); if (ui.meerG === 'indeling') indelingEvents(v, items);
   const qi = $('#meerQ'); qi.oninput = () => { ui.meerQ = qi.value; clearTimeout(qi._t); qi._t = setTimeout(() => { renderMeer(); const n = $('#meerQ'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 150); };
 }
 /* 1.47: menu-indeling aanpassen (voor iedereen, in S.inst.menu) */
