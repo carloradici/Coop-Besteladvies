@@ -1,12 +1,14 @@
 /* ---------- 1.32: koppeling met Brood Opzet (bake-off) ---------- */
 function boInst() { return (S.inst || {}).bo || {}; }
+/* 2.22: retourgegevens alleen met x-retour-sleutel; die staat alleen op het toestel van de beheerder (niet gedeeld, niet gesynchroniseerd) */
+const boRetSl = () => isBeheer() ? ls.get('cba-retsl:' + W) || '' : '';
 async function boHaal(forceer) {
   const b = boInst(); if (!b.url || !b.code || OEFEN || (DEMO && !forceer)) return;
   if (!forceer && S.bo && Date.now() - (S.bo.t || 0) < 36e5) return;
   try {
-    const r = await fetch(b.url, { headers: { 'x-sleutel': b.code } }); const d = await r.json().catch(() => ({ fout: 'Geen antwoord (' + r.status + ')' }));
+    const rs = boRetSl(), r = await fetch(b.url, { headers: Object.assign({ 'x-sleutel': b.code }, rs ? { 'x-retour-sleutel': rs } : {}) }); const d = await r.json().catch(() => ({ fout: 'Geen antwoord (' + r.status + ')' }));
     if (!d.ok) throw new Error(d.fout || r.status);
-    d.t = Date.now(); S.bo = d; await iset('bo:' + W, d); boAutoKoppel(); rebuild();
+    d.t = Date.now(); if (isBeheer()) { d.retStat = !rs ? 'geen' : d.retour ? 'ok' : 'fout'; if (!d.retour && S.bo && S.bo.retour) d.retour = S.bo.retour; } S.bo = d; await iset('bo:' + W, d); boAutoKoppel(); rebuild();
     if (!/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName)) render(true); return d;
   } catch (e) { if (forceer) throw e; }
 }
@@ -74,14 +76,14 @@ function boBeheerHtml() {
   const st = d ? `✓ Opgehaald ${new Date(d.t).toLocaleString('nl-NL', { weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${(d.soorten || []).length} soorten bake-off` : b.url ? 'Nog niet opgehaald' : 'Nog niet gekoppeld';
   const rij = s => { const a = kp[s.id] && M.art[kp[s.id]]; return `<button class="it boKop" data-bok="${esc(s.id)}"><span style="flex:1;min-width:0"><b>${esc(s.naam)}</b><br><span class="small ${a ? '' : kp[s.id] === '' ? '' : 'rood'}">${a ? '→ ' + esc(a.naam) + ' · ' + boNrTxt(a) : kp[s.id] === '' ? 'Niet koppelen' : 'Nog niet gekoppeld – tik om te kiezen'}</span></span><span class="pijl">›</span></button>`; };
   return `<div class="blk" data-sec="brood"><h2>🥐 Brood Opzet koppelen</h2><p class="small">Haalt elk uur op wat er per bake-off-soort is klaargezet, wat er over was en de voorraad. Het advies en de waarschuwing "komt niet uit" gebruiken dit.</p>
-  <div class="form"><div class="f"><label>Adres</label><input id="boUrl" type="url" placeholder="https://….supabase.co/functions/v1/…" value="${esc(b.url || '')}"></div><div class="f"><label>Koppelcode</label><input id="boCode" value="${esc(b.code || '')}" autocomplete="off"></div></div>
+  <div class="form"><div class="f"><label>Adres</label><input id="boUrl" type="url" placeholder="https://….supabase.co/functions/v1/…" value="${esc(b.url || '')}"></div><div class="f"><label>Koppelcode</label><input id="boCode" value="${esc(b.code || '')}" autocomplete="off"></div>${isBeheer() ? `<div class="f"><label>Retoursleutel</label><input id="boRs" type="password" value="${esc(boRetSl())}" autocomplete="off" placeholder="alleen voor de beheerder"></div>` : ''}</div>${isBeheer() ? `<p class="small${d && d.retStat !== 'ok' && d.retStat ? ' rood' : ''}">${!d || !d.retStat ? 'Retoursleutel: alleen op dit toestel bewaard, niet gedeeld met andere toestellen.' : d.retStat === 'ok' ? '✓ Retourgegevens opgehaald (alleen op dit toestel)' : d.retStat === 'geen' ? 'Retourgegevens: sleutel ontbreekt' : 'Retourgegevens: sleutel klopt niet'}</p>` : ''}
   <button class="btn" id="boTest" style="width:100%">Opslaan en ophalen</button><p class="small" id="boSt">${st}</p></div>
   ${d && d.soorten ? `<div class="blk" data-sec="brood"><h2>Soorten koppelen (${(d.soorten).filter(s => kp[s.id]).length} van ${d.soorten.length})</h2><p class="small">Koppel elke soort aan het artikel in het bestelboek. Bij precies dezelfde naam gaat het vanzelf.</p><div class="list">${d.soorten.map(rij).join('')}</div></div>` : ''}`;
 }
 function boBeheerEvents(v) {
   const k = v.querySelector('#boTest'); if (k) k.onclick = async () => {
     const url = $('#boUrl').value.trim(), code = $('#boCode').value.trim(); if (!/^https:\/\/.+/.test(url) || !code) return toast('Vul het adres en de koppelcode in');
-    $('#boSt').textContent = 'Bezig…'; const w = Object.assign({}, S.inst, { bo: Object.assign({}, boInst(), { url, code }) });
+    $('#boSt').textContent = 'Bezig…'; const rsI = v.querySelector('#boRs'); if (rsI) { const x = rsI.value.trim(); x ? ls.set('cba-retsl:' + W, x) : ls.del('cba-retsl:' + W); } const w = Object.assign({}, S.inst, { bo: Object.assign({}, boInst(), { url, code }) });
     if (!DEMO) await saveInst(w); else S.inst = w;
     try { const d = await boHaal(true); toast(`✓ ${d.soorten.length} soorten opgehaald`); render(); } catch (e) { $('#boSt').textContent = '✗ ' + e.message; }
   };

@@ -407,7 +407,7 @@ const HULP = {
   'beheer:advies': ['Advies-instellingen', 'Buffer, even tellen, houdbaarheid, weer en vanaf wanneer de app waarschuwt bij veel bestellen. Tik op een kopje met ▾ om het open of dicht te klappen.'],
   'beheer:open': ['Openingstijden', 'Openingstijden per dag en afwijkende dagen zoals feestdagen. Op gesloten dagen rekent de app geen verkoop.'],
   'beheer:onderdelen': ['Afdelingen', 'Bij welke afdeling elke productgroep hoort en in welke volgorde de groepen staan. Tik op een kopje met ▾ om het open of dicht te klappen.'],
-  'beheer:brood': ['Brood Opzet koppelen', 'Vul één keer het adres en de koppelcode in en tik op Opslaan en ophalen. Tik daarna op elke soort om het artikel te kiezen (📒 = uit je Brood Opzet-bestelboek).'],
+  'beheer:brood': ['Brood Opzet koppelen', 'Vul één keer het adres en de koppelcode in en tik op Opslaan en ophalen. Tik daarna op elke soort om het artikel te kiezen (📒 = uit je Brood Opzet-bestelboek). <b>Retoursleutel</b> (alleen beheerder): nodig om de retourgegevens (weekstaten voor Retourbonnen) op te halen. Hij wordt alleen op dit toestel bewaard en niet gedeeld; op een ander beheerderstoestel vul je hem opnieuw in.'],
   'tafels:sort': ['Vers-acties · 1 Sorteren', 'Tik per actie op de koeltafel waar hij komt, of op 📝 voor een notitie. Met 📄 Bekijken zie je de folder en de bestellijst.'],
   'tafels:in': ['Vers-acties · 2 Indelen', 'Tik op een koeltafel om hem in te delen. Met 👁️ Pdf bekijken krijg je per tafel een A4.'],
   'tafels:tafel': ['Koeltafel indelen', 'Tik een actie aan bij Nog plaatsen en daarna de vakken. Vink af wat klaar staat.'],
@@ -457,7 +457,7 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['📲', 'Naar de terminal op volgorde', 'De QR-codes komen nu in de volgorde waarin je de artikelen hebt afgevinkt. Ook zelf toegevoegde artikelen met een bestelnummer krijgen een QR-code.']];
+const NIEUWS = [['🔐', 'Retoursleutel Brood Opzet', 'Retourgegevens komen alleen nog binnen met een retoursleutel. Die vul je als beheerder in bij Brood Opzet koppelen; hij blijft alleen op jouw toestel.']];
 let nieuweVersie = null;
 const updTonen = () => (S.pref || {}).upd ?? rol === 'admin';
 async function zoekUpdate(stil, forceer) {
