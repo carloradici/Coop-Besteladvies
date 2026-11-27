@@ -6,7 +6,7 @@ const RB_V = [['k', 'Containers totaal', 100], ['bk', 'Bierkrat + 16/24 fles', 3
 const RB_N = 10;
 /* kolommen C t/m L van de Excel */
 const RB_X = [['k', 'karren retour'], ['bb', 'bigbags retour'], ['bk', 'bierkratten'], ['bl', 'bierkrat leeg'], ['fk', 'friskratten'], ['rad', 'RAD'], ['pl', 'plank'], ['ep', 'euro pallet'], ['b12', 'bierkrat 12 flessen'], ['fl', 'bierfles los']];
-LIB.ocr = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+LIB.ocr = 'lib/ocr/tesseract.min.js'; // 2.29: tekstherkenning in de app zelf (geen extern adres)
 let RB = null, rbRij = [], rbOcr = null, rbTel = { n: 0, tot: 0 }, rbBezig = null;
 /* 1.92: wachtrij van gelezen scans blijft op het toestel bewaard (ook na sluiten of update) */
 const rbRijBewaar = () => { iset('rbrij', rbRij); ls.set('cba-rbtel', rbTel); };
@@ -165,7 +165,7 @@ async function renderRetour() {
 function rbForm(v) {
   const e = ui.rbEdit, b = e.b, veld = (k, t, x = '') => `<div class="f"><label>${t}${rbGeld() ? `<small class="rbpr">${RB_P[k] ? rbEuro(rbP(k, b.datum)) + ' per stuk' : 'geen statiegeld'}</small>` : ''}</label><input data-rf="${k}" type="text" inputmode="decimal" value="${esc(b['_' + k] ?? (b[k] || ''))}" ${x}><span class="rbis" data-ris="${k}"></span></div>`;
   const ex = RB_V.slice(RB_N), blok2 = RB_V.slice(1, RB_N).concat(ex.filter(([k]) => +b[k])).map(([k, t]) => veld(k, t)).join('') + (ex.some(([k]) => !+b[k]) ? `<details class="rbmeer"><summary>+ Meer soorten (DPB KST, CHEP, CBL, lege kratten, flessen)</summary>${ex.filter(([k]) => !+b[k]).map(([k, t]) => veld(k, t)).join('')}<p class="small">Leeg krat Nutricia 24 fles vul je in bij Leeg krat bier 24 fles: Van Tol gebruikt daarvoor dezelfde code.</p></details>` : '');
-  v.innerHTML = `${e.img ? `<div class="rbkop" style="background-image:url(${e.img})" role="img" aria-label="Kop van de bon met het bonnummer"></div>` : ''}
+  v.innerHTML = `${e.img && fotoOk(e.img) ? `<div class="rbkop" style="background-image:url(${e.img})" role="img" aria-label="Kop van de bon met het bonnummer"></div>` : ''}
     <div class="blk form rbf">${e.rij ? `<p class="small">Bon ${rbTel.n + 1} van ${rbTel.tot}</p>` : ''}${e.fout ? `<p class="small rood">⚠️ ${esc(e.fout)}</p>` : ''}
     <label class="rbnrl" for="rbNr">Bonnummer</label><input id="rbNr" class="rbnr" type="text" inputmode="numeric" value="${esc(b.nr || 'BGR ')}" placeholder="BGR 202606941"><p class="small rood" id="rbNrW"></p>
     <div class="f"><label>Datum</label><input id="rbDat" type="date" value="${esc(b.datum || '')}"></div>
@@ -269,7 +269,7 @@ async function rbLees(c, tx) {
     if (m) r.b.nr = 'BGR ' + m[1]; if (d) r.b.datum = `${d[3]}-${d[2].padStart(2, '0')}-${d[1].padStart(2, '0')}`; const ids = rbBags([...o.matchAll(/Bag\W{0,2}[I1l|]?\W{0,2}D\W{0,3}(\d{8})(?!\d)/gi)].map(x => x[1])), lab = Math.max(0, ...o.split(/[\f\v]/).map(x => (x.match(/KLANT\s*LABEL/gi) || []).length)), bb = ids.length ? Math.max(lab, ids.length) : Math.max(lab, /KLANT|LABEL|Bag\W?[I1l|]?\W?D|Klant\W?[I1l|]D/i.test(o) ? 1 : 0);
     if (bb) { r.b.bb = bb; r.b._bb = String(bb); } if (ids.length) r.b.bags = ids; };
   if (/BGR\s*\d{6}/i.test(tx || '')) { zoek(tx, tx); return r; }
-  if (!rbOcr) try { await loadScript(LIB.ocr); rbOcr = await window.Tesseract.createWorker('eng'); } catch (e) { r.fout = 'Tekst lezen kon niet laden (offline?): vul het bonnummer zelf in'; return r; }
+  if (!rbOcr) try { await loadScript(LIB.ocr); { const a = f => new URL('lib/ocr/' + f, location.href).href; rbOcr = await window.Tesseract.createWorker('eng', 1, { workerPath: a('worker.min.js'), corePath: a(''), langPath: a('').slice(0, -1), workerBlobURL: false }); } } catch (e) { r.fout = 'Tekst lezen kon niet laden (offline?): vul het bonnummer zelf in'; return r; }
   try { const strook = (x0, y0, x1, y1, bw = 1440) => { const k = document.createElement('canvas'), sw = (x1 - x0) * c.width, sh = (y1 - y0) * c.height, f = Math.max(1, bw / sw); k.width = sw * f; k.height = sh * f; const g = k.getContext('2d'); g.drawImage(c, x0 * c.width, y0 * c.height, sw, sh, 0, 0, k.width, k.height);
       const im = g.getImageData(0, 0, k.width, k.height), d = im.data, hs = new Array(256).fill(0); for (let p = 0; p < d.length; p += 4) { d[p] = d[p + 1] = d[p + 2] = (d[p] * 3 + d[p + 1] * 6 + d[p + 2]) / 10 | 0; hs[d[p]]++; }
       let lo = 0, hi = 255, n = 0, z = d.length / 4 * 0.02; while ((n += hs[lo]) < z) lo++; n = 0; while ((n += hs[hi]) < z) hi--; const sc = 255 / Math.max(1, hi - lo); for (let p = 0; p < d.length; p += 4) d[p] = d[p + 1] = d[p + 2] = Math.max(0, Math.min(255, (d[p] - lo) * sc)); g.putImageData(im, 0, 0); return k; };
@@ -284,8 +284,7 @@ async function rbLees(c, tx) {
 }
 
 async function rbImport(f) {
-  if (!f) return; try { await loadScript(LIB.xlsx); } catch (e) { return toast(e.message); }
-  const wb = XLSX.read(await f.arrayBuffer()), rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: null });
+  if (!f) return; let rows; try { rows = await xlsxRijen(await f.arrayBuffer(), { type: 'array' }, { header: 1, defval: null }); } catch (e) { return toast(e.message); }
   let n = 0, dub = 0;
   for (const r of rows.slice(1)) {
     const k = String(r[1] ?? '').trim(), nr = 'BGR ' + rbKey(k); if (!/^(BGR\W*)?\d{6,}$/i.test(k)) continue;

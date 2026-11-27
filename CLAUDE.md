@@ -10,10 +10,11 @@ Web-app (PWA) van Coop Vogelenzang die per artikel een bestel-advies geeft (vers
 - Stuur tijdens langer werk korte voortgangsberichten met percentage ("⏳ 40% · nu testen"). Is de tool `mcp__voortgang-balk__voortgang` er, roep die ook aan (de balk zelf toont de iPhone-app nog niet).
 
 ## Opbouw
-- `index.html`: alleen HTML-geraamte + laadscript met `LADEN`.
+- `index.html`: alleen HTML-geraamte + CSP + `<script src="laden.js">`.
+- `laden.js` (2.29): `LADEN` (regel 3) en het laadscript; voert de app uit via een blob-URL, zodat de CSP géén 'unsafe-inline'/'unsafe-eval' nodig heeft. Nooit inline scripts of `onclick="…"` in HTML gebruiken: dat werkt niet meer (en hoort niet).
 - `rekenkern.js`: rekenkern en inleesfuncties (`window.C`), los script.
 - `qrcode.min.js`: QR-bibliotheek (MIT, Kazuhiko Arase), los script vóór rekenkern; gebruikt door "Naar de terminal".
-- `lib/`: pdf.js, xlsx, html2canvas, jspdf, barcode-detector + zxing_reader.wasm (2.27, locateFile in app-extra) lokaal (LIB in app-basis). Scripts van jsdelivr alleen met SRI (`SRI` in app-basis). CSP staat als meta in index.html: nieuw extern adres = daar toevoegen. LADEN staat op regel 23.
+- `lib/`: pdf.js, xlsx, html2canvas, jspdf, barcode-detector + zxing_reader.wasm (2.27, locateFile in app-extra) lokaal (LIB in app-basis). Scripts van jsdelivr alleen met SRI (`SRI` in app-basis). CSP staat als meta in index.html: nieuw extern adres = daar toevoegen. Tekstherkenning in `lib/ocr/`, Excel van buiten lezen via `xlsxRijen` (worker `lib/xlsx-werker.js`), pdf's via `pdfjs()` (altijd zonder eval).
 - De `app-*.js`-bestanden zijn stukken van één script: het laadscript zet ze in volgorde van `LADEN` binnen `(function(){'use strict'; … })();` en voert ze als één geheel uit. Functies mogen naar elkaar verwijzen over bestanden heen. Zet géén eigen `'use strict'` of wrapper in die bestanden. Nieuw bestand? Zet het in `LADEN` (index.html) én in `APP` (sw.js).
 - `style.css`: alle opmaak. Coop-oranje #f17d04, grote knoppen, simpele Nederlandse teksten.
 
@@ -40,13 +41,13 @@ Web-app (PWA) van Coop Vogelenzang die per artikel een bestel-advies geeft (vers
 | app-retour.js | retourbonnen Van Tol: scans (pdf iPhone-scanner) + gedrukte tekst lezen (Tesseract), invullen, saldo, Excel import/export, nakijken (vt) + claimrapport-pdf (cl = geclaimd), karren tellen (tab 'karren', RB.tel); opgeslagen in voorkeuren wie='retour', scans lokaal (iget 'rbscan:'+nr) én in privé bucket 'retour' (map per winkel; lezen/wijzigen/verwijderen alleen mag(w,'retour_beheer') = beheerder, uploaden is_lid); voorkeuren wie='retour' in de database alleen beheerder (2.23); karrentellingen apart in wie='karren' (voor iedereen); bedragen alleen voor beheerder (rbGeld) |
 | app-start.js | opstarten |
 
-Edge Functions: `stuur-push.js` (cron alleen met CRON_SLEUTEL), `dagexport.js`, `folder.js`, `verkoop-export.js` (kassaverkoop per PLU voor Brood Opzet, winkel uit VERKOOP_WINKEL), `bo.js` (proxy naar Brood Opzet, geheimen BO_URL/BO_SLEUTEL, alleen is_lid). Code blijft in deze bestanden; `supabase/functions/<naam>/index.ts` is de ingang. **Automatisch live** via `.github/workflows/functies.yml` (Supabase CLI, geheim SUPABASE_ACCESS_TOKEN in GitHub) zodra zo'n bestand verandert: geen Deploy-knop meer. Koppelcode verkoop-export = geheim VERKOOP_SLEUTEL in Supabase (nooit in de openbare repo). verify_jwt: alleen folder aan. Brood Opzet-gegevens komen van de Edge Function `brood-export` in het Brood Opzet-project (bestand `brood-export.js` in repo Broodkarren); adres + koppelcode staan in `S.inst.bo`.
+Edge Functions: `stuur-push.js` (cron alleen met CRON_SLEUTEL), `dagexport.js`, `folder.js`, `verkoop-export.js` (kassaverkoop per PLU voor Brood Opzet, winkel uit VERKOOP_WINKEL), `bo.js` (proxy naar Brood Opzet, geheimen BO_URL/BO_SLEUTEL, alleen is_lid), `face.js` (2.29: Face ID/WebAuthn controleren, tabellen face_sleutels/face_uitdaging, rpc face_sessie alleen service_role). folder vraagt `?w=` en is_lid. Code blijft in deze bestanden; `supabase/functions/<naam>/index.ts` is de ingang. **Automatisch live** via `.github/workflows/functies.yml` (Supabase CLI, geheim SUPABASE_ACCESS_TOKEN in GitHub) zodra zo'n bestand verandert: geen Deploy-knop meer. Koppelcode verkoop-export = geheim VERKOOP_SLEUTEL in Supabase (nooit in de openbare repo). verify_jwt: alleen folder aan. Brood Opzet-gegevens komen van de Edge Function `brood-export` in het Brood Opzet-project (bestand `brood-export.js` in repo Broodkarren); adres + koppelcode staan in `S.inst.bo`.
 
 ## Nieuwe versie (1.31, 1.32 …)
 1. `app-basis.js`: `const VERSIE = 'x.y'`.
 2. `version.json`: `{"versie":"x.y"}` (hiermee ziet de app dat er een update is).
 3. `sw.js`: `V = 'cba-x.y'`.
-4. `index.html`: `?b=x.y` bij style.css en in het laadscript.
+4. `index.html`: `?b=x.y` bij style.css en bij `laden.js`; `laden.js`: `?b=x.y` in de fetch.
 5. `app-home.js`: `NIEUWS` bijwerken (icoon, titel, één zin per punt) = venster "Nieuw in versie" (zoals Brood Opzet).
 
 Updates (2.07, zoals Brood Opzet): groene balk bij nieuwe versie; instelling "Updates tonen" per persoon (standaard aan voor beheerder, uit = stil bijwerken op de achtergrond); na bijwerken blijf je ingelogd (`cba-updopen`, 2 min).
@@ -80,5 +81,6 @@ Updates (2.07, zoals Brood Opzet): groene balk bij nieuwe versie; instelling "Up
 ## Beveiliging (2.25)
 - Nooit HTML bouwen met tekst van anderen zonder `esc`; eigen artikelen/tafels gaan door `schoon()`.
 - Inkoopprijzen staan in tabel `inkoop` (mag inkoop), niet in boeken (`boekOp`). Koppelcode alleen via rpc `koppelcode_info` (team).
-- Uitloggen/loskoppelen wist alles lokaal (`wisLokaal`). Pincode: PBKDF2 (`pinHash2`), oplopende blokkade in de database.
-- Inbraaktest: SQL t1–t3 (schema inbraaktest, alles teruggedraaid) na elke wijziging aan rechten.
+- Uitloggen/loskoppelen wist alles lokaal (`wisLokaal`) en sluit de server-sessie (rpc `uitloggen`, auth logout). Pincode: PBKDF2 (`pinHash2`), blokkade per persoon (max 1 uur) én per toestel (10 fout per uur, tabel pin_poging), geen makkelijke pincodes (`pinZwak` = SQL `pin_zwak`). Eerste pincode alleen met startcode (`reset_pin` geeft 6 cijfers, 3 dagen).
+- Medewerkers: trigger `mw_rechten`: alleen een beheerder maakt iemand beheerder of wijzigt beheerders; niemand geeft rechten die hij zelf niet heeft. Push-aanmelding alleen via rpc `push_abo`; activiteit alleen toevoegen/lezen.
+- Inbraaktest: SQL t1, t2, t2b, t3 (schema inbraaktest, alles teruggedraaid; ook team-gebruiker, tweede winkel, startcode, pincodes raden per toestel) na elke wijziging aan rechten. Lokaal: Postgres 16 met /home/claude/sec/base.sql als nagebootste database.

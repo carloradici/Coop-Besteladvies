@@ -165,7 +165,7 @@ function renderAssort() {
     const opg = Object.values(S.assort).filter(r => r.bron === bron && r.status === 'in' && r.opgenomen && !r.schap_ok).map(r => M.art[r.bron + ':' + r.nr]).filter(inOd);
     if (!nieuw.length && !uit.length && !san.length && !opg.length) continue;
     h += `<div class="grp"><span>${odNaam(od)}</span><small>${nieuw.length + opg.length} nieuw · ${uit.length + san.length} eruit</small></div><div class="card laatste">`;
-    const rij = (a, knop) => `<div class="it"><span>${esc(a.naam)} <span class="small">${a.nr}${a.groep ? ' · ' + esc(a.groep) : ''}</span></span>${knop}</div>`;
+    const rij = (a, knop) => `<div class="it"><span>${esc(a.naam)} <span class="small">${esc(a.nr)}${a.groep ? ' · ' + esc(a.groep) : ''}</span></span>${knop}</div>`;
     if (nieuw.length) h += `<b style="color:var(--groen)">Nieuw in het bestelboek</b><div class="list">${nieuw.map(a => rij(a, `<button class="btn sm sec" data-open="${od}|${a.nr}">Bekijk</button>`)).join('')}</div>`;
     if (opg.length) h += `<b style="color:var(--groen);display:block;margin-top:10px">Opgenomen in assortiment – schapplek maken</b><div class="list">${opg.map(a => rij(a, kanSchap ? `<button class="btn sm" data-sok="${a.key}">Schap klaar</button>` : '')).join('')}</div>`;
     if (uit.length) h += `<b style="color:var(--rood);display:block;margin-top:10px">Uit het bestelboek – schap opnieuw indelen</b><div class="list">${uit.map(a => rij(a, kanSchap ? `<button class="btn sm" data-ok="${bron}|${a.nr}">Schap klaar</button>` : '')).join('')}</div>`;
@@ -206,12 +206,15 @@ function pinWijzigen() {
     if (e.target.closest && e.target.closest('[data-face]')) { if (faceCfg(mw.id) && !(await bevestig('Face ID uitzetten?', 'Daarna log je op dit toestel alleen nog in met je pincode.', 'Uitzetten', 'Annuleren'))) return; ov.remove(); return faceInstellen(); }
     if (e.target.dataset.pw === undefined) return;
     const o = $('#pw0').value.trim(), n = $('#pw1').value.trim(), msg = $('#pwM');
-    if (!/^\d{4}$/.test(n)) return msg.textContent = 'Een pincode bestaat uit 4 cijfers.';
+    if (!/^\d{4}$/.test(n)) return msg.textContent = 'Een pincode bestaat uit 4 cijfers.'; if (pinZwak(n)) return msg.textContent = 'Deze pincode is te makkelijk te raden (zoals 1234 of 1111). Kies een andere.';
     if (n !== $('#pw2').value.trim()) return msg.textContent = 'De nieuwe pincodes zijn niet gelijk.';
-    try { const ok = DEMO ? o === '1234' : await rpc('pin_wijzigen', { w: W, mid: mw.id, oud: o, nieuw: n }); if (!ok) return msg.textContent = 'De huidige pincode klopt niet.'; const lok = ls.get('cba-pin') || {}; lok[mw.id] = await pinHash(mw.id, n); ls.set('cba-pin', lok); ov.remove(); toast('Pincode gewijzigd'); }
+    try { const ok = DEMO ? o === '1234' : await rpc('pin_wijzigen', { w: W, mid: mw.id, oud: o, nieuw: n }); if (!ok) return msg.textContent = 'De huidige pincode klopt niet.'; const lok = ls.get('cba-pin') || {}; lok[mw.id] = await pinHash2(mw.id, n); ls.set('cba-pin', lok); ov.remove(); toast('Pincode gewijzigd'); }
     catch (x) { msg.textContent = 'Lukt nu niet: ' + x.message; }
   });
 }
+/* 2.29: startcode (6 cijfers, 3 dagen, één keer) waarmee een medewerker zelf zijn eerste pincode kiest */
+async function startcode(m) { let c = '123456'; if (!DEMO) { try { c = await rpc('reset_pin', { w: W, mid: m.id }); } catch (e) { return toast('Startcode maken lukte niet: ' + e.message); } if (!c) return toast(m.email ? 'Deze persoon logt in met e-mail' : 'Pincode gereset'); m.heeft_pin = false; mwOpslaan(async () => { }); }
+  sheet(`<h2 style="margin:0">Startcode voor ${esc(m.naam)}</h2><p class="startcode">${esc(String(c).replace(/(\d{3})(\d{3})/, '$1 $2'))}</p><p class="small">Geef deze code persoonlijk. Bij de eerste keer inloggen tikt ${esc(m.naam)} deze code in en kiest daarna zelf een pincode. De code werkt 3 dagen en maar één keer.</p><button class="btn" data-x style="width:100%">Klaar</button>`); }
 async function mwOpslaan(f) {
   await adminDo(async () => { await f(); if (!DEMO) { const r = await rest(wq('medewerkers?select=id,naam,rol,rechten,actief,heeft_pin,email&order=naam.asc')); S.medewerkers = r.filter(m => m.actief !== false); } });
 }
@@ -221,7 +224,7 @@ function renderMedewerkers() {
   v.innerHTML = `<div class="blk lijstblok">${lijst.map(m => `<button class="rijknop" data-mwid="${m.id}"><span><b>${esc(m.naam)}</b><br><span class="small">${m.email ? 'Eigenaar · ' : ''}${samenvat(m)} · ${m.heeft_pin ? 'pincode ingesteld' : 'nog geen pincode'}</span></span><span class="pijl">›</span></button>`).join('') || '<div class="small" style="padding:14px 16px">Nog geen medewerkers.</div>'}</div>
   <div class="blk"><h2>Medewerker toevoegen</h2><div class="row"><input type="text" id="mwN" placeholder="Naam" style="flex:1"><button class="btn sm" id="mwAdd">Toevoegen</button></div><button class="btn sm sec" id="mwCk" style="width:100%;margin-top:10px">✅ Checklist nieuwe medewerker</button><p class="small">Nieuwe medewerkers krijgen de rechten van "Vakkenvuller". Tik daarna op de naam om ze aan te passen. Ze kiezen zelf hun pincode bij de eerste keer.</p></div>`;
   v.querySelectorAll('[data-mwid]').forEach(b => b.onclick = () => { ui.mwId = b.dataset.mwid; ga('mwedit'); });
-  $('#mwAdd').onclick = () => { const n = $('#mwN').value.trim(); if (!n) return toast('Vul een naam in'); mwOpslaan(async () => { const row = { naam: n, rol: 'medewerker', rechten: presetRechten('medewerker') }; if (DEMO) DEMO_MW.push(Object.assign({ id: 'd' + Date.now(), heeft_pin: false }, row)); else await rest('medewerkers', { method: 'POST', body: metW([row]), headers: { Prefer: 'return=minimal' }, noBody: true }); log('team', `Medewerker toegevoegd: ${n}`); }).then(() => nieuwChecklist(n)); };
+  $('#mwAdd').onclick = () => { const n = $('#mwN').value.trim(); if (!n) return toast('Vul een naam in'); const row = { naam: n, rol: 'medewerker', rechten: presetRechten('medewerker') }; mwOpslaan(async () => { if (DEMO) DEMO_MW.push(Object.assign({ id: 'd' + Date.now(), heeft_pin: false }, row)); else { const [nw] = await rest('medewerkers', { method: 'POST', body: metW([row]), headers: { Prefer: 'return=representation' } }); row.id = nw && nw.id; } log('team', `Medewerker toegevoegd: ${n}`); }).then(() => { nieuwChecklist(n); if (row.id || DEMO) startcode(Object.assign({ naam: n }, row)); }); };
   const ck = $('#mwCk'); if (ck) ck.onclick = () => nieuwChecklist();
 }
 function renderMwEdit() {
@@ -230,11 +233,11 @@ function renderMwEdit() {
   v.innerHTML = `<div class="blk"><h2>Snel kiezen</h2><div class="row"><button class="btn sm ${m.rol === 'medewerker' ? '' : 'sec'}" data-pre="medewerker">Vakkenvuller</button><button class="btn sm ${m.rol === 'leider' ? '' : 'sec'}" data-pre="leider">Afdelingsleider</button><button class="btn sm ${beh ? '' : 'sec'}" data-pre="beheerder">Beheerder</button></div><p class="small">${beh ? 'Een beheerder mag alles, ook op een gedeeld winkeltoestel.' : 'Pas hieronder per onderdeel aan wat deze medewerker mag.'}</p></div>
   <div class="blk"><h2>Wat de rollen mogen</h2>${[['medewerker', 'Vakkenvuller'], ['leider', 'Afdelingsleider']].map(([k, n]) => `<p class="small"><b>${n}:</b> ${RECHTEN.flatMap(g => g[1]).filter(r => PRESET[k].includes(r[0])).map(r => r[1]).join(', ')}.</p>`).join('')}<p class="small"><b>Beheerder:</b> alles.</p><p class="small">Kies een rol en zet daarna per vinkje aan of uit wat afwijkt.</p></div>
   ${RECHTEN.map(g => `<div class="blk"><h2>${g[0]} <span class="small">· ${g[1].filter(r => beh ? r[0] !== 'beginner' : R[r[0]]).length} van ${g[1].length} aan</span></h2><div class="list">${g[1].map(r => `<div class="it"><span>${r[1]}</span><input type="checkbox" class="schak" data-rt="${r[0]}" ${(beh && r[0] !== 'beginner') || (!beh && R[r[0]]) ? 'checked' : ''} ${beh ? 'disabled' : ''}></div>`).join('')}</div></div>`).join('')}
-  <div class="blk"><h2>Pincode</h2><p class="small">${m.heeft_pin ? 'Pincode is ingesteld.' : 'Nog geen pincode: wordt gekozen bij de eerste keer.'}</p>${m.heeft_pin ? '<button class="btn sec" id="mwReset" style="width:100%">Pincode resetten</button>' : ''}<button class="btn red" id="mwWeg" style="width:100%;margin-top:10px">Medewerker verwijderen</button></div>`;
+  <div class="blk"><h2>Pincode</h2><p class="small">${m.heeft_pin ? 'Pincode is ingesteld.' : 'Nog geen pincode. Maak een startcode en geef die persoonlijk aan de medewerker; daarmee kiest hij zelf een pincode.'}</p>${m.email ? '' : `<button class="btn sec" id="mwReset" style="width:100%">${m.heeft_pin ? 'Pincode resetten' : '🔑 Startcode maken'}</button>`}<button class="btn red" id="mwWeg" style="width:100%;margin-top:10px">Medewerker verwijderen</button></div>`;
   const patch = body => mwOpslaan(async () => { if (DEMO) Object.assign(m, body); else await rest(wq('medewerkers?id=eq.' + m.id), { method: 'PATCH', body, headers: { Prefer: 'return=minimal' }, noBody: true }); });
   v.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => { const p = b.dataset.pre; patch({ rol: p, rechten: presetRechten(p) }); log('team', `Rechten ${m.naam}: ${p}`); });
   v.querySelectorAll('[data-rt]').forEach(c => c.onchange = () => { const r = Object.assign({}, R); r[c.dataset.rt] = c.checked; patch({ rechten: r }); });
-  const rs = $('#mwReset'); if (rs) rs.onclick = () => { if (!ask('Pincode resetten? De medewerker kiest de volgende keer een nieuwe.')) return; mwOpslaan(async () => { if (DEMO) m.heeft_pin = false; else await rpc('reset_pin', { w: W, mid: m.id }); }); };
+  const rs = $('#mwReset'); if (rs) rs.onclick = () => { if (m.heeft_pin && !ask('Pincode resetten? De medewerker kiest daarna met een startcode een nieuwe.')) return; startcode(m); };
   $('#mwWeg').onclick = () => { if (!ask(`${m.naam} verwijderen?`)) return; mwOpslaan(async () => { if (DEMO) DEMO_MW.splice(DEMO_MW.indexOf(m), 1); else await rest(wq('medewerkers?id=eq.' + m.id), { method: 'PATCH', body: { actief: false }, headers: { Prefer: 'return=minimal' }, noBody: true }); }).then(() => ga('medewerkers')); };
 }
 function codeTekst(c) { return c ? String(c).replace(/(.{4})(?=.)/g, '$1 ') : '–'; }
@@ -429,8 +432,8 @@ const HULP = {
   gebruik: ['Wat wordt gebruikt', 'Hoe vaak elk scherm geopend is, op alle toestellen samen. Rood = nog nooit gebruikt: kandidaat om weg te halen.'],
   vandaag: ['Wie deed wat', 'Per persoon wat er op een dag is gedaan. Blader met ‹ › naar andere dagen.'],
   export: ['Exporteren', 'Maak een Excel-bestand van de bestellijst, de verkoop of de actieresultaten.'],
-  medewerkers: ['Medewerkers', 'Voeg medewerkers toe; zij kiezen zelf een pincode. Tik op een naam voor rechten of pincode resetten.'],
-  mwedit: ['Rechten', 'Kies Vakkenvuller, Afdelingsleider of Beheerder en pas daarna per vinkje aan. Beginnersmodus: alleen bestellen en tellen.'],
+  medewerkers: ['Medewerkers', 'Voeg medewerkers toe: je krijgt meteen een <b>startcode</b> (6 cijfers, 3 dagen geldig). Geef die persoonlijk; de medewerker tikt hem bij de eerste keer in en kiest daarna zelf een pincode. Tik op een naam voor rechten, een nieuwe startcode of pincode resetten. Makkelijke pincodes zoals 1234 worden geweigerd.'],
+  mwedit: ['Rechten', 'Kies Vakkenvuller, Afdelingsleider of Beheerder en pas daarna per vinkje aan. Beginnersmodus: alleen bestellen en tellen. Alleen een beheerder kan iemand beheerder maken, en je kunt niemand een recht geven dat je zelf niet hebt.'],
   winkel: ['Winkel', 'Met de koppelcode koppel je een nieuw toestel van de winkel. Een code werkt <b>één keer</b> en hooguit 24 uur: is hij gebruikt of verlopen, tik dan op <b>Nieuwe code</b>. Gekoppelde toestellen merken daar niets van. Laat de code het liefst op je eigen scherm zien in plaats van hem via WhatsApp te sturen. <b>Alle toestellen loskoppelen</b> gebruik je alleen als een toestel kwijt is.'],
   meldingen: ['Meldingen', 'Kies welke pushmeldingen dit toestel krijgt. Op de iPhone werkt dit alleen als de app op je beginscherm staat.'],
   appinst: ['App-instellingen', 'Licht of donker, tekstgrootte en korte lijst. Bij <b>Pincode opnieuw vragen</b> kies je hoe lang de app buiten beeld mag zijn voordat hij je pincode vraagt (alleen voor deze telefoon). <b>Updates tonen</b>: aan = een groene balk bij een nieuwe versie en daarna een overzicht van wat er nieuw is; uit = de app werkt zichzelf stil bij als hij op de achtergrond staat. Na een update blijf je ingelogd.'],
@@ -460,7 +463,11 @@ function tour(i = 0) {
 
 /* ---------- updates (2.07: zoals Brood Opzet) ---------- */
 // Bij elke nieuwe versie bijwerken: wat er nieuw is, kort en in gewone taal
-const NIEUWS = [['🏷️', 'Schapkaartjes beter scannen', 'Licht wazige schapkaartjes worden vaker gelezen, en de app leest een kaartje pas als hij het zeker weet, zodat je niet bij een verkeerd artikel uitkomt.'],
+const NIEUWS = [['🔐', 'Nog beter beveiligd', 'Een nieuwe medewerker kiest zijn eerste pincode met een startcode van de beheerder (Meer → Medewerkers → 🔑 Startcode maken).'],
+  ['🔢', 'Geen makkelijke pincodes meer', 'Pincodes zoals 1234, 1111 of een jaartal worden geweigerd. Heb je zo\'n pincode, dan vraagt de app je een nieuwe te kiezen.'],
+  ['🙂', 'Face ID opnieuw aanzetten', 'Face ID wordt nu echt door de server gecontroleerd. Zet het één keer opnieuw aan via Meer → Pincode en Face ID.'],
+  ['🛡️', 'Sterker slot op de app', 'Ingesloten code in bestanden, pdf\'s of Excel kan niets meer uitvoeren, en uitloggen sluit ook op de server af.'],
+  ['🏷️', 'Schapkaartjes beter scannen', 'Licht wazige schapkaartjes worden vaker gelezen, en de app leest een kaartje pas als hij het zeker weet, zodat je niet bij een verkeerd artikel uitkomt.'],
   ['📷', 'Scannen werkt weer', 'De barcodescanner zit nu in de app zelf, dus hij werkt weer en ook sneller zonder internet.'],
   ['⭐', 'Meer-menu vernieuwd', 'Zoeken, favorieten met een sterretje bovenaan en groepen die je open- en dichtklapt, net als in Brood Opzet.'],
   ['🛡️', 'Beveiliging aangescherpt', 'Na een controle door een tweede AI zijn alle gevonden gaten gedicht. Bij ontkoppelen of uitloggen wordt nu alles van de winkel van het toestel gewist.'],
@@ -522,7 +529,7 @@ async function pushAbo() {
 async function pushOpslaan(uit) {
   const sub = await pushAbo(); const cur = ls.get('cba-push') || {};
   const row = { winkel_id: W, endpoint: sub.endpoint, sub, wie: wieSleutel(), rol: mag('upload') ? 'beheer' : 'medewerker', uit: uit || cur.uit || [] };
-  await upsert('push_abos', [row], 'endpoint'); ls.set('cba-push', { endpoint: sub.endpoint, uit: row.uit }); return row;
+  await rpc('push_abo', { w: W, ep: row.endpoint, sub: row.sub, wie: row.wie, uit: row.uit }).catch(() => upsert('push_abos', [row], 'endpoint')); ls.set('cba-push', { endpoint: sub.endpoint, uit: row.uit }); return row; // 2.29: push alleen voor je eigen toestel (oude manier tot de database is bijgewerkt)
 }
 function renderMeldingen() {
   const v = $('#view'); const st = pushStatus(); const cur = ls.get('cba-push');

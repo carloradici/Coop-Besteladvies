@@ -115,7 +115,12 @@ function saveAgenda(row) { return adminDo(async () => { if (!DEMO) await upW('ag
 /* ---------- uploads ---------- */
 const libs = {};
 function loadScript(src) { return libs[src] || (libs[src] = new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; if (SRI[src]) { s.integrity = SRI[src]; s.crossOrigin = 'anonymous'; } s.onload = res; s.onerror = () => rej(new Error('Kon onderdeel niet laden (offline?)')); document.head.appendChild(s); })); }
-async function pdfjs() { await loadScript(LIB.pdf); const p = window.pdfjsLib; if (!p.GlobalWorkerOptions.workerSrc) p.GlobalWorkerOptions.workerSrc = LIB.pdfw; return p; }
+async function pdfjs() { await loadScript(LIB.pdf); const p = window.pdfjsLib; if (!p.GlobalWorkerOptions.workerSrc) p.GlobalWorkerOptions.workerSrc = LIB.pdfw;
+  return pdfVeilig || (pdfVeilig = Object.create(p, { getDocument: { value: o => p.getDocument(Object.assign({}, o && o.data ? o : { data: o }, { isEvalSupported: false })) } })); } // 2.29: pdf's van buiten nooit code laten uitvoeren
+let pdfVeilig = null;
+/* 2.29: Excel van buiten lezen in een aparte worker (max 20 s) */
+function xlsxRijen(buf, o, j) { return new Promise((ok, no) => { const w = new Worker('lib/xlsx-werker.js'), t = setTimeout(() => { w.terminate(); no(new Error('Excel-bestand lezen duurde te lang')); }, 20000), k = f => x => { clearTimeout(t); w.terminate(); f(x); };
+  w.onmessage = k(e => e.data.fout ? no(new Error(e.data.fout)) : ok(e.data.rows)); w.onerror = k(() => no(new Error('Excel-bestand kon niet gelezen worden'))); w.postMessage({ buf, o, j }); }); }
 async function uploads(files, regels) {
   const ulog = $('#upLog') || document.createElement('div'); ulog.classList.remove('hide'); ulog.innerHTML = '';
   const L = (t, c = '') => { if (regels) regels.push(t); ulog.insertAdjacentHTML('beforeend', `<div class="${c}">${esc(t)}</div>`); ulog.scrollTop = 1e9; };
@@ -126,8 +131,7 @@ async function uploads(files, regels) {
     try {
       const buf = await f.arrayBuffer();
       if (/\.xlsx?$/i.test(f.name)) {
-        await loadScript(LIB.xlsx);
-        const wb = XLSX.read(buf, { type: 'array' }); const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null });
+        const rows = await xlsxRijen(buf, { type: 'array' }, { header: 1, raw: true, defval: null });
         const r = C.parseCaspos(rows, f.name);
         if (!DEMO) {
           await upW('dagverkoop', [{ dag: r.dag, data: r.data, bestand: f.name, geupload: new Date().toISOString() }]);
@@ -179,7 +183,7 @@ async function boekAutoHaal(nu) {
   boekArchHaal();
 }
 const BOEK_URL = 'https://static.reto.media/ordervantolversuniecom/bestelboeken/';
-async function boekHaal(naam) { try { const r = await fetch(`${SB_URL}/functions/v1/folder?url=${encodeURIComponent(BOEK_URL + naam)}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (!r.ok) return null; const b = await r.arrayBuffer(); return b.byteLength > 1000 ? new File([b], naam, { type: 'application/pdf' }) : null; } catch (e) { return null; } }
+async function boekHaal(naam) { try { const r = await fetch(`${SB_URL}/functions/v1/folder?w=${W}&url=${encodeURIComponent(BOEK_URL + naam)}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (!r.ok) return null; const b = await r.arrayBuffer(); return b.byteLength > 1000 ? new File([b], naam, { type: 'application/pdf' }) : null; } catch (e) { return null; } }
 /* 1.73: eenmalig oudere bestelboeken ophalen; hun artikelen herkennen verkoop die niet meer in het boek staat */
 async function boekArchHaal() {
   const k = 'cba-boekarch2-' + W; if (boekArchHaal.bezig || ls.get(k) || !S.boeken.vers || !S.boeken.kw) return; boekArchHaal.bezig = 1; let n = 0; toast('Oude bestelboeken zoeken…', 3000);

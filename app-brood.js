@@ -2,6 +2,7 @@
 function boInst() { return (S.inst || {}).bo || {}; }
 /* 2.22: retourgegevens alleen met x-retour-sleutel; die staat alleen op het toestel van de beheerder (niet gedeeld, niet gesynchroniseerd) */
 const boRetSl = () => isBeheer() ? ls.get('cba-retsl:' + W) || '' : '';
+const ontTag = o => JSON.parse(JSON.stringify(o).replace(/[<>]/g, '')); // 2.29: gegevens uit Brood Opzet nooit als HTML laten werken
 async function boHaal(forceer) {
   // 2.25: via de eigen server-functie "bo" (adres en koppelcode als geheim in Supabase); oude manier alleen zolang die nog is ingevuld
   const b = boInst(); if ((!b.proxy && (!b.url || !b.code)) || OEFEN || (DEMO && !forceer)) return;
@@ -9,7 +10,7 @@ async function boHaal(forceer) {
   try {
     const rs = boRetSl(), r = b.proxy ? await fetch(`${SB_URL}/functions/v1/bo?w=${W}`, { headers: Object.assign({ apikey: SB_KEY, Authorization: 'Bearer ' + await token() }, rs ? { 'x-retour-sleutel': rs } : {}) }) : await fetch(b.url, { headers: Object.assign({ 'x-sleutel': b.code }, rs ? { 'x-retour-sleutel': rs } : {}) }); const d = await r.json().catch(() => ({ fout: 'Geen antwoord (' + r.status + ')' }));
     if (!d.ok) throw new Error(d.fout || r.status);
-    d.t = Date.now(); if (isBeheer()) { d.retStat = !rs ? 'geen' : d.retour ? 'ok' : 'fout'; if (!d.retour && S.bo && S.bo.retour) d.retour = S.bo.retour; } S.bo = d; await iset('bo:' + W, d); boAutoKoppel(); rebuild();
+    Object.assign(d, ontTag(d)); d.t = Date.now(); if (isBeheer()) { d.retStat = !rs ? 'geen' : d.retour ? 'ok' : 'fout'; if (!d.retour && S.bo && S.bo.retour) d.retour = S.bo.retour; } S.bo = d; await iset('bo:' + W, d); boAutoKoppel(); rebuild();
     if (!/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName)) render(true); return d;
   } catch (e) { if (forceer) throw e; }
 }
@@ -110,7 +111,7 @@ function boKies(sid) {
   const s = ((S.bo || {}).soorten || []).find(x => x.id === sid); if (!s) return; const l = Object.values(M.art), bb = boBoek();
   const lijst = q => {
     const rb = boZoek(q || s.naam, bb).slice(0, 10), keys = new Set(rb.map(x => x.key)), r = boZoek(q || s.naam, l).filter(a => !keys.has(a.key)).slice(0, q ? 25 : 10);
-    const hb = rb.map(x => `<button class="it" ${x.key ? `data-bka="${esc(x.key)}"` : `data-bkn="${esc(x.nr)}"`}><span style="flex:1">${esc(x.naam)}<br><span class="small">${x.nr} · 📒 ${esc(x.boek.join(', '))}${x.key ? '' : ' · ➕ wordt aangemaakt'}</span></span></button>`).join('');
+    const hb = rb.map(x => `<button class="it" ${x.key ? `data-bka="${esc(x.key)}"` : `data-bkn="${esc(x.nr)}"`}><span style="flex:1">${esc(x.naam)}<br><span class="small">${esc(x.nr)} · 📒 ${esc(x.boek.join(', '))}${x.key ? '' : ' · ➕ wordt aangemaakt'}</span></span></button>`).join('');
     return (hb ? `<p class="small"><b>📒 Uit je Brood Opzet-bestelboek</b></p>${hb}` : '') + (r.length ? `<p class="small"><b>${q ? 'Hele bestelboek' : 'Suggesties uit het bestelboek'}</b></p>` + r.map(a => `<button class="it" data-bka="${esc(a.key)}"><span style="flex:1">${esc(a.naam)}<br><span class="small">${boNrTxt(a)} · ${odNaam(onderdeelVan(a))}</span></span></button>`).join('') : '') || '<p class="small">Niets gevonden. Typ een ander woord of het artikelnummer.</p>';
   };
   const koppel = (key, o) => { const w = Object.assign({}, S.inst); w.bo = Object.assign({}, boInst()); w.bo.koppel = Object.assign({}, w.bo.koppel || {}, { [sid]: key }); o.remove(); if (DEMO) { S.inst = w; rebuild(); render(); } else saveInst(w); };

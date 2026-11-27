@@ -34,7 +34,7 @@ export async function verwerk({ sb, XLSX, webpush, sleutel, bestand, body, test,
   if (deel.length !== 2 || !/^[0-9a-f-]{36}$/i.test(deel[0]) || deel[1].length < 32) return { status: 401, fout: 'Geen geldige uploadsleutel' };
   const W = deel[0];
   const { data: ok, error } = await sb.rpc('check_uploadsleutel', { w: W, sleutel: String(sleutel).trim() });
-  if (error) return { status: 500, fout: 'Database: ' + error.message };
+  if (error) return { status: 500, fout: 'Database niet bereikbaar' };
   if (!ok) return { status: 401, fout: 'Uploadsleutel klopt niet of is ingetrokken' };
   const { data: wk } = await sb.from('winkels').select('naam').eq('id', W);
   const winkel = (wk && wk[0] && wk[0].naam) || '';
@@ -51,9 +51,9 @@ export async function verwerk({ sb, XLSX, webpush, sleutel, bestand, body, test,
   if (!r.n) { await log(false, 'Geen artikelen gevonden', r.dag); return { status: 422, fout: 'Geen artikelen gevonden in het bestand' }; }
   const geupload = new Date().toISOString();
   const e1 = (await sb.from('dagverkoop').upsert({ winkel_id: W, dag: r.dag, data: r.data, bestand, geupload }, { onConflict: 'winkel_id,dag' })).error;
-  if (e1) { await log(false, 'Opslaan mislukt: ' + e1.message, r.dag); return { status: 500, fout: 'Opslaan mislukt: ' + e1.message }; }
+  if (e1) { await log(false, 'Opslaan mislukt: ' + e1.message, r.dag); return { status: 500, fout: 'Opslaan mislukt' }; }
   const krows = Object.entries(r.meta).map(([ean, m]) => Object.assign({ winkel_id: W, ean, gezien: r.dag }, m));
-  for (let i = 0; i < krows.length; i += 500) { const e2 = (await sb.from('kassa').upsert(krows.slice(i, i + 500), { onConflict: 'winkel_id,ean' })).error; if (e2) { await log(false, 'Artikelgegevens: ' + e2.message, r.dag); return { status: 500, fout: 'Artikelgegevens opslaan mislukt: ' + e2.message }; } }
+  for (let i = 0; i < krows.length; i += 500) { const e2 = (await sb.from('kassa').upsert(krows.slice(i, i + 500), { onConflict: 'winkel_id,ean' })).error; if (e2) { await log(false, 'Artikelgegevens: ' + e2.message, r.dag); return { status: 500, fout: 'Artikelgegevens opslaan mislukt' }; } }
   await sb.from('upload_sleutels').update({ laatst: geupload }).eq('winkel_id', W);
   await log(true, `${r.n} artikelen`, r.dag);
   let gemeld = 0;
@@ -84,6 +84,8 @@ export function start(XLSX, webpush, createClient) {
       const test = req.method === 'GET' || url.searchParams.get('test') === '1';
       let bestand = req.headers.get('x-bestand') || ''; try { bestand = decodeURIComponent(bestand); } catch (e) { }
       bestand = bestand.replace(/[\\/]/g, '_').slice(0, 200);
+      const d = sleutel.trim().split('.'); if (d.length !== 2 || !/^[0-9a-f-]{36}$/i.test(d[0]) || d[1].length < 32) return json({ fout: 'Geen geldige uploadsleutel' }, 401); // 2.29: eerst de sleutel, dan pas het bestand lezen
+      if (+(req.headers.get('content-length') || 0) > 15 * 1024 * 1024) return json({ fout: 'Bestand is te groot' }, 413);
       const body = test ? null : await req.arrayBuffer();
       const r = await verwerk({ sb, XLSX, webpush: wp, sleutel, bestand, body, test });
       const { status, ...rest } = r; return json(rest, status);

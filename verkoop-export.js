@@ -22,6 +22,6 @@ export function start(createClient, SLEUTEL, WINKEL) {
       if (r.error) throw r.error;
       for (const x of r.data) { const d = {}; for (const [e, v] of Object.entries(x.data || {})) if (plus.has(kaal(e))) d[kaal(e)] = (d[kaal(e)] || 0) + (+(v?.[0]) || 0); dagen[x.dag] = d; }
       return js({ ok: true, winkel: w || null, dagen });
-    } catch (e) { return js({ ok: false, fout: String(e?.message || e) }, 500); }
+    } catch (e) { console.error(e); return js({ ok: false, fout: "Er ging iets mis" }, 500); }
   });
 }

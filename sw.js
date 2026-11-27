@@ -1,19 +1,15 @@
-const V = 'cba-2.28';
-const APP = ['style.css', 'qrcode.min.js', 'rekenkern.js', 'app-basis.js', 'app-sync.js', 'app-login.js', 'app-home.js', 'app-deadlines.js', 'app-beheer.js', 'app-uploaden.js', 'app-pdf-print.js', 'app-extra.js', 'app-advies.js', 'app-acties.js', 'app-plekken.js', 'app-voorkoop.js', 'app-overig.js', 'app-brood.js', 'app-route.js', 'app-kantoor.js', 'app-retour.js', 'app-start.js'].map(f => './' + f + '?b=' + V.split('-')[1]);
+const V = 'cba-2.29';
+const APP = ['style.css', 'laden.js', 'qrcode.min.js', 'rekenkern.js', 'app-basis.js', 'app-sync.js', 'app-login.js', 'app-home.js', 'app-deadlines.js', 'app-beheer.js', 'app-uploaden.js', 'app-pdf-print.js', 'app-extra.js', 'app-advies.js', 'app-acties.js', 'app-plekken.js', 'app-voorkoop.js', 'app-overig.js', 'app-brood.js', 'app-route.js', 'app-kantoor.js', 'app-retour.js', 'app-start.js'].map(f => './' + f + '?b=' + V.split('-')[1]);
 const SHELL = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png', ...APP];
 // 2.11: icoontjes, manifest en QR-bibliotheek veranderen niet: overnemen uit de vorige versie (sneller bijwerken)
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => Promise.all(SHELL.map(async u => { if (/icon-|manifest|qrcode/.test(u)) { const r = await caches.match(u, { ignoreSearch: true }); if (r) return c.put(u, r); } return c.add(u); }))).then(() => self.skipWaiting())); });
-self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
+self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('cba-') && k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.hostname.endsWith('supabase.co')) return;
-  if (u.hostname === 'cdnjs.cloudflare.com') {
-    e.respondWith(caches.open(V).then(c => c.match(e.request).then(r => r || fetch(e.request).then(n => { c.put(e.request, n.clone()); return n; }))));
-    return;
-  }
   if (u.pathname.endsWith('version.json')) return;
   if (u.origin === location.origin) {
-    e.respondWith(fetch(e.request).then(n => { const cl = n.clone(); caches.open(V).then(c => c.put(e.request, cl)); return n; }).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html'))));
+    e.respondWith(fetch(e.request).then(n => { if (n.ok) { const cl = n.clone(); caches.open(V).then(c => c.put(e.request, cl)); } return n; }).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html'))));
   }
 });
 self.addEventListener('push', e => {

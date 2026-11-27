@@ -1,7 +1,7 @@
 // Coop Besteladvies – pushmeldingen (Supabase Edge Function "stuur-push").
 // Wordt automatisch live gezet door .github/workflows/functies.yml (supabase/functions/stuur-push/index.ts).
 // Soorten: update (nieuwe app-versie op GitHub, per versie één keer; ook in cron), test (één toestel), boek (na upload bestelboek, alleen met geldige pincode-sessie: beheerder of recht upload), cron (elk kwartier, per winkel: besteldag per onderdeel, dag-export, in/out).
-export const FUNCTIE_VERSIE = '1.30';
+export const FUNCTIE_VERSIE = '1.31';
 const STD_SCHEMA = { vers: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 4, l: 0 }], kw: [{ b: 0, l: 2 }, { b: 2, l: 4 }, { b: 3, l: 0 }] };
 const ONDERDELEN = [['agf', 'AGF'], ['vers', 'Vers'], ['brood', 'Brood'], ['diep', 'Diepvries'], ['kw', 'KW']];
 const STD_OPEN = [['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['08:00', '20:00'], ['', '']];
@@ -22,13 +22,15 @@ export function lokaleTijd(nu) {
 }
 
 export const folderUrls = (jaar, week) => { const w = String(week).padStart(2, '0'); return [...new Set([jaar, jaar - 1, jaar + 1].map(m => `https://static.reto.media/ordervantolversuniecom/upload-${m}/folderplanning-${jaar}-coop-wk-${w}.pdf`))]; };
+export const PUSH_OK = /^https:\/\/([a-z0-9-]+\.)*(push\.apple\.com|fcm\.googleapis\.com|push\.services\.mozilla\.com|notify\.windows\.com)\//;
+export const gelijk = (a, b) => { a = String(a || ''); b = String(b || ''); let d = a.length ^ b.length; for (let i = 0; i < b.length; i++) d |= (a.charCodeAt(i) || 0) ^ b.charCodeAt(i); return !!b && d === 0; };
 export async function verwerk({ sb, webpush, body, token, nu = new Date(), haal = (u, o) => fetch(u, o), cronOk = true }) {
   const soort = body && body.soort;
   const { data: abos, error: dbFout } = await sb.from('push_abos').select('*');
   if (dbFout) return { status: 500, fout: 'Database niet bereikbaar' };
   const verstuurd = { n: 0, weg: 0 };
   const stuur = async (lijst, bericht) => {
-    for (const a of lijst) {
+    for (const a of lijst) { if (!PUSH_OK.test(String(a.endpoint || '')) || !a.sub || a.sub.endpoint !== a.endpoint) continue; // 2.29: alleen echte push-diensten
       try { await webpush.sendNotification(a.sub, JSON.stringify(bericht)); verstuurd.n++; }
       catch (e) { if (e && (e.statusCode === 404 || e.statusCode === 410)) { await sb.from('push_abos').delete().eq('endpoint', a.endpoint); verstuurd.weg++; } }
     }
@@ -47,7 +49,7 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date(), haal 
   const sessieMw = async () => {
     if (!token || !body.winkel) return null; const { data: u } = await sb.auth.getUser(token); const user = u && u.user; if (!user) return null;
     const { data: se } = await sb.from('sessies').select('medewerker_id,tot').eq('uid', user.id).eq('winkel_id', body.winkel); const sessie = (se || []).find(x => new Date(x.tot) > nu); if (!sessie) return null;
-    const { data: m } = await sb.from('medewerkers').select('rol,rechten,actief').eq('id', sessie.medewerker_id); const mw = m && m[0]; return mw && mw.actief !== false ? mw : null;
+    const { data: m } = await sb.from('medewerkers').select('rol,rechten,actief').eq('id', sessie.medewerker_id); const mw = m && m[0]; return mw && mw.actief !== false ? Object.assign(mw, { uid: user.id }) : null;
   };
   if (soort === 'test') {
     if (!(await sessieMw())) return { status: 403, fout: 'Niet ingelogd' };
@@ -57,8 +59,8 @@ export async function verwerk({ sb, webpush, body, token, nu = new Date(), haal 
     return { status: 200, versie: FUNCTIE_VERSIE, ...verstuurd };
   }
   if (soort === 'taak') {
-    if (!(await sessieMw())) return { status: 403, fout: 'Niet ingelogd' };
-    { let vrij = false; for (let i = 0; i < 5 && !vrij; i++) vrij = await eenmalig(`taak:${body.winkel}:${nu.toISOString().slice(0, 16)}:${String(body.endpoint || '').slice(-24)}:${i}`); if (!vrij) return { status: 429, fout: 'Even wachten' }; } // max 5 per minuut per toestel
+    const mw = await sessieMw(); if (!mw) return { status: 403, fout: 'Niet ingelogd' };
+    { let vrij = false; for (let i = 0; i < 5 && !vrij; i++) vrij = await eenmalig(`taak:${body.winkel}:${nu.toISOString().slice(0, 16)}:${mw.uid}:${i}`); if (!vrij) return { status: 429, fout: 'Even wachten' }; } // max 5 per minuut per persoon
     const { data: mws } = await sb.from('medewerkers').select('id,naam,email').eq('winkel_id', body.winkel); const namen = String(body.voor || '').split(',');
     const ids = new Set((mws || []).filter(m => namen.includes(m.naam)).flatMap(m => ['mw:' + m.id].concat(m.email ? ['mail:' + m.email] : [])));
     const doel = (abos || []).filter(a => a.winkel_id === body.winkel && wil(a, 'taak') && a.endpoint !== body.endpoint && (body.voor === 'iedereen' || !body.voor || ids.has(a.wie)));
@@ -192,7 +194,7 @@ export function start(webpush, createClient) {
       const body = await req.json().catch(() => ({}));
       const auth = req.headers.get('authorization') || '';
       const token = auth.startsWith('Bearer ') && auth.split('.').length === 3 ? auth.slice(7) : null;
-      const cs = Deno.env.get('CRON_SLEUTEL'), cronOk = !cs || req.headers.get('x-cron-sleutel') === cs || body.sleutel === cs; // 2.25: cron alleen met geheime sleutel (zodra die is ingesteld)
+      const cs = Deno.env.get('CRON_SLEUTEL'), cronOk = !!cs && (gelijk(req.headers.get('x-cron-sleutel'), cs) || gelijk(body.sleutel, cs)); // 2.29: cron alleen met de geheime sleutel
       const r = await verwerk({ sb, webpush, body, token, cronOk });
       const { status, ...rest } = r;
       return new Response(JSON.stringify(rest), { status, headers: { ...cors, 'Content-Type': 'application/json' } });

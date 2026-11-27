@@ -1,8 +1,8 @@
-const VERSIE = '2.28';
+const VERSIE = '2.29';
 const VAPID_PUB = 'BOChxPqkP4LeLJb1ALruz2OGohK0RhAU2neR_tluJxKv6A85Snt5-e6hhmMZKdGTddp0aXpxcer8vqLOiyWIHYU';
 const SB_URL = 'https://qgrexmttlceegavnkmkx.supabase.co';
 const SB_KEY = 'sb_publishable_X_oyYWBNmGl1_tMI-R3wnw_LAi45_me';
-const SRI = { 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js': 'sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F' };
+const SRI = {}; // 2.29: alle bibliotheken staan in lib/ (geen externe scripts meer)
 const LIB = {
   // 2.25: vaste bibliotheken op de eigen site (geen afhankelijkheid van een CDN); de rest met controle-vingerafdruk (SRI)
   pdf: 'lib/pdf.min.js',

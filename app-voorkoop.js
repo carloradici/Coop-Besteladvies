@@ -52,7 +52,7 @@ async function kwPdfLezen(buf, naam) {
 async function kwFolderErbij(haal) { const buf = await haal(''); const kop = buf.slice(0); const wk = folderBijVoorkoop(C.parseFolder(await C.pdfVlakken(await pdfjs(), buf))); if (wk) pdfBewaar(wk, 'folder', kop); return wk; }
 async function kwHaalOp(jaar, week, alleenVk) {
   if (DEMO) throw new Error('In de testversie kun je de pdf zelf kiezen');
-  const haal = async soort => { const r = await fetch(`${SB_URL}/functions/v1/folder?jaar=${jaar}&week=${week}${soort ? '&soort=' + soort : ''}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } if (r.status === 404 && !/staat nog niet/.test(t)) t = 'De functie "folder" staat nog niet in Supabase'; const e = new Error(t); e.status = r.status; throw e; } return r.arrayBuffer(); };
+  const haal = async soort => { const r = await fetch(`${SB_URL}/functions/v1/folder?w=${W}&jaar=${jaar}&week=${week}${soort ? '&soort=' + soort : ''}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } if (r.status === 404 && !/staat nog niet/.test(t)) t = 'De functie "folder" staat nog niet in Supabase'; const e = new Error(t); e.status = r.status; throw e; } return r.arrayBuffer(); };
   let vkFout = null, wkv = null;
   try { const buf = await haal('voorkoop'); const pages = await C.pdfPages(await pdfjs(), buf.slice(0)); if (C.detectPdf(pages) === 'voorkoop') { const vk = C.parseVoorkoop(pages); if (!vk || weekSleutel(vk.van) !== weekSleutel(C.mondayOf(jaar, week))) throw new Error(`Voorkooplijst week ${week} staat nog niet online`); wkv = bewaarVoorkoop(vk, 'opgehaald'); pdfBewaar(wkv, 'voorkoop', buf); } } catch (e) { vkFout = e; }
   const k = weekSleutel(C.mondayOf(jaar, week)); const p = S.kwplan[k];
@@ -154,7 +154,7 @@ async function pdfOphalen(wk, soort) {
   const pad = pdfPad(wk, soort); const l = await pdfLokaal('get', pad); if (l) return l;
   if (!DEMO && navigator.onLine) {
     try { const r = await fetch(`${SB_URL}/storage/v1/object/authenticated/pdfs/${pad}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (r.ok) { const b = await r.arrayBuffer(); await pdfLokaal('put', pad, b.slice(0)); return b; } } catch (e) { }
-    if ((soort === 'folder' || soort === 'voorkoop') && wk >= pdfGrens()) { try { const [y, w] = wk.split('-').map(Number); const r = await fetch(`${SB_URL}/functions/v1/folder?jaar=${y}&week=${w}${soort === 'voorkoop' ? '&soort=voorkoop' : ''}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (r.ok) { const b = await r.arrayBuffer(); pdfBewaar(wk, soort, b); return b; } } catch (e) { } }
+    if ((soort === 'folder' || soort === 'voorkoop') && wk >= pdfGrens()) { try { const [y, w] = wk.split('-').map(Number); const r = await fetch(`${SB_URL}/functions/v1/folder?w=${W}&jaar=${y}&week=${w}${soort === 'voorkoop' ? '&soort=voorkoop' : ''}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }); if (r.ok) { const b = await r.arrayBuffer(); pdfBewaar(wk, soort, b); return b; } } catch (e) { } }
   }
   return null;
 }
@@ -251,9 +251,9 @@ function controleSheet(od, cur) {
   const ov = sheet(`<h2 style="margin:0">🔍 Controle met terminal</h2><p class="small">Typ per regel uit je bestelgeschiedenis het artikelnummer (of de laatste cijfers).</p><input type="search" inputmode="numeric" id="ctlQ" placeholder="Artikelnummer" style="width:100%"><div id="ctlR"></div><h3 id="ctlT"></h3><div class="list" id="ctlO"></div><button class="btn sec" data-x style="width:100%;margin-top:10px">Klaar</button>`);
   const teken = () => {
     const q = ov.querySelector('#ctlQ').value.trim(); const hits = q.length >= 2 ? lijstArtikelen(od).filter(a => String(a.nr).endsWith(q) || String(a.nr) === q).slice(0, 5) : [];
-    ov.querySelector('#ctlR').innerHTML = hits.map(a => { const b = S.bestel[a.key + '|' + cur.besteldag]; return `<div class="it"><span style="flex:1"><b>${esc(a.naam)}</b><br><span class="small">${a.nr} · in de app: <b>${b && (b.besteld || b.aantal) ? C.fmt(aantal(a)) + (a.perHE ? ' ' + ehMv(a, aantal(a)) : '') : 'niet besteld'}</b></span></span>${b ? `<button class="btn sm" data-cok="${a.key}">✓ klopt</button>` : ''}<button class="btn sm sec" data-cga="${a.key}">Aanpassen</button></div>`; }).join('') || (q.length >= 2 ? '<p class="small">Niet gevonden in deze lijst.</p>' : '');
+    ov.querySelector('#ctlR').innerHTML = hits.map(a => { const b = S.bestel[a.key + '|' + cur.besteldag]; return `<div class="it"><span style="flex:1"><b>${esc(a.naam)}</b><br><span class="small">${esc(a.nr)} · in de app: <b>${b && (b.besteld || b.aantal) ? C.fmt(aantal(a)) + (a.perHE ? ' ' + ehMv(a, aantal(a)) : '') : 'niet besteld'}</b></span></span>${b ? `<button class="btn sm" data-cok="${a.key}">✓ klopt</button>` : ''}<button class="btn sm sec" data-cga="${a.key}">Aanpassen</button></div>`; }).join('') || (q.length >= 2 ? '<p class="small">Niet gevonden in deze lijst.</p>' : '');
     const rest = lijst.filter(a => !ok.has(a.key)); ov.querySelector('#ctlT').textContent = rest.length ? `Nog niet gecontroleerd (${rest.length})` : '✓ Alles gecontroleerd';
-    ov.querySelector('#ctlO').innerHTML = rest.map(a => `<div class="it"><span style="flex:1">${esc(a.naam)} <span class="small">${a.nr} · ${C.fmt(aantal(a))}</span></span></div>`).join('');
+    ov.querySelector('#ctlO').innerHTML = rest.map(a => `<div class="it"><span style="flex:1">${esc(a.naam)} <span class="small">${esc(a.nr)} · ${C.fmt(aantal(a))}</span></span></div>`).join('');
   };
   ov.querySelector('#ctlQ').oninput = teken;
   ov.onclick = e => { if (e.target === ov || e.target.closest('[data-x]')) return ov.remove(); const c = e.target.closest('[data-cok]'); if (c) { ok.add(c.dataset.cok); const q = ov.querySelector('#ctlQ'); q.value = ''; q.focus(); teken(); } const g = e.target.closest('[data-cga]'); if (g) { ov.remove(); naarArtikel(M.art[g.dataset.cga]); } };
@@ -269,9 +269,9 @@ async function bewaarActie(pages, naam, buf) {
 }
 async function versHaalOp(jaar, week) {
   if (DEMO) throw new Error('In de testversie kun je de pdf zelf kiezen');
-  const hd = { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }; let r = await fetch(`${SB_URL}/functions/v1/folder?jaar=${jaar}&week=${week}&soort=vers`, hd);
+  const hd = { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } }; let r = await fetch(`${SB_URL}/functions/v1/folder?w=${W}&jaar=${jaar}&week=${week}&soort=vers`, hd);
   // 1.68: Reto noemt hem nu folder-coop-week-NN.pdf
-  for (const ww of [String(week), String(week).padStart(2, '0')]) { if (r.ok) break; const r2 = await fetch(`${SB_URL}/functions/v1/folder?url=${encodeURIComponent(`https://static.reto.media/ordervantolversuniecom/upload-${jaar}/folder-coop-week-${ww}.pdf`)}`, hd); if (r2.ok) r = r2; }
+  for (const ww of [String(week), String(week).padStart(2, '0')]) { if (r.ok) break; const r2 = await fetch(`${SB_URL}/functions/v1/folder?w=${W}&url=${encodeURIComponent(`https://static.reto.media/ordervantolversuniecom/upload-${jaar}/folder-coop-week-${ww}.pdf`)}`, hd); if (r2.ok) r = r2; }
   if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } throw new Error(t); }
   const buf = await r.arrayBuffer(); const pages = await C.pdfPages(await pdfjs(), buf.slice(0)); if (C.detectPdf(pages) !== 'actie') throw new Error('Geen vers-bestellijst');
   const a = await bewaarActie(pages, 'opgehaald', buf); if (a.week !== +week) throw new Error(`Vers-bestellijst week ${week} staat nog niet online`); return a;
@@ -301,7 +301,7 @@ function linkPlakken() {
     const b = ov.querySelector('#lkG'); b.disabled = true; b.textContent = 'Ophalen…';
     try {
       if (DEMO) throw new Error('In de testversie kun je de pdf zelf kiezen');
-      const r = await fetch(`${SB_URL}/functions/v1/folder?url=${encodeURIComponent(l)}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } });
+      const r = await fetch(`${SB_URL}/functions/v1/folder?w=${W}&url=${encodeURIComponent(l)}`, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + await token() } });
       if (!r.ok) { let t = 'Ophalen mislukt (' + r.status + ')'; try { const j = await r.json(); if (j.fout) t = j.fout; } catch (e) { } throw new Error(t); }
       const naam = decodeURIComponent(l.split('?')[0].split('/').pop() || 'bestand.pdf'); const f = new File([await r.arrayBuffer()], naam, { type: r.headers.get('content-type') || 'application/pdf' });
       ov.remove(); log('upload', 'Via link: ' + naam); uploads([f]);
